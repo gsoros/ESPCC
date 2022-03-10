@@ -8,8 +8,11 @@ void GPS::loop() {
         gps.encode(c);
         // Serial.print(c);
     }
+    static unsigned long lastPrint = millis();
     if (gps.location.isValid()) {
         board.oled.displayGps(&gps);
+        if (millis() < lastPrint + 3000) return;
+        lastPrint = millis();
         Serial.printf(
             "%f %f %.1fm %.2fkm/h %d %d%ssat %02d:%02d:%02d%s(%04d) F%d P%d S%d\n",  //
             gps.location.lat(),

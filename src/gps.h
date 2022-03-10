@@ -5,6 +5,7 @@
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 
+#include "definitions.h"
 #include "task.h"
 
 class GPS : public Task {
@@ -16,7 +17,7 @@ class GPS : public Task {
     }
 
     void setup() {
-        ss.begin(9600, SWSERIAL_8N1, GPIO_NUM_17, GPIO_NUM_16);
+        ss.begin(9600, SWSERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
     }
 
     void loop();
