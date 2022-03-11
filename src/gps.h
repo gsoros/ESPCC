@@ -6,9 +6,9 @@
 #include <TinyGPS++.h>
 
 #include "definitions.h"
-#include "task.h"
+#include "atoll_task.h"
 
-class GPS : public Task {
+class GPS : public Atoll::Task {
    public:
     SoftwareSerial ss;
     TinyGPSPlus gps;

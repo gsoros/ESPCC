@@ -1,38 +1,47 @@
 #ifndef __board_h
 #define __board_h
 
+#include "Arduino.h"
+
 #include "definitions.h"
-#include "haspreferences.h"
-#include "task.h"
+#include "atoll_preferences.h"
+#include "atoll_task.h"
+#include "atoll_touch.h"
+#include "ble.h"
 #include "gps.h"
 #include "oled.h"
-#include "ble.h"
 #include "sdcard.h"
 
-class Board : public Task, public HasPreferences {
+class Board : public Atoll::Task,
+              public Atoll::Preferences {
    public:
     char hostName[SETTINGS_STR_LENGTH] = HOSTNAME;
-    Preferences boardPreferences = Preferences();
+    ::Preferences arduinoPreferences = ::Preferences();
     GPS gps;
     Oled oled;
-    BLE ble;
+    Ble ble;
     SdCard sd;
+    Atoll::Touch touch = Atoll::Touch(GPIO_NUM_4);
 
-    Board() {}
+    Board() {
+    }
+
     virtual ~Board() {}
 
     void setup() {
         setCpuFrequencyMhz(80);
-        preferencesSetup(&boardPreferences, "BOARD");
+        preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
 
         gps.setup();
         oled.setup();
-        ble.setup("devicename", preferences);
+        ble.setup("devicename", &arduinoPreferences);
         sd.setup();
+        touch.setup();
 
         gps.taskStart("GPS Task", GPS_TASK_FREQ);
         ble.taskStart("BLE Task", BLE_TASK_FREQ);
+        touch.taskStart("Touch Task", TOUCH_TASK_FREQ);
         taskStart("Board Task", BOARD_TASK_FREQ);
 
         if (sd.ready()) sd.test();
@@ -50,7 +59,6 @@ class Board : public Task, public HasPreferences {
             vTaskDelay(10);
         Serial.read();
         */
-        vTaskDelay(100000);
     }
 
     bool loadSettings() {
