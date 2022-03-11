@@ -9,7 +9,7 @@ void GPS::loop() {
         // Serial.print(c);
     }
 
-    if (gps.time.isValid()) {
+    if (gps.time.isValid() && gps.time.isUpdated()) {
         board.oled.displayGps(&gps);
     } else {
         static uint32_t satellites = UINT32_MAX;

@@ -6,7 +6,7 @@
 #include "definitions.h"
 #include "atoll_preferences.h"
 #include "atoll_task.h"
-#include "atoll_touch.h"
+#include "touch.h"
 #include "ble.h"
 #include "gps.h"
 #include "oled.h"
@@ -21,7 +21,7 @@ class Board : public Atoll::Task,
     Oled oled;
     Ble ble;
     SdCard sd;
-    Atoll::Touch touch = Atoll::Touch(ATOLL_TOUCH_PAD_0);
+    Touch touch = Touch(TOUCH_PAD_0_PIN);
 
     Board() {
     }
