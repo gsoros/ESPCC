@@ -21,7 +21,7 @@ class Board : public Atoll::Task,
     Oled oled;
     Ble ble;
     SdCard sd;
-    Atoll::Touch touch = Atoll::Touch(GPIO_NUM_4);
+    Atoll::Touch touch = Atoll::Touch(ATOLL_TOUCH_PAD_0);
 
     Board() {
     }

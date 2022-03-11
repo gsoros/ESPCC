@@ -23,4 +23,6 @@
 #define GPS_TX_PIN GPIO_NUM_16              //
 ;                                           //
 ;                                           //
+#define ATOLL_TOUCH_NUM_PADS 1              //
+#define ATOLL_TOUCH_PAD_0 GPIO_NUM_4        //
 #endif
