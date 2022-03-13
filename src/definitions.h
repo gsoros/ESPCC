@@ -8,7 +8,7 @@
 #define BOARD_TASK_FREQ 10                  //
 #define BLE_TASK_FREQ 10                    //
 #define GPS_TASK_FREQ 100                   //
-#define TOUCH_TASK_FREQ 10                  //
+#define TOUCH_TASK_FREQ 20                  //
 #define OLED_TASK_FREQ 25                   //
 ;                                           //
 #define SLEEP_DELAY_DEFAULT 15 * 60 * 1000  // 15m

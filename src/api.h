@@ -24,7 +24,7 @@ class Api : public Atoll::Api {
 
    protected:
     static ApiResult *hostname(const char *arg, char *reply, char *value);
-    static ApiResult *touchSens(const char *arg, char *reply, char *value);
+    static ApiResult *touchThres(const char *arg, char *reply, char *value);
 };
 
 #endif

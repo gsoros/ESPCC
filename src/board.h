@@ -38,7 +38,7 @@ class Board : public Atoll::Task,
         oled.setup();
         ble.setup(hostName, &arduinoPreferences);
         sd.setup();
-        touch.setup();
+        touch.setup(&arduinoPreferences, "Touch");
 
         gps.taskStart("Gps Task", GPS_TASK_FREQ);
         ble.taskStart("Ble Task", BLE_TASK_FREQ);
