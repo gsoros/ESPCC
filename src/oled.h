@@ -1,11 +1,8 @@
 #ifndef __oled_h
 #define __oled_h
 
-#include <Arduino.h>
 #include <U8g2lib.h>
 #include <TinyGPS++.h>
-
-#include "touch.h"
 
 class Oled {
    public:
@@ -25,7 +22,7 @@ class Oled {
     }
 
     void displayGps(TinyGPSPlus *gps) {
-        lock();
+        if (!lock()) return;
         oled->clearBuffer();
         oled->setCursor(0, 32);
         oled->printf("%02d%d",
@@ -44,7 +41,7 @@ class Oled {
     }
 
     void displaySatellites(uint32_t satellites) {
-        lock();
+        if (!lock()) return;
         oled->clearBuffer();
         oled->setCursor(0, 82);
         oled->printf("%03d", satellites);
@@ -54,7 +51,7 @@ class Oled {
 
     void onTouchEvent(uint8_t index, uint8_t event) {
         // if (ATOLL_TOUCH_START != event) return;
-        lock();
+        if (!lock()) return;
         oled->clearBuffer();
         oled->setCursor(0, 82);
         oled->printf("%d %d", index, event);
@@ -62,10 +59,11 @@ class Oled {
         release();
     }
 
-    void setContrast(uint8_t contrast) {
-        lock();
+    bool setContrast(uint8_t contrast) {
+        if (!lock()) return false;
         oled->setContrast(contrast);
         release();
+        return true;
     }
 
    protected:
@@ -74,8 +72,11 @@ class Oled {
     // U8G2_SH1106_128X64_WINSTAR_F_HW_I2C *oled;
     U8G2_SH1106_128X64_NONAME_F_HW_I2C *oled;
 
-    void lock() {
-        xSemaphoreTake(mutex, portMAX_DELAY);
+    bool lock(uint32_t timeout = portMAX_DELAY) {
+        if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
+            return true;
+        log_e("Could not aquire lock");
+        return false;
     }
 
     void release() {

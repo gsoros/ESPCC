@@ -1,8 +1,4 @@
-#include <Arduino.h>
-
 #include "board.h"
-#include "gps.h"
-#include "oled.h"
 
 Board board;
 

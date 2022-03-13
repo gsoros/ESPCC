@@ -5,7 +5,7 @@
 #define BLE_CHAR_VALUE_MAXLENGTH 256        // maximum number of bytes written to ble characteristic values
 ;                                           //
 ;                                           // task frequencies in Hz
-#define BOARD_TASK_FREQ 10                  //
+#define BOARD_TASK_FREQ 25                  //
 #define BLE_TASK_FREQ 10                    //
 #define GPS_TASK_FREQ 100                   //
 #define TOUCH_TASK_FREQ 10                  //
@@ -17,12 +17,12 @@
 ;                                           //
 #define HOSTNAME "ESPCC"                    // default host name, used by ble and ota mdns
 ;                                           //
-#define LED_PIN GPIO_NUM_22                 // onboard LED pin
-#define BATTERY_PIN GPIO_NUM_35             // pin for battery voltage measurement
-#define GPS_RX_PIN GPIO_NUM_17              //
-#define GPS_TX_PIN GPIO_NUM_16              //
+#define LED_PIN 22                          // onboard LED pin
+#define BATTERY_PIN 35                      // pin for battery voltage measurement
+#define GPS_RX_PIN 17                       //
+#define GPS_TX_PIN 16                       //
 ;                                           //
 ;                                           //
 #define TOUCH_NUM_PADS 1                    //
-#define TOUCH_PAD_0_PIN GPIO_NUM_4          //
+#define TOUCH_PAD_0_PIN 4                   //
 #endif

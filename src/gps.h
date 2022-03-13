@@ -1,7 +1,6 @@
 #ifndef __gps_h
 #define __gps_h
 
-#include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h>
 

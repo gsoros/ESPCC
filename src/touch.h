@@ -1,8 +1,6 @@
 #ifndef __touch_h
 #define __touch_h
 
-#include <Arduino.h>
-
 #include "definitions.h"
 
 #define ATOLL_TOUCH_NUM_PADS TOUCH_NUM_PADS

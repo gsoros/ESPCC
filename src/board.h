@@ -1,8 +1,6 @@
 #ifndef __board_h
 #define __board_h
 
-#include "Arduino.h"
-
 #include "definitions.h"
 #include "atoll_preferences.h"
 #include "atoll_task.h"
@@ -11,6 +9,7 @@
 #include "gps.h"
 #include "oled.h"
 #include "sdcard.h"
+#include "api.h"
 
 class Board : public Atoll::Task,
               public Atoll::Preferences {
@@ -22,6 +21,7 @@ class Board : public Atoll::Task,
     Ble ble;
     SdCard sd;
     Touch touch = Touch(TOUCH_PAD_0_PIN);
+    Api api;
 
     Board() {
     }
@@ -33,9 +33,10 @@ class Board : public Atoll::Task,
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
 
+        api.setup();
         gps.setup();
         oled.setup();
-        ble.setup("devicename", &arduinoPreferences);
+        ble.setup(hostName, &arduinoPreferences);
         sd.setup();
         touch.setup();
 
@@ -48,13 +49,20 @@ class Board : public Atoll::Task,
     }
 
     void loop() {
-        /*
-        static uint8_t contrast = 0;
+        static int16_t contrast = 0;
         static bool increase = true;
-        Serial.printf("Contrast: %d\n", contrast);
-        oled.setContrast(contrast);
-        contrast += increase ? 1 : -1;
-        if (0 == contrast || UINT8_MAX == contrast) increase = !increase;
+        if (contrast < 0) {
+            contrast = 0;
+            increase = true;
+        } else if (UINT8_MAX <= contrast) {
+            contrast = UINT8_MAX;
+            increase = false;
+        }
+        // bool success =
+        oled.setContrast((uint8_t)contrast);
+        // Serial.printf("Contrast: %d %s\n", contrast, success ? "succ" : "fail");
+        contrast += increase ? 50 : -50;
+        /*
         while (!Serial.available())
             vTaskDelay(10);
         Serial.read();
