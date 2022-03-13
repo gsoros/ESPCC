@@ -13,6 +13,7 @@ class Oled : public Atoll::Task {
         uint8_t y;  // top left y
         uint8_t w;  // width
         uint8_t h;  // height
+        bool invert = false;
     };
 
    public:
@@ -54,6 +55,7 @@ class Oled : public Atoll::Task {
         feedback[0].y = 0;
         feedback[0].w = feedbackWidth;
         feedback[0].h = height / 2;
+        feedback[0].invert = true;
 
         feedback[1].x = 0;
         feedback[1].y = height / 2;
@@ -64,6 +66,7 @@ class Oled : public Atoll::Task {
         feedback[2].y = 0;
         feedback[2].w = feedbackWidth;
         feedback[2].h = height / 2;
+        feedback[2].invert = true;
 
         feedback[3].x = width - feedbackWidth;
         feedback[3].y = height / 2;
