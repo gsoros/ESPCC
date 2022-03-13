@@ -40,33 +40,16 @@ class Board : public Atoll::Task,
         sd.setup();
         touch.setup();
 
-        gps.taskStart("GPS Task", GPS_TASK_FREQ);
-        ble.taskStart("BLE Task", BLE_TASK_FREQ);
+        gps.taskStart("Gps Task", GPS_TASK_FREQ);
+        ble.taskStart("Ble Task", BLE_TASK_FREQ);
         touch.taskStart("Touch Task", TOUCH_TASK_FREQ);
+        oled.taskStart("Oled Task", OLED_TASK_FREQ);
         taskStart("Board Task", BOARD_TASK_FREQ);
 
         if (sd.ready()) sd.test();
     }
 
     void loop() {
-        static int16_t contrast = 0;
-        static bool increase = true;
-        if (contrast < 0) {
-            contrast = 0;
-            increase = true;
-        } else if (UINT8_MAX <= contrast) {
-            contrast = UINT8_MAX;
-            increase = false;
-        }
-        // bool success =
-        oled.setContrast((uint8_t)contrast);
-        // Serial.printf("Contrast: %d %s\n", contrast, success ? "succ" : "fail");
-        contrast += increase ? 50 : -50;
-        /*
-        while (!Serial.available())
-            vTaskDelay(10);
-        Serial.read();
-        */
     }
 
     bool loadSettings() {

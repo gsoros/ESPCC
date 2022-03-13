@@ -5,10 +5,11 @@
 #define BLE_CHAR_VALUE_MAXLENGTH 256        // maximum number of bytes written to ble characteristic values
 ;                                           //
 ;                                           // task frequencies in Hz
-#define BOARD_TASK_FREQ 25                  //
+#define BOARD_TASK_FREQ 10                  //
 #define BLE_TASK_FREQ 10                    //
 #define GPS_TASK_FREQ 100                   //
 #define TOUCH_TASK_FREQ 10                  //
+#define OLED_TASK_FREQ 25                   //
 ;                                           //
 #define SLEEP_DELAY_DEFAULT 15 * 60 * 1000  // 15m
 #define SLEEP_DELAY_MIN 1 * 60 * 1000       // 1m

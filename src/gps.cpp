@@ -9,13 +9,15 @@ void GPS::loop() {
         // Serial.print(c);
     }
 
-    if (gps.time.isValid() && gps.time.isUpdated()) {
-        board.oled.displayGps(&gps);
-    } else {
-        static uint32_t satellites = UINT32_MAX;
-        if (satellites != gps.satellites.value()) {
-            satellites = gps.satellites.value();
-            board.oled.displaySatellites(satellites);
+    if (!board.touch.anyPadIsTouched()) {
+        if (gps.time.isValid() && gps.time.isUpdated()) {
+            board.oled.displayGps(&gps);
+        } else {
+            static uint32_t satellites = UINT32_MAX;
+            if (satellites != gps.satellites.value()) {
+                satellites = gps.satellites.value();
+                board.oled.displaySatellites(satellites);
+            }
         }
     }
 
