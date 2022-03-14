@@ -85,33 +85,43 @@ class Oled : public Atoll::Task {
 
     void loop();
 
-    void printfField(uint8_t positionIndex, bool send, const char *format, ...) {
-        assert(positionIndex < sizeof(fields) / sizeof(fields[0]));
+    void printfField(
+        uint8_t fieldIndex,
+        bool send,
+        uint8_t color,
+        uint8_t bgColor,
+        const char *format,
+        ...) {
+        assert(fieldIndex < sizeof(fields) / sizeof(fields[0]));
         if (send && !aquireMutex()) return;
         char out[4];
         va_list argp;
         va_start(argp, format);
         vsnprintf(out, 4, format, argp);
         va_end(argp);
-        Area *a = &fields[positionIndex];
-        // log_i("%d(%d, %d, %d, %d) %s", positionIndex, a->x, a->y, a->w, a->h, out);
-        fill(a, 0, false);
+        Area *a = &fields[fieldIndex];
+        // log_i("%d(%d, %d, %d, %d) %s", fieldIndex, a->x, a->y, a->w, a->h, out);
+        device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
+        fill(a, bgColor, false, false);
         device->setCursor(a->x, a->y + a->h);
         uint8_t oldColor = device->getDrawColor();
-        device->setDrawColor(1);
+        device->setDrawColor(color);
         device->print(out);
         device->setDrawColor(oldColor);
+        device->setMaxClipWindow();
         if (!send) return;
         device->sendBuffer();
         releaseMutex();
     }
 
-    void fill(Area *a, uint8_t color, bool send) {
+    void fill(Area *a, uint8_t color, bool send = true, bool setClip = true) {
         if (send && !aquireMutex()) return;
         uint8_t oldColor = device->getDrawColor();
+        if (setClip) device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
         device->setDrawColor(color);
         device->drawBox(a->x, a->y, a->w, a->h);
         device->setDrawColor(oldColor);
+        if (setClip) device->setMaxClipWindow();
         if (!send) return;
         device->sendBuffer();
         releaseMutex();
@@ -120,21 +130,18 @@ class Oled : public Atoll::Task {
     void
     displayGps(TinyGPSPlus *gps) {
         if (!aquireMutex()) return;
-        printfField(0, false, "%02d%d",
-                    gps->time.hour(),
-                    gps->time.minute() / 10);
-        printfField(1, false, "%d%02d",
-                    gps->time.minute() % 10,
-                    gps->time.second());
-        printfField(2, false, "%d%02d",
-                    gps->date.month() % 10,
-                    gps->date.day());
+        printfField(0, false, 1, 0, "%02d%d",
+                    gps->time.hour(), gps->time.minute() / 10);
+        printfField(1, false, 1, 0, "%d%02d",
+                    gps->time.minute() % 10, gps->time.second());
+        printfField(2, false, 1, 0, "%d%02d",
+                    gps->date.month() % 10, gps->date.day());
         device->sendBuffer();
         releaseMutex();
     }
 
     void displaySatellites(uint32_t satellites) {
-        printfField(2, true, "%03d", satellites);
+        printfField(2, true, 1, 0, "%03d", satellites);
     }
 
     void onTouchEvent(TouchPad *pad, uint8_t event);

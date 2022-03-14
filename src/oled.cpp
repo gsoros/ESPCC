@@ -28,7 +28,8 @@ void Oled::loop() {
 }
 
 void Oled::onTouchEvent(TouchPad *pad, uint8_t event) {
-    printfField(1, true, "%d%02lu", pad->index, (millis() - pad->touchStart) / 100);
+    // printfField(1, true, 0, 1, "%d%02lu",
+    //             pad->index, (millis() - pad->start) / 100);
 
     if (sizeof(feedback) / sizeof(feedback[0]) <= pad->index) return;
     // if (TouchEvent::start == event) {
@@ -36,8 +37,21 @@ void Oled::onTouchEvent(TouchPad *pad, uint8_t event) {
     //   return;
     // }
     if (TouchEvent::end == event) {
-        fill(&feedback[pad->index], 1, true);
-        fill(&feedback[pad->index], 0, true);
+        // log_i("end");
+        fill(&feedback[pad->index], 1);
+        fill(&feedback[pad->index], 0);
+        return;
+    }
+    if (TouchEvent::doubleTouch == event) {
+        log_i("pad %d double touch", pad->index);
+        Area a = feedback[pad->index];  // copy
+        a.h /= 3;
+        fill(&a, 1, false);
+        a.y += a.h;
+        fill(&a, 0, false);
+        a.y += a.h;
+        fill(&a, 1);
+        fill(&feedback[pad->index], 0);
         return;
     }
     if (TouchEvent::longTouch == event) {
@@ -45,17 +59,18 @@ void Oled::onTouchEvent(TouchPad *pad, uint8_t event) {
         return;
     }
     if (TouchEvent::touching == event) {
-        if (pad->touchStart < pad->lastLongTouch) {  // animation completed, still touching
+        // log_i("touching");
+        if (pad->start < pad->longTouch) {  // animation completed, still touching
             // fill(&feedback[pad->index], 1, true);
             return;
         }
+        // log_i("animating");
         const ulong t = millis();
         Area a = feedback[pad->index];  // copy
-        a.h = a.invert
-                  ? map(t - pad->touchStart, 0, pad->longTouchDelay, 0, a.h)
-                  : map(t - pad->touchStart, 0, pad->longTouchDelay, a.h, 0);
+        a.h = map(t - pad->start, 0, Touch::longTouchTime, 0, a.h);
         if (feedback[pad->index].h < a.h) return;  // overflow
+        a.y += (feedback[pad->index].h - a.h) / 2;
         fill(&feedback[pad->index], 0, false);
-        fill(&a, 1, true);
+        fill(&a, 1);
     }
 }
