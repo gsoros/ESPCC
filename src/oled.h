@@ -127,8 +127,8 @@ class Oled : public Atoll::Task {
         releaseMutex();
     }
 
-    void
-    displayGps(TinyGPSPlus *gps) {
+    void displayGps(TinyGPSPlus *gps) {
+        // log_i("%d", gps->hdop.value());
         if (!aquireMutex()) return;
         printfField(0, false, 1, 0, "%02d%d",
                     gps->time.hour(), gps->time.minute() / 10);
@@ -157,7 +157,7 @@ class Oled : public Atoll::Task {
     SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     U8G2 *device;
 
-    bool aquireMutex(uint32_t timeout = portMAX_DELAY) {
+    bool aquireMutex(uint32_t timeout = 100) {
         if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
             return true;
         log_e("Could not aquire mutex");
