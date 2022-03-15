@@ -6,8 +6,8 @@
 #define ATOLL_TOUCH_NUM_PADS TOUCH_NUM_PADS
 #include "atoll_touch.h"
 
-typedef Atoll::TouchPad TouchPad;
-typedef Atoll::TouchEvent TouchEvent;
+typedef Atoll::Touch::Pad TouchPad;
+typedef Atoll::Touch::Event TouchEvent;
 
 class Touch : public Atoll::Touch {
    public:
