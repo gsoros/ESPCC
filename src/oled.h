@@ -144,7 +144,7 @@ class Oled : public Atoll::Task {
         printfField(2, true, 1, 0, "%03d", satellites);
     }
 
-    void onTouchEvent(TouchPad *pad, uint8_t event);
+    void onTouchEvent(TouchPad *pad, TouchEvent event);
 
     bool setContrast(uint8_t contrast) {
         if (!aquireMutex()) return false;
