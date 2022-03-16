@@ -6,8 +6,9 @@
 
 // typedef Atoll::ApiCommand ApiCommand;
 typedef Atoll::ApiResult ApiResult;
+typedef Atoll::ApiReply ApiReply;
 
-typedef ApiResult *(*ApiProcessor)(const char *str, char *reply, char *value);
+typedef ApiResult *(*ApiProcessor)(ApiReply *reply);
 
 class ApiCommand : public Atoll::ApiCommand {
    public:
@@ -23,8 +24,9 @@ class Api : public Atoll::Api {
     static void setup();
 
    protected:
-    static ApiResult *hostname(const char *arg, char *reply, char *value);
-    static ApiResult *touchThres(const char *arg, char *reply, char *value);
+    static ApiResult *hostnameProcessor(ApiReply *reply);
+    static ApiResult *touchThresProcessor(ApiReply *reply);
+    static ApiResult *touchReadProcessor(ApiReply *reply);
 };
 
 #endif
