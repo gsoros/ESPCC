@@ -40,41 +40,41 @@ void Oled::onTouchEvent(TouchPad *pad, TouchEvent event) {
             return;
         }
         case TouchEvent::end: {
-            log_i("pad %d touch", pad->index);
+            log_i("pad %d end", pad->index);
             fill(a, 1);
             fill(a, 0);
             return;
         }
         case TouchEvent::doubleTouch: {
-            log_i("pad %d double touch", pad->index);
+            log_i("pad %d double", pad->index);
             Area b;
             memcpy(&b, a, sizeof(b));
-            b.h /= 3;
-            fill(&b, 1, false);
-            b.y += b.h;
-            fill(&b, 0, false);
-            b.y += b.h;
-            fill(&b, 1);
-            delay(Touch::touchTime * 3);
-            fill(a, 0);
+            b.h /= 3;                     // divide area height by 3
+            fill(&b, 1, false);           // area 1 white
+            b.y += b.h;                   // move down
+            fill(&b, 0, false);           // area 2 black
+            b.y += b.h;                   // move down
+            fill(&b, 1);                  // area 3 white
+            delay(Touch::touchTime * 3);  //
+            fill(a, 0);                   // clear
             return;
         }
         case TouchEvent::longTouch: {
-            log_i("pad %d long touch", pad->index);
+            log_i("pad %d long", pad->index);
             fill(a, 1);
             delay(Touch::touchTime * 3);
             fill(a, 0);
             return;
         }
         case TouchEvent::touching: {
-            // log_i("touching");
+            // log_i("pad %d touching", pad->index);
             if (pad->start + Touch::longTouchTime < millis()) {  // animation completed, still touching
                 fill(a, 1);
                 delay(Touch::touchTime * 3);
                 fill(a, 0);
                 return;
             }
-            // log_i("animating");
+            // log_i("pad %d animating", pad->index);
             Area b;
             memcpy(&b, a, sizeof(b));
             b.h = map(millis() - pad->start, 0, Touch::longTouchTime, 0, b.h);  // scale down area height
