@@ -4,18 +4,9 @@
 void Api::setup() {
     Atoll::Api::setup();
 
-    addCommand(ApiCommand(
-        1,
-        "hostname",
-        Api::hostnameProcessor));
-    addCommand(ApiCommand(
-        3,
-        "touchThres",
-        Api::touchThresProcessor));
-    addCommand(ApiCommand(
-        4,
-        "touchRead",
-        Api::touchReadProcessor));
+    addCommand(ApiCommand("hostname", Api::hostnameProcessor));
+    addCommand(ApiCommand("touchThres", Api::touchThresProcessor));
+    addCommand(ApiCommand("touchRead", Api::touchReadProcessor));
 }
 
 ApiResult *Api::touchThresProcessor(ApiReply *reply) {
@@ -44,11 +35,16 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
         board.touch.saveSettings();
     }
     // get touchpad thresholds
-    // value format: pad1:threshold1;pad2:threshold2;...
+    // value format: padIndex1:threshold1,padIndex2:threshold2...
     char thresholds[valueLength] = "";
     for (int i = 0; i < board.touch.numPads; i++) {
         char token[9];
-        snprintf(token, sizeof(token), "%d:%d;", i, board.touch.pads[i].threshold);
+        snprintf(
+            token,
+            sizeof(token),
+            0 == i ? "%d:%d" : ",%d:%d",
+            i,
+            board.touch.pads[i].threshold);
         int16_t remaining = valueLength - strlen(thresholds) - 1;
         if (remaining < strlen(token)) {
             log_e("no space left for adding %s to %s", token, thresholds);

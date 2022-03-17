@@ -4,7 +4,6 @@
 #include "definitions.h"
 #include "atoll_api.h"
 
-// typedef Atoll::ApiCommand ApiCommand;
 typedef Atoll::ApiResult ApiResult;
 typedef Atoll::ApiReply ApiReply;
 
@@ -13,10 +12,10 @@ typedef ApiResult *(*ApiProcessor)(ApiReply *reply);
 class ApiCommand : public Atoll::ApiCommand {
    public:
     ApiCommand(
-        uint8_t code = 0,
         const char *name = "",
-        ApiProcessor processor = nullptr)
-        : Atoll::ApiCommand(code, name, processor) {}
+        ApiProcessor processor = nullptr,
+        uint8_t code = 0)
+        : Atoll::ApiCommand(name, processor, code) {}
 };
 
 class Api : public Atoll::Api {
