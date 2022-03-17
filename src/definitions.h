@@ -6,7 +6,8 @@
 ;                                           //
 ;                                           // task frequencies in Hz
 #define BOARD_TASK_FREQ 10                  //
-#define BLE_TASK_FREQ 10                    //
+#define BLE_CLIENT_TASK_FREQ 10             //
+#define BLE_SERVER_TASK_FREQ 10             //
 #define GPS_TASK_FREQ 100                   //
 #define TOUCH_TASK_FREQ 20                  //
 #define OLED_TASK_FREQ 25                   //

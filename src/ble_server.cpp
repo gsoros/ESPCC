@@ -8,7 +8,7 @@ void BleServer::onWrite(BLECharacteristic *c) {
         // in case of success we omit the resultName: "resultCode;..."
         if (reply.result->code == Api::success()->code)
             snprintf(resultStr, sizeof(resultStr), "%d", reply.result->code);
-        else  // in case of error we provide the resultName: "resultCode:resultName;..."
+        else  // in case of an error we provide the resultName: "resultCode:resultName;..."
             snprintf(resultStr, sizeof(resultStr), "%d:%s",
                      reply.result->code, reply.result->name);
         char croppedReply[BLE_CHAR_VALUE_MAXLENGTH] = "";

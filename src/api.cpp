@@ -7,6 +7,7 @@ void Api::setup() {
     addCommand(ApiCommand("hostname", Api::hostnameProcessor));
     addCommand(ApiCommand("touchThres", Api::touchThresProcessor));
     addCommand(ApiCommand("touchRead", Api::touchReadProcessor));
+    addCommand(ApiCommand("scan", Api::scanProcessor));
 }
 
 ApiResult *Api::touchThresProcessor(ApiReply *reply) {
@@ -73,5 +74,18 @@ ApiResult *Api::hostnameProcessor(ApiReply *reply) {
     // TODO
     // get hostname
     strncpy(reply->value, board.hostName, valueLength);
+    return success();
+}
+
+ApiResult *Api::scanProcessor(ApiReply *reply) {
+    if (!strlen(reply->arg)) return result("argInvalid");
+    uint32_t duration = atoi(reply->arg);
+    if (duration < 1 || 120 < duration) return result("argInvalid");
+    if (board.bleClient.scan->isScanning()) {
+        snprintf(reply->value, sizeof(reply->value), "%s", "already scanning");
+        return error();
+    }
+    board.bleClient.startScan(duration);
+    snprintf(reply->value, sizeof(reply->value), "%d", duration);
     return success();
 }
