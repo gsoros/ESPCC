@@ -38,23 +38,30 @@ void BleClient::onResult(BLEAdvertisedDevice* device) {
         log_i("type heartrate");
         strcat(type, "H");
     }
-    if (0 < strlen(type)) {
-        char address[sizeof(PeerDevice::address)];
-        strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
-        if (!peerExists(address)) {
-            PeerDevice* peer = new PeerDevice(
-                address,
-                type,
-                device->getName().c_str());
-            if (!addPeer(peer)) delete peer;
-        }
-        char value[ATOLL_API_VALUE_LENGTH];
-        snprintf(value, sizeof(value), "%d;scanResult=%s,%s,%s",
-                 board.api.success()->code,
-                 address,
-                 type,
-                 device->getName().c_str());
-        log_i("bleServer.setApiValue('%s')", value);
-        board.bleServer.setApiValue(value);
-    }
+    if (strlen(type) < 1) return;
+
+    char address[sizeof(PeerDevice::address)];
+    strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
+    if (peerExists(address)) return;
+    PeerDevice* peer;
+    if (strstr(type, "P"))
+        peer = new PowerMeter(
+            address,
+            type,
+            device->getName().c_str());
+    else
+        peer = new PeerDevice(
+            address,
+            type,
+            device->getName().c_str());
+    if (!addPeer(peer)) delete peer;
+
+    char value[ATOLL_API_VALUE_LENGTH];
+    snprintf(value, sizeof(value), "%d;scanResult=%s,%s,%s",
+             board.api.success()->code,
+             address,
+             type,
+             device->getName().c_str());
+    log_i("bleServer.setApiValue('%s')", value);
+    board.bleServer.setApiValue(value);
 }
