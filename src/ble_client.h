@@ -4,7 +4,7 @@
 #include "definitions.h"
 #include "atoll_ble_client.h"
 
-typedef Atoll::PeerDevice PeerDevice;
+typedef Atoll::BlePeerDevice PeerDevice;
 
 class BleClient : public Atoll::BleClient {
    public:

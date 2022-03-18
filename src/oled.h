@@ -141,7 +141,7 @@ class Oled : public Atoll::Task {
     }
 
     void displaySatellites(uint32_t satellites) {
-        printfField(2, true, 1, 0, "S%02d", satellites);
+        printfField(2, true, 1, 0, "*%02d", satellites);
     }
 
     void onTouchEvent(TouchPad *pad, TouchEvent event);

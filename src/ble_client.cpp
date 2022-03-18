@@ -39,17 +39,22 @@ void BleClient::onResult(BLEAdvertisedDevice* device) {
         strcat(type, "H");
     }
     if (0 < strlen(type)) {
-        addPeer(PeerDevice(
-            device->getAddress().toString().c_str(),
-            type,
-            device->getName().c_str()));
+        char address[sizeof(PeerDevice::address)];
+        strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
+        if (!peerExists(address)) {
+            PeerDevice* peer = new PeerDevice(
+                address,
+                type,
+                device->getName().c_str());
+            if (!addPeer(peer)) delete peer;
+        }
         char value[ATOLL_API_VALUE_LENGTH];
         snprintf(value, sizeof(value), "%d;scanResult=%s,%s,%s",
                  board.api.success()->code,
-                 device->getAddress().toString().c_str(),
+                 address,
                  type,
                  device->getName().c_str());
-        log_i("%s", value);
+        log_i("bleServer.setApiValue('%s')", value);
         board.bleServer.setApiValue(value);
     }
 }
