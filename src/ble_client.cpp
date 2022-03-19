@@ -1,5 +1,6 @@
 #include "ble_client.h"
 #include "board.h"
+#include "powermeter.h"
 
 void BleClient::onResult(BLEAdvertisedDevice* device) {
     log_i("scan found %s", device->toString().c_str());
@@ -57,8 +58,9 @@ void BleClient::onResult(BLEAdvertisedDevice* device) {
     if (!addPeer(peer)) delete peer;
 
     char value[ATOLL_API_VALUE_LENGTH];
-    snprintf(value, sizeof(value), "%d;scanResult=%s,%s,%s",
+    snprintf(value, sizeof(value), "%d;%d=%s,%s,%s",
              board.api.success()->code,
+             board.api.command("scanResult")->code,
              address,
              type,
              device->getName().c_str());

@@ -77,9 +77,14 @@ void Oled::onTouchEvent(TouchPad *pad, TouchEvent event) {
             // log_i("pad %d animating", pad->index);
             Area b;
             memcpy(&b, a, sizeof(b));
-            b.h = map(millis() - pad->start, 0, Touch::longTouchTime, 0, b.h);  // scale down area height
-            if (a->h < b.h) return;                                             // overflow
-            b.y += (a->h - b.h) / 2;                                            // move area to vertical middle
+            b.h = map(
+                millis() - pad->start,
+                0,
+                Touch::longTouchTime,
+                0,
+                b.h);                 // scale down area height
+            if (a->h < b.h) return;   // overflow
+            b.y += (a->h - b.h) / 2;  // move area to vertical middle
             fill(a, 0, false);
             fill(&b, 1);
             return;

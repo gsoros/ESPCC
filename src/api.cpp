@@ -8,6 +8,7 @@ void Api::setup() {
     addCommand(ApiCommand("touchThres", Api::touchThresProcessor));
     addCommand(ApiCommand("touchRead", Api::touchReadProcessor));
     addCommand(ApiCommand("scan", Api::scanProcessor));
+    addCommand(ApiCommand("scanResult", Api::scanResultProcessor));
 }
 
 ApiResult *Api::touchThresProcessor(ApiReply *reply) {
@@ -88,4 +89,9 @@ ApiResult *Api::scanProcessor(ApiReply *reply) {
     board.bleClient.startScan(duration);
     snprintf(reply->value, sizeof(reply->value), "%d", duration);
     return success();
+}
+
+ApiResult *Api::scanResultProcessor(ApiReply *reply) {
+    log_e("command scanResult cannot be called");
+    return error();
 }

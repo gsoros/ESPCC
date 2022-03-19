@@ -130,10 +130,12 @@ class Oled : public Atoll::Task {
     void displayGps(TinyGPSPlus *gps) {
         // log_i("%d", gps->hdop.value());
         if (!aquireMutex()) return;
-        printfField(0, false, 1, 0, "%02d%d",
-                    gps->time.hour(), gps->time.minute() / 10);
-        printfField(1, false, 1, 0, "%d%02d",
-                    gps->time.minute() % 10, gps->time.second());
+        if (lastPower < millis() - 3000)
+            printfField(0, false, 1, 0, "%02d%d",
+                        gps->time.hour(), gps->time.minute() / 10);
+        if (lastCadence < millis() - 3000)
+            printfField(1, false, 1, 0, "%d%02d",
+                        gps->time.minute() % 10, gps->time.second());
         printfField(2, false, 1, 0, "%d%02d",
                     gps->date.month() % 10, gps->date.day());
         device->sendBuffer();
@@ -141,7 +143,25 @@ class Oled : public Atoll::Task {
     }
 
     void displaySatellites(uint32_t satellites) {
-        printfField(2, true, 1, 0, "*%02d", satellites);
+        printfField(2, true, 1, 0, "-%02d", satellites);
+    }
+
+    void displayPower(uint16_t value) {
+        static uint16_t lastValue = 0;
+        if (lastValue != value) {
+            printfField(0, true, 1, 0, "%03d", value);
+            lastValue = value;
+            lastPower = millis();
+        }
+    }
+
+    void displayCadence(uint16_t value) {
+        static uint16_t lastValue = 0;
+        if (lastValue != value) {
+            printfField(1, true, 1, 0, "%03d", value);
+            lastValue = value;
+            lastCadence = millis();
+        }
     }
 
     void onTouchEvent(TouchPad *pad, TouchEvent event);
@@ -156,8 +176,11 @@ class Oled : public Atoll::Task {
    protected:
     SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
     U8G2 *device;
+    ulong lastPower = 0;
+    ulong lastCadence = 0;
 
     bool aquireMutex(uint32_t timeout = 100) {
+        // log_i("aquireMutex");
         if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
             return true;
         log_e("Could not aquire mutex");
@@ -165,6 +188,7 @@ class Oled : public Atoll::Task {
     }
 
     void releaseMutex() {
+        // log_i("releaseMutex");
         xSemaphoreGive(mutex);
     }
 };

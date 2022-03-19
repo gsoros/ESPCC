@@ -5,7 +5,7 @@
 #include "atoll_ble_client.h"
 
 typedef Atoll::BlePeerDevice PeerDevice;
-typedef Atoll::PowerMeter PowerMeter;
+// typedef Atoll::PowerMeter PowerMeter;
 
 class BleClient : public Atoll::BleClient {
    public:

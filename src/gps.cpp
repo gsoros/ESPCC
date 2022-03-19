@@ -11,7 +11,11 @@ void GPS::loop() {
 
     if (!board.touch.anyPadIsTouched()) {
         if (gps.time.isValid() && gps.time.isUpdated()) {
-            board.oled.displayGps(&gps);
+            static ulong lastTime = 0;
+            if (lastTime < millis() - 1000) {
+                board.oled.displayGps(&gps);
+                lastTime = millis();
+            }
         } else {
             static uint32_t satellites = UINT32_MAX;
             if (satellites != gps.satellites.value()) {
