@@ -4,7 +4,7 @@
 #include "definitions.h"
 #include "atoll_ble_client.h"
 
-typedef Atoll::BlePeerDevice PeerDevice;
+typedef Atoll::Peer Peer;
 // typedef Atoll::PowerMeter PowerMeter;
 
 class BleClient : public Atoll::BleClient {
@@ -13,8 +13,8 @@ class BleClient : public Atoll::BleClient {
         Atoll::BleClient::setup(deviceName, p);
     }
 
-    virtual PeerDevice *createPeer(const char *address, const char *type, const char *name);
-    virtual PeerDevice *createPeer(BLEAdvertisedDevice *advertisedDevice);
+    virtual Peer *createPeer(const char *address, uint8_t addressType, const char *type, const char *name);
+    virtual Peer *createPeer(BLEAdvertisedDevice *advertisedDevice);
 
     virtual void onResult(BLEAdvertisedDevice *advertisedDevice);
 

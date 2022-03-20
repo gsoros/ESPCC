@@ -105,7 +105,7 @@ ApiResult *Api::peersProcessor(ApiReply *reply) {
     for (int i = 0; i < board.bleClient.peersMax; i++) {
         if (nullptr == board.bleClient.peers[i]) continue;
         if (board.bleClient.peers[i]->markedForRemoval) continue;
-        char token[PeerDevice::packedMaxLength + 1];
+        char token[Peer::packedMaxLength + 1];
         board.bleClient.peers[i]->pack(token, sizeof(token) - 1);
         strcat(token, ";");
         remaining = valueLength - strlen(value) - 1;
@@ -120,16 +120,18 @@ ApiResult *Api::peersProcessor(ApiReply *reply) {
 }
 
 ApiResult *Api::addPeerProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < sizeof(PeerDevice::address) + 3) {
+    if (strlen(reply->arg) < sizeof(Peer::address) + 3) {
         if (reply->log) log_e("arg too short (%d)", strlen(reply->arg));
         return result("argInvalid");
     }
-    char address[sizeof(PeerDevice::address)] = "";
-    char type[sizeof(PeerDevice::type)] = "";
-    char name[sizeof(PeerDevice::name)] = "";
-    if (!PeerDevice::unpack(
+    char address[sizeof(Peer::address)] = "";
+    uint8_t addressType = 0;
+    char type[sizeof(Peer::type)] = "";
+    char name[sizeof(Peer::name)] = "";
+    if (!Peer::unpack(
             reply->arg,
             address, sizeof(address),
+            &addressType,
             type, sizeof(type),
             name, sizeof(name))) {
         if (reply->log) log_e("could not unpack %s", reply->arg);
@@ -139,7 +141,7 @@ ApiResult *Api::addPeerProcessor(ApiReply *reply) {
         if (reply->log) log_e("peer already exists: %s", reply->arg);
         return result("argInvalid");
     }
-    PeerDevice *peer = board.bleClient.createPeer(address, type, name);
+    Peer *peer = board.bleClient.createPeer(address, addressType, type, name);
     if (nullptr == peer) {
         if (reply->log) log_e("could not create peer from %s", reply->arg);
         return error();
@@ -154,7 +156,7 @@ ApiResult *Api::addPeerProcessor(ApiReply *reply) {
 }
 
 ApiResult *Api::deletePeerProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < sizeof(PeerDevice::address) - 1) {
+    if (strlen(reply->arg) < sizeof(Peer::address) - 1) {
         if (reply->log) log_e("arg too short (%d)", strlen(reply->arg));
         return result("argInvalid");
     }

@@ -143,7 +143,8 @@ class Oled : public Atoll::Task {
     }
 
     void displaySatellites(uint32_t satellites) {
-        printfField(2, true, 1, 0, "-%02d", satellites);
+        if (lastHeartrate < millis() - 3000)
+            printfField(2, true, 1, 0, "-%02d", satellites);
     }
 
     void displayPower(uint16_t value) {
@@ -164,6 +165,15 @@ class Oled : public Atoll::Task {
         }
     }
 
+    void displayHeartrate(uint16_t value) {
+        static uint16_t lastValue = 0;
+        if (lastValue != value) {
+            printfField(2, true, 1, 0, "%03d", value);
+            lastValue = value;
+            lastHeartrate = millis();
+        }
+    }
+
     void onTouchEvent(TouchPad *pad, TouchEvent event);
 
     bool setContrast(uint8_t contrast) {
@@ -178,6 +188,7 @@ class Oled : public Atoll::Task {
     U8G2 *device;
     ulong lastPower = 0;
     ulong lastCadence = 0;
+    ulong lastHeartrate = 0;
 
     bool aquireMutex(uint32_t timeout = 100) {
         // log_i("aquireMutex");

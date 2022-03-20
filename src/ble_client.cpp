@@ -1,25 +1,29 @@
 #include "ble_client.h"
 #include "board.h"
-#include "powermeter.h"
+#include "peers.h"
 
 void BleClient::loadSettings() {
     if (!preferencesStartLoad()) return;
     for (uint8_t i = 0; i < peersMax; i++) {
         char key[8] = "";
         snprintf(key, sizeof(key), "peer%d", i);
-        char packed[PeerDevice::packedMaxLength] = "";
-        strncpy(packed, preferences->getString(key, packed).c_str(), sizeof(packed));
+        char packed[Peer::packedMaxLength] = "";
+        strncpy(packed,
+                preferences->getString(key, packed).c_str(),
+                sizeof(packed));
         if (strlen(packed) < 1) continue;
         log_i("loading %s: %s", key, packed);
-        char address[sizeof(PeerDevice::address)] = "";
-        char type[sizeof(PeerDevice::type)] = "";
-        char name[sizeof(PeerDevice::name)] = "";
-        if (PeerDevice::unpack(
+        char address[sizeof(Peer::address)] = "";
+        uint8_t addressType = 0;
+        char type[sizeof(Peer::type)] = "";
+        char name[sizeof(Peer::name)] = "";
+        if (Peer::unpack(
                 packed,
                 address, sizeof(address),
+                &addressType,
                 type, sizeof(type),
                 name, sizeof(name))) {
-            PeerDevice *peer = createPeer(address, type, name);
+            Peer *peer = createPeer(address, addressType, type, name);
             if (nullptr == peer) continue;  // delete nullptr should be safe!
             if (!addPeer(peer)) delete peer;
         }
@@ -30,7 +34,7 @@ void BleClient::loadSettings() {
 void BleClient::saveSettings() {
     if (!preferencesStartSave()) return;
     char key[8] = "";
-    char packed[PeerDevice::packedMaxLength] = "";
+    char packed[Peer::packedMaxLength] = "";
     for (uint8_t i = 0; i < peersMax; i++) {
         snprintf(key, sizeof(key), "peer%d", i);
         strncpy(packed, "", sizeof(packed));
@@ -48,36 +52,44 @@ void BleClient::saveSettings() {
 void BleClient::printSettings() {
     for (uint8_t i = 0; i < peersMax; i++)
         if (nullptr != peers[i])
-            log_i("peer %d name: %s, type: %s, address: %s",
-                  i, peers[i]->name, peers[i]->type, peers[i]->address);
+            log_i("peer %d name: %s, type: %s, address: %s(%d)",
+                  i, peers[i]->name, peers[i]->type, peers[i]->address, peers[i]->addressType);
 }
 
-PeerDevice *BleClient::createPeer(const char *address, const char *type, const char *name) {
-    PeerDevice *peer;
+Peer *BleClient::createPeer(
+    const char *address,
+    uint8_t addressType,
+    const char *type,
+    const char *name) {
+    log_i("creating %s,%d,%s,%s", address, addressType, type, name);
+    Peer *peer;
     //    if (strstr(type, "E"))
-    //        peer = new ESPM(address,type,name);
+    //        peer = new ESPM(address, addressType, type, name); else
     if (strstr(type, "P"))
-        peer = new PowerMeter(address, type, name);
-    //    else if (strstr(type, "H"))
-    //        peer = new HeartrateMonitor(address, type, name);
+        peer = new PowerMeter(address, addressType, type, name);
+    else if (strstr(type, "H"))
+        peer = new HeartrateMonitor(address, addressType, type, name);
     else
         return nullptr;
     return peer;
 }
 
-PeerDevice *BleClient::createPeer(BLEAdvertisedDevice *device) {
+Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     // BLEUUID espmUuid = BLEUUID(ESPM_API_SERVICE_UUID);
     BLEUUID cpsUuid = BLEUUID(CYCLING_POWER_SERVICE_UUID);
-    // BLEUUID hrsUuid = BLEUUID(HEART_RATE_SERVICE_UUID);
-    char address[sizeof(PeerDevice::address)];
+    BLEUUID hrsUuid = BLEUUID(HEART_RATE_SERVICE_UUID);
+    char address[sizeof(Peer::address)];
     strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
-    PeerDevice *peer = nullptr;
+    uint8_t addressType = device->getAddress().getType();
+    char name[sizeof(Peer::name)];
+    strncpy(name, device->getName().c_str(), sizeof(name));
+    Peer *peer = nullptr;
     //    if (device->isAdvertisingService(espmUuid))
-    //        peer = new ESPM(address,"E",device->getName().c_str());
+    //        peer = new ESPM(address, addressType, "E", name); else
     if (device->isAdvertisingService(cpsUuid))
-        peer = new PowerMeter(address, "P", device->getName().c_str());
-    //    else if (device->isAdvertisingService(hrsUuid)) {
-    //        peer = new HeartrateMonitor(address, "H", device->getName().c_str());
+        peer = new PowerMeter(address, addressType, "P", name);
+    else if (device->isAdvertisingService(hrsUuid))
+        peer = new HeartrateMonitor(address, addressType, "H", name);
     return peer;
 }
 
@@ -85,7 +97,23 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
     log_i("scan found %s", device->toString().c_str());
 
     if (peerExists(device->getAddress().toString().c_str())) return;
-    PeerDevice *peer = createPeer(device);
+
+    if (device->haveTargetAddress())
+        for (int i = 0; i < device->getTargetAddressCount(); i++)
+            log_i("Target address %i: %s", device->getTargetAddress(i).toString().c_str());
+
+    // scan->stop();
+    // BLEClient *client = BLEDevice::createClient(device->getAddress());
+    // while (!client->isConnected()) {
+    //     if (client->connect())
+    //         log_i("connected");
+    //     else
+    //         log_i("could not connect");
+    //     delay(500);
+    // }
+    // return;
+
+    Peer *peer = createPeer(device);
     if (nullptr == peer) {  // delete nullptr should be safe!
         log_i("not adding peer %s", device->getName().c_str());
         return;
@@ -96,10 +124,11 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
         saveSettings();
 
     char value[ATOLL_API_VALUE_LENGTH];
-    snprintf(value, sizeof(value), "%d;%d=%s,%s,%s",
+    snprintf(value, sizeof(value), "%d;%d=%s,%d,%s,%s",
              board.api.success()->code,
              board.api.command("scanResult")->code,
              peer->address,
+             peer->addressType,
              peer->type,
              peer->name);
     log_i("bleServer.setApiValue('%s')", value);

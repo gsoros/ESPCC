@@ -6,9 +6,14 @@ void Touch::fireEvent(uint8_t index, TouchEvent event) {
     board.oled.onTouchEvent(&pads[index], event);
     if (event == TouchEvent::longTouch)
         board.bleClient.startScan(5);
-    else if (event == TouchEvent::doubleTouch)
-        if (board.bleClient.peers[0] != nullptr) {
-            board.bleClient.peers[0]->disconnect();
-            board.bleClient.removePeer(board.bleClient.peers[0]);
+    else if (event == TouchEvent::doubleTouch) {
+        for (uint8_t i = 0; i < board.bleClient.peersMax; i++) {
+            if (board.bleClient.peers[i] != nullptr) {
+                board.bleClient.peers[i]->disconnect();
+                board.bleClient.removePeer(board.bleClient.peers[i]);
+                board.bleClient.saveSettings();
+                break;
+            }
         }
+    }
 }
