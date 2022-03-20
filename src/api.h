@@ -28,6 +28,9 @@ class Api : public Atoll::Api {
     static ApiResult *touchReadProcessor(ApiReply *reply);
     static ApiResult *scanProcessor(ApiReply *reply);
     static ApiResult *scanResultProcessor(ApiReply *reply);
+    static ApiResult *peersProcessor(ApiReply *reply);
+    static ApiResult *addPeerProcessor(ApiReply *reply);
+    static ApiResult *deletePeerProcessor(ApiReply *reply);
 };
 
 #endif
