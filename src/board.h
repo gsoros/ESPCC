@@ -5,8 +5,8 @@
 #include "atoll_preferences.h"
 #include "atoll_task.h"
 #include "touch.h"
-#include "ble_server.h"
 #include "ble_client.h"
+#include "ble_server.h"
 #include "gps.h"
 #include "oled.h"
 #include "sdcard.h"
@@ -19,8 +19,8 @@ class Board : public Atoll::Task,
     ::Preferences arduinoPreferences = ::Preferences();
     GPS gps;
     Oled oled;
-    BleServer bleServer;
     BleClient bleClient;
+    BleServer bleServer;
     SdCard sd;
     Touch touch = Touch(TOUCH_PAD_0_PIN);
     Api api;
@@ -38,14 +38,14 @@ class Board : public Atoll::Task,
         api.setup();
         gps.setup();
         oled.setup();
-        bleServer.setup(hostName, &arduinoPreferences, ESPCC_API_SERVICE_UUID);
         bleClient.setup(hostName, &arduinoPreferences);
+        bleServer.setup(hostName, &arduinoPreferences, ESPCC_API_SERVICE_UUID);
         sd.setup();
         touch.setup(&arduinoPreferences, "Touch");
 
         gps.taskStart("Gps Task", GPS_TASK_FREQ);
-        bleServer.taskStart("BleServer Task", BLE_SERVER_TASK_FREQ);
         bleClient.taskStart("BleClient Task", BLE_CLIENT_TASK_FREQ);
+        bleServer.taskStart("BleServer Task", BLE_SERVER_TASK_FREQ);
         touch.taskStart("Touch Task", TOUCH_TASK_FREQ);
         oled.taskStart("Oled Task", OLED_TASK_FREQ);
         taskStart("Board Task", BOARD_TASK_FREQ);

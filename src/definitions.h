@@ -27,4 +27,7 @@
 ;                                           //
 #define TOUCH_NUM_PADS 1                    //
 #define TOUCH_PAD_0_PIN 4                   //
+;
+;
+;
 #endif

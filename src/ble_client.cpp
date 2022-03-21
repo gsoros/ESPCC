@@ -81,6 +81,9 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     char address[sizeof(Peer::address)];
     strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
     uint8_t addressType = device->getAddress().getType();
+    // NimBLEAddress faszom;
+    // NimBLEAdvertisedDevice geci;
+    // BLEClient *pina = BLEDevice::createClient();
     char name[sizeof(Peer::name)];
     strncpy(name, device->getName().c_str(), sizeof(name));
     Peer *peer = nullptr;

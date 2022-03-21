@@ -136,14 +136,15 @@ class Oled : public Atoll::Task {
         if (lastCadence < millis() - 3000)
             printfField(1, false, 1, 0, "%d%02d",
                         gps->time.minute() % 10, gps->time.second());
-        printfField(2, false, 1, 0, "%d%02d",
-                    gps->date.month() % 10, gps->date.day());
+        if (lastHeartrate < millis() - 30000)
+            printfField(2, false, 1, 0, "%d%02d",
+                        gps->date.month() % 10, gps->date.day());
         device->sendBuffer();
         releaseMutex();
     }
 
     void displaySatellites(uint32_t satellites) {
-        if (lastHeartrate < millis() - 3000)
+        if (lastHeartrate < millis() - 30000)
             printfField(2, true, 1, 0, "-%02d", satellites);
     }
 
