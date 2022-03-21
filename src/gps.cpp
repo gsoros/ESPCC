@@ -13,14 +13,14 @@ void GPS::loop() {
         if (gps.time.isValid() && gps.time.isUpdated()) {
             static ulong lastTime = 0;
             if (lastTime < millis() - 1000) {
-                board.oled.displayGps(&gps);
+                board.oled.onGps(&gps);
                 lastTime = millis();
             }
         } else {
             static uint32_t satellites = UINT32_MAX;
             if (satellites != gps.satellites.value()) {
                 satellites = gps.satellites.value();
-                board.oled.displaySatellites(satellites);
+                board.oled.onSatellites(satellites);
             }
         }
     }

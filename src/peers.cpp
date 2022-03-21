@@ -8,8 +8,8 @@ void PowerChar::onNotify(
     bool isNotify) {
     lastValue = decode(data, length);
     // log_i("PowerChar::onNotify %d %d", lastValue, lastCadence);
-    board.oled.displayPower(lastValue);
-    board.oled.displayCadence(lastCadence);
+    board.oled.onPower(lastValue);
+    board.oled.onCadence(lastCadence);
 }
 
 void HeartrateChar::onNotify(
@@ -19,5 +19,5 @@ void HeartrateChar::onNotify(
     bool isNotify) {
     lastValue = decode(data, length);
     // log_i("HRChar::onNotify %d %d", lastValue, lastCadence);
-    board.oled.displayHeartrate(lastValue);
+    board.oled.onHeartrate(lastValue);
 }

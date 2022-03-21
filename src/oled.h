@@ -127,7 +127,7 @@ class Oled : public Atoll::Task {
         releaseMutex();
     }
 
-    void displayGps(TinyGPSPlus *gps) {
+    void onGps(TinyGPSPlus *gps) {
         // log_i("%d", gps->hdop.value());
         if (!aquireMutex()) return;
         if (lastPower < millis() - 3000)
@@ -143,12 +143,12 @@ class Oled : public Atoll::Task {
         releaseMutex();
     }
 
-    void displaySatellites(uint32_t satellites) {
+    void onSatellites(uint32_t satellites) {
         if (lastHeartrate < millis() - 30000)
             printfField(2, true, 1, 0, "-%02d", satellites);
     }
 
-    void displayPower(uint16_t value) {
+    void onPower(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
             printfField(0, true, 1, 0, "%03d", value);
@@ -157,7 +157,7 @@ class Oled : public Atoll::Task {
         }
     }
 
-    void displayCadence(uint16_t value) {
+    void onCadence(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
             printfField(1, true, 1, 0, "%03d", value);
@@ -166,7 +166,7 @@ class Oled : public Atoll::Task {
         }
     }
 
-    void displayHeartrate(uint16_t value) {
+    void onHeartrate(uint16_t value) {
         static uint16_t lastValue = 0;
         if (lastValue != value) {
             printfField(2, true, 1, 0, "%03d", value);

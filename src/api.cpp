@@ -120,7 +120,7 @@ ApiResult *Api::peersProcessor(ApiReply *reply) {
 }
 
 ApiResult *Api::addPeerProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < sizeof(Peer::address) + 3) {
+    if (strlen(reply->arg) < sizeof(Peer::address) + 5) {
         if (reply->log) log_e("arg too short (%d)", strlen(reply->arg));
         return result("argInvalid");
     }

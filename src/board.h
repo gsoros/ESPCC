@@ -11,6 +11,8 @@
 #include "oled.h"
 #include "sdcard.h"
 #include "api.h"
+#include "wifi.h"
+#include "ota.h"
 
 class Board : public Atoll::Task,
               public Atoll::Preferences {
@@ -24,6 +26,8 @@ class Board : public Atoll::Task,
     SdCard sd;
     Touch touch = Touch(TOUCH_PAD_0_PIN);
     Api api;
+    Wifi wifi;
+    Ota ota;
 
     Board() {
     }
@@ -42,6 +46,8 @@ class Board : public Atoll::Task,
         bleServer.setup(hostName, &arduinoPreferences, ESPCC_API_SERVICE_UUID);
         sd.setup();
         touch.setup(&arduinoPreferences, "Touch");
+        wifi.setup(hostName, &arduinoPreferences, "Wifi", &api);
+        ota.setup(hostName);
 
         gps.taskStart("Gps Task", GPS_TASK_FREQ);
         bleClient.taskStart("BleClient Task", BLE_CLIENT_TASK_FREQ);
