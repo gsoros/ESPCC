@@ -13,6 +13,7 @@
 #define OLED_TASK_FREQ 25                                              //
 #define OTA_TASK_FREQ 1                                                //
 #define BATTERY_TASK_FREQ 1                                            //
+#define RECORDER_TASK_FREQ 1                                           //
 ;                                                                      //
 #define SLEEP_DELAY_DEFAULT 15 * 60 * 1000                             // 15m
 #define SLEEP_DELAY_MIN 1 * 60 * 1000                                  // 1m
@@ -26,6 +27,8 @@
 #define GPS_RX_PIN 17                                                  //
 #define GPS_TX_PIN 16                                                  //
 ;                                                                      //
+#define OLED_SCK_PIN 14                                                //
+#define OLED_SDA_PIN 12                                                //
 ;                                                                      //
 #define TOUCH_NUM_PADS 1                                               //
 #define TOUCH_PAD_0_PIN 4                                              //

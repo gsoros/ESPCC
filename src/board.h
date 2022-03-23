@@ -7,21 +7,27 @@
 #include "touch.h"
 #include "ble_client.h"
 #include "ble_server.h"
-#include "gps.h"
-#include "oled.h"
+#include "atoll_gps.h"
+#include "atoll_oled.h"
 #include "sdcard.h"
 #include "api.h"
 #include "atoll_wifi.h"
 #include "atoll_ota.h"
 #include "atoll_battery.h"
+#include "atoll_recorder.h"
 
 class Board : public Atoll::Task,
               public Atoll::Preferences {
    public:
     char hostName[SETTINGS_STR_LENGTH] = HOSTNAME;
     ::Preferences arduinoPreferences = ::Preferences();
-    GPS gps;
-    Oled oled;
+    Atoll::GPS gps;
+    Atoll::Oled oled = Atoll::Oled(
+        new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
+            U8G2_R1,        // rotation 90˚
+            U8X8_PIN_NONE,  // reset pin none
+            OLED_SCK_PIN,
+            OLED_SDA_PIN));
     BleClient bleClient;
     BleServer bleServer;
     SdCard sd;
@@ -30,6 +36,7 @@ class Board : public Atoll::Task,
     Atoll::Wifi wifi;
     Atoll::Ota ota;
     Atoll::Battery battery;
+    Atoll::Recorder recorder;
 
     Board() {}
     virtual ~Board() {}
@@ -41,13 +48,14 @@ class Board : public Atoll::Task,
 
         bleServer.setup(hostName);
         api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
-        gps.setup();
+        gps.setup(9600, SWSERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN, &touch, &oled);
         oled.setup();
         bleClient.setup(hostName, &arduinoPreferences, &bleServer);
         sd.setup();
         touch.setup(&arduinoPreferences, "Touch");
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
         battery.setup(&arduinoPreferences, &battery, &api, &bleServer);
+        recorder.setup(&gps);
 
         gps.taskStart("Gps Task", GPS_TASK_FREQ);
         bleClient.taskStart("BleClient Task", BLE_CLIENT_TASK_FREQ);
@@ -55,13 +63,16 @@ class Board : public Atoll::Task,
         touch.taskStart("Touch Task", TOUCH_TASK_FREQ);
         oled.taskStart("Oled Task", OLED_TASK_FREQ);
         battery.taskStart("Battery Task", BATTERY_TASK_FREQ);
+        recorder.taskStart("Recorder Task", RECORDER_TASK_FREQ);
         taskStart("Board Task", BOARD_TASK_FREQ);
+
         bleServer.start();
 
         if (sd.ready()) sd.test();
     }
 
     void loop() {
+        taskStop();
     }
 
     bool loadSettings() {

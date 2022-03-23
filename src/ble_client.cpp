@@ -75,23 +75,18 @@ Peer *BleClient::createPeer(
 }
 
 Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
-    // BLEUUID espmUuid = BLEUUID(ESPM_API_SERVICE_UUID);
-    BLEUUID cpsUuid = BLEUUID(CYCLING_POWER_SERVICE_UUID);
-    BLEUUID hrsUuid = BLEUUID(HEART_RATE_SERVICE_UUID);
     char address[sizeof(Peer::address)];
     strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
     uint8_t addressType = device->getAddress().getType();
-    // NimBLEAddress faszom;
-    // NimBLEAdvertisedDevice geci;
-    // BLEClient *pina = BLEDevice::createClient();
     char name[sizeof(Peer::name)];
     strncpy(name, device->getName().c_str(), sizeof(name));
+    
     Peer *peer = nullptr;
-    //    if (device->isAdvertisingService(espmUuid))
+    //    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID)))
     //        peer = new ESPM(address, addressType, "E", name); else
-    if (device->isAdvertisingService(cpsUuid))
+    if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID)))
         peer = new PowerMeter(address, addressType, "P", name);
-    else if (device->isAdvertisingService(hrsUuid))
+    else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID)))
         peer = new HeartrateMonitor(address, addressType, "H", name);
     return peer;
 }
