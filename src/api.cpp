@@ -1,8 +1,13 @@
 #include "api.h"
 #include "board.h"
 
-void Api::setup() {
-    Atoll::Api::setup();
+void Api::setup(
+    Api *instance,
+    ::Preferences *p,
+    const char *preferencesNS,
+    BleServer *bleServer,
+    const char *serviceUuid) {
+    Atoll::Api::setup(instance, p, preferencesNS, bleServer, serviceUuid);
 
     addCommand(ApiCommand("hostname", Api::hostnameProcessor));
     addCommand(ApiCommand("touchThres", Api::touchThresProcessor));

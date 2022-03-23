@@ -3,13 +3,17 @@
 
 #include "definitions.h"
 #include "atoll_ble_client.h"
+#include "ble_server.h"
 
 typedef Atoll::Peer Peer;
 // typedef Atoll::PowerMeter PowerMeter;
 
 class BleClient : public Atoll::BleClient {
    public:
-    virtual void setup(const char *deviceName, ::Preferences *p) {
+    BleServer *bleServer = nullptr;
+
+    virtual void setup(const char *deviceName, ::Preferences *p, BleServer *bleServer = nullptr) {
+        this->bleServer = bleServer;
         Atoll::BleClient::setup(deviceName, p);
     }
 

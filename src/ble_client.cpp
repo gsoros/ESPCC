@@ -61,7 +61,7 @@ Peer *BleClient::createPeer(
     uint8_t addressType,
     const char *type,
     const char *name) {
-    log_i("creating %s,%d,%s,%s", address, addressType, type, name);
+    // log_i("creating %s,%d,%s,%s", address, addressType, type, name);
     Peer *peer;
     //    if (strstr(type, "E"))
     //        peer = new ESPM(address, addressType, type, name); else
@@ -126,6 +126,8 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
     else
         saveSettings();
 
+    if (nullptr == bleServer) return;
+
     char value[ATOLL_API_VALUE_LENGTH];
     snprintf(value, sizeof(value), "%d;%d=%s,%d,%s,%s",
              board.api.success()->code,
@@ -134,6 +136,10 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
              peer->addressType,
              peer->type,
              peer->name);
-    log_i("bleServer.setApiValue('%s')", value);
-    board.bleServer.setApiValue(value);
+
+    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
+    bleServer->notify(
+        BLEUUID(ESPCC_API_SERVICE_UUID),
+        BLEUUID(API_TX_CHAR_UUID),
+        (uint8_t *)value, strlen(value));
 }

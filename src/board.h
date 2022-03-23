@@ -11,8 +11,9 @@
 #include "oled.h"
 #include "sdcard.h"
 #include "api.h"
-#include "wifi.h"
-#include "ota.h"
+#include "atoll_wifi.h"
+#include "atoll_ota.h"
+#include "atoll_battery.h"
 
 class Board : public Atoll::Task,
               public Atoll::Preferences {
@@ -26,12 +27,11 @@ class Board : public Atoll::Task,
     SdCard sd;
     Touch touch = Touch(TOUCH_PAD_0_PIN);
     Api api;
-    Wifi wifi;
-    Ota ota;
+    Atoll::Wifi wifi;
+    Atoll::Ota ota;
+    Atoll::Battery battery;
 
-    Board() {
-    }
-
+    Board() {}
     virtual ~Board() {}
 
     void setup() {
@@ -39,22 +39,24 @@ class Board : public Atoll::Task,
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
 
-        api.setup();
+        bleServer.setup(hostName);
+        api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
         gps.setup();
         oled.setup();
-        bleClient.setup(hostName, &arduinoPreferences);
-        bleServer.setup(hostName, &arduinoPreferences, ESPCC_API_SERVICE_UUID);
+        bleClient.setup(hostName, &arduinoPreferences, &bleServer);
         sd.setup();
         touch.setup(&arduinoPreferences, "Touch");
-        wifi.setup(hostName, &arduinoPreferences, "Wifi", &api);
-        ota.setup(hostName);
+        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
+        battery.setup(&arduinoPreferences, &battery, &api, &bleServer);
 
         gps.taskStart("Gps Task", GPS_TASK_FREQ);
         bleClient.taskStart("BleClient Task", BLE_CLIENT_TASK_FREQ);
         bleServer.taskStart("BleServer Task", BLE_SERVER_TASK_FREQ);
         touch.taskStart("Touch Task", TOUCH_TASK_FREQ);
         oled.taskStart("Oled Task", OLED_TASK_FREQ);
+        battery.taskStart("Battery Task", BATTERY_TASK_FREQ);
         taskStart("Board Task", BOARD_TASK_FREQ);
+        bleServer.start();
 
         if (sd.ready()) sd.test();
     }

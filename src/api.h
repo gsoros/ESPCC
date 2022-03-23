@@ -3,6 +3,7 @@
 
 #include "definitions.h"
 #include "atoll_api.h"
+#include "ble_server.h"
 
 typedef Atoll::ApiResult ApiResult;
 typedef Atoll::ApiReply ApiReply;
@@ -20,7 +21,11 @@ class ApiCommand : public Atoll::ApiCommand {
 
 class Api : public Atoll::Api {
    public:
-    static void setup();
+    static void setup(Api *instance,
+                      ::Preferences *p,
+                      const char *preferencesNS,
+                      BleServer *bleServer = nullptr,
+                      const char *serviceUuid = nullptr);
 
    protected:
     static ApiResult *hostnameProcessor(ApiReply *reply);

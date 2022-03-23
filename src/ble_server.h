@@ -10,11 +10,6 @@
 
 class BleServer : public Atoll::BleServer {
    public:
-    virtual void setup(const char *deviceName, ::Preferences *p, const char *asUuidStr) {
-        Atoll::BleServer::setup(deviceName, p, asUuidStr);
-    }
-
-    void onWrite(BLECharacteristic *c);
 };
 
 #endif
