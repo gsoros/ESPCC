@@ -54,7 +54,7 @@ class Board : public Atoll::Task,
         sd.setup();
         touch.setup(&arduinoPreferences, "Touch");
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
-        battery.setup(&arduinoPreferences, &battery, &api, &bleServer);
+        battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
         recorder.setup(&gps);
 
         gps.taskStart("Gps Task", GPS_TASK_FREQ);
