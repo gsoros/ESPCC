@@ -12,7 +12,10 @@ class BleClient : public Atoll::BleClient {
    public:
     BleServer *bleServer = nullptr;
 
-    virtual void setup(const char *deviceName, ::Preferences *p, BleServer *bleServer = nullptr) {
+    virtual void setup(
+        const char *deviceName,
+        ::Preferences *p,
+        BleServer *bleServer = nullptr) {
         this->bleServer = bleServer;
         Atoll::BleClient::setup(deviceName, p);
     }

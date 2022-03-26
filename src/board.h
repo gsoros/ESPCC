@@ -4,6 +4,12 @@
 #include "definitions.h"
 #include "atoll_preferences.h"
 #include "atoll_task.h"
+#ifdef FEATURE_SERIAL
+#include "atoll_split_stream.h"
+#include "atoll_wifi_serial.h"
+#else
+#include "atoll_null_serial.h"
+#endif
 #include "touch.h"
 #include "ble_client.h"
 #include "ble_server.h"
@@ -22,6 +28,10 @@ class Board : public Atoll::Task,
     const char *taskName() { return "Board"; }
     char hostName[SETTINGS_STR_LENGTH] = HOSTNAME;
     ::Preferences arduinoPreferences = ::Preferences();
+#ifdef FEATURE_SERIAL
+    HardwareSerial hwSerial = HardwareSerial(0);
+    Atoll::WifiSerial wifiSerial;
+#endif
     Atoll::GPS gps;
     Atoll::Oled oled = Atoll::Oled(
         new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
@@ -44,6 +54,13 @@ class Board : public Atoll::Task,
 
     void setup() {
         setCpuFrequencyMhz(80);
+
+#ifdef FEATURE_SERIAL
+        hwSerial.begin(115200);
+        Serial.setup(&hwSerial, &wifiSerial, true, true);
+        while (!hwSerial) vTaskDelay(10);
+        Serial.printf("\n\n\nESPCC %s %s\n\n\n", __DATE__, __TIME__);
+#endif
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
 
@@ -55,7 +72,12 @@ class Board : public Atoll::Task,
         sdcard.setup();
         // if (sdcard.mounted) sdcard.test();
         touch.setup(&arduinoPreferences, "Touch");
-        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder);
+        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder
+#ifdef FEATURE_SERIAL
+                   ,
+                   &wifiSerial
+#endif
+        );
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
         recorder.setup(&gps, &sdcard);
 

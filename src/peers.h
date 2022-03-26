@@ -25,10 +25,6 @@ class PowerMeter : public Atoll::PowerMeter {
               type,
               name,
               new PowerChar()) {
-        // replace default char object
-        // PowerChar* powerChar = new PowerChar;
-        // log_i("deleted %d", deleteChars(powerChar->label));
-        // addChar(powerChar);
     }
 };
 
