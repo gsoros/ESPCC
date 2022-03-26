@@ -35,16 +35,28 @@ void BleClient::saveSettings() {
     if (!preferencesStartSave()) return;
     char key[8] = "";
     char packed[Peer::packedMaxLength] = "";
+    char saved[Peer::packedMaxLength] = "";
     for (uint8_t i = 0; i < peersMax; i++) {
         snprintf(key, sizeof(key), "peer%d", i);
         strncpy(packed, "", sizeof(packed));
-        if (nullptr == peers[i] || peers[i]->markedForRemoval)
-            log_i("removing %s", key);
-        else if (peers[i]->pack(packed, sizeof(packed)))
-            log_i("saving %s: %s", key, packed);
-        else
-            log_e("could not pack %s: %s", key, peers[i]->address);
-        preferences->putString(key, packed);
+        strncpy(saved,
+                preferences->getString(key).c_str(),
+                sizeof(saved));
+        if (nullptr == peers[i] || peers[i]->markedForRemoval) {
+            if (0 != strcmp(saved, "")) {
+                log_i("removing %s", key);
+                preferences->putString(key, "");
+            }
+        } else {
+            if (!peers[i]->pack(packed, sizeof(packed))) {
+                log_e("could not pack %s: %s", key, peers[i]->address);
+                continue;
+            }
+            if (0 != strcmp(saved, packed)) {
+                log_i("saving %s: %s", key, packed);
+                preferences->putString(key, packed);
+            }
+        }
     }
     preferencesEnd();
 }
@@ -80,7 +92,7 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     uint8_t addressType = device->getAddress().getType();
     char name[sizeof(Peer::name)];
     strncpy(name, device->getName().c_str(), sizeof(name));
-    
+
     Peer *peer = nullptr;
     //    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID)))
     //        peer = new ESPM(address, addressType, "E", name); else

@@ -52,6 +52,7 @@ class Board : public Atoll::Task,
         oled.setup();
         bleClient.setup(hostName, &arduinoPreferences, &bleServer);
         sd.setup();
+        if (sd.mounted) sd.test();
         touch.setup(&arduinoPreferences, "Touch");
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
@@ -67,8 +68,6 @@ class Board : public Atoll::Task,
         taskStart("Board Task", BOARD_TASK_FREQ);
 
         bleServer.start();
-
-        if (sd.ready()) sd.test();
     }
 
     void loop() {

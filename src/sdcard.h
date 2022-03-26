@@ -5,12 +5,14 @@
 #include "SD.h"
 #include "SPI.h"
 
-#define SCK 23
+#include "atoll_fs.h"
+
+#define SCK 18
 #define MISO 19
-#define MOSI 18
+#define MOSI 23
 #define CS 5
 
-class SdCard {
+class SdCard : public Atoll::Fs {
    public:
     SPIClass spi = SPIClass(VSPI);
 
@@ -19,37 +21,33 @@ class SdCard {
 
     void setup() {
         spi.begin(SCK, MISO, MOSI, CS);
-        if (!SD.begin(CS, spi, 80000000)) {
-            Serial.println("[SD] Card Mount Failed");
+        // if (!SD.begin(CS, spi, 80000000)) {
+        if (!SD.begin(CS, spi)) {
+            log_i("Card Mount Failed");
             return;
         }
 
         uint8_t cardType = SD.cardType();
         if (cardType == CARD_NONE) {
-            Serial.println("[SD] No SD card attached");
+            log_i("No SD card attached");
             return;
         }
+        mounted = true;
 
-        Serial.print("[SD] Card Type: ");
+        log_i("Card Type: ");
         if (cardType == CARD_MMC) {
-            Serial.println("MMC");
+            log_i("MMC");
         } else if (cardType == CARD_SD) {
-            Serial.println("SDSC");
+            log_i("SDSC");
         } else if (cardType == CARD_SDHC) {
-            Serial.println("SDHC");
+            log_i("SDHC");
         } else {
-            Serial.println("Unknown");
+            log_i("Unknown");
         }
 
-        Serial.printf("[SD] Card Size: %lluMB\n", SD.cardSize() / (1024 * 1024));
-        Serial.printf("[SD] Total space: %lluMB\n", SD.totalBytes() / (1024 * 1024));
-        Serial.printf("[SD] Used space: %lluMB\n", SD.usedBytes() / (1024 * 1024));
-    }
-
-    bool ready() {
-        uint8_t cardType = SD.cardType();
-        if (cardType == CARD_NONE || cardType == CARD_UNKNOWN) return false;
-        return true;
+        log_i("Card Size: %lluMB", SD.cardSize() / (1024 * 1024));
+        log_i("Total space: %lluMB", SD.totalBytes() / (1024 * 1024));
+        log_i("Used space: %lluMB", SD.usedBytes() / (1024 * 1024));
     }
 
     void test() {
@@ -59,73 +57,70 @@ class SdCard {
         removeDir(SD, "/testing");
         listDir(SD, "/", 2);
         writeFile(SD, "/testing.txt", "Hello ");
-        appendFile(SD, "/testing.txt", "World!\n");
+        appendFile(SD, "/testing.txt", "World!");
         readFile(SD, "/testing.txt");
-        deleteFile(SD, "/testing.txt");
+        deleteFile(SD, "/testing2.txt");
         renameFile(SD, "/testing.txt", "/testing2.txt");
         readFile(SD, "/testing2.txt");
-        testFileIO(SD, "/testing.txt");
+        testFileIO(SD, "/testing2.txt");
+        deleteFile(SD, "/testing2.txt");
     }
 
     void listDir(fs::FS &fs, const char *dirname, uint8_t levels) {
-        Serial.printf("Listing directory: %s\n", dirname);
+        log_i("Listing directory: %s", dirname);
 
         File root = fs.open(dirname);
         if (!root) {
-            Serial.println("Failed to open directory");
+            log_i("Failed to open directory");
             return;
         }
         if (!root.isDirectory()) {
-            Serial.println("Not a directory");
+            log_i("Not a directory");
             return;
         }
 
         File file = root.openNextFile();
         while (file) {
             if (file.isDirectory()) {
-                Serial.print("  DIR : ");
-                Serial.println(file.name());
+                log_i("Dir: %s", file.name());
                 if (levels) {
                     listDir(fs, file.name(), levels - 1);
                 }
             } else {
-                Serial.print("  FILE: ");
-                Serial.print(file.name());
-                Serial.print("  SIZE: ");
-                Serial.println(file.size());
+                log_i("File: %s, size: %d", file.name(), file.size());
             }
             file = root.openNextFile();
         }
     }
 
     void createDir(fs::FS &fs, const char *path) {
-        Serial.printf("Creating Dir: %s\n", path);
+        log_i("Creating Dir: %s", path);
         if (fs.mkdir(path)) {
-            Serial.println("Dir created");
+            log_i("Dir created");
         } else {
-            Serial.println("mkdir failed");
+            log_i("mkdir failed");
         }
     }
 
     void removeDir(fs::FS &fs, const char *path) {
-        Serial.printf("Removing Dir: %s\n", path);
+        log_i("Removing Dir: %s", path);
         if (fs.rmdir(path)) {
-            Serial.println("Dir removed");
+            log_i("Dir removed");
         } else {
-            Serial.println("rmdir failed");
+            log_i("rmdir failed");
         }
     }
 
     void readFile(fs::FS &fs, const char *path) {
-        Serial.printf("Reading file: %s\n", path);
+        log_i("Reading file: %s", path);
 
         File file = fs.open(path);
         if (!file) {
-            Serial.println("Failed to open file for reading");
+            log_i("Failed to open file for reading");
             return;
         }
 
-        Serial.print("Read from file: ");
+        log_i("Read from file:");
         while (file.available()) {
             Serial.write(file.read());
         }
@@ -133,93 +128,88 @@ class SdCard {
     }
 
     void writeFile(fs::FS &fs, const char *path, const char *message) {
-        Serial.printf("Writing file: %s\n", path);
+        log_i("Writing file: %s", path);
 
         File file = fs.open(path, FILE_WRITE);
         if (!file) {
-            Serial.println("Failed to open file for writing");
+            log_i("Failed to open file for writing");
             return;
         }
         if (file.print(message)) {
-            Serial.println("File written");
+            log_i("File written");
         } else {
-            Serial.println("Write failed");
+            log_i("Write failed");
         }
         file.close();
     }
 
     void appendFile(fs::FS &fs, const char *path, const char *message) {
-        Serial.printf("Appending to file: %s\n", path);
+        log_i("Appending to file: %s", path);
 
         File file = fs.open(path, FILE_APPEND);
         if (!file) {
-            Serial.println("Failed to open file for appending");
+            log_i("Failed to open file for appending");
             return;
         }
         if (file.print(message)) {
-            Serial.println("Message appended");
+            log_i("Message appended");
         } else {
-            Serial.println("Append failed");
+            log_i("Append failed");
         }
         file.close();
     }
 
     void renameFile(fs::FS &fs, const char *path1, const char *path2) {
-        Serial.printf("Renaming file %s to %s\n", path1, path2);
+        log_i("Renaming file %s to %s", path1, path2);
         if (fs.rename(path1, path2)) {
-            Serial.println("File renamed");
+            log_i("File renamed");
         } else {
-            Serial.println("Rename failed");
+            log_i("Rename failed");
         }
     }
 
     void deleteFile(fs::FS &fs, const char *path) {
-        Serial.printf("Deleting file: %s\n", path);
+        log_i("Deleting file: %s", path);
         if (fs.remove(path)) {
-            Serial.println("File deleted");
+            log_i("File deleted");
         } else {
-            Serial.println("Delete failed");
+            log_i("Delete failed");
         }
     }
 
     void testFileIO(fs::FS &fs, const char *path) {
-        File file = fs.open(path);
         static uint8_t buf[512];
         size_t len = 0;
-        uint32_t start = millis();
-        uint32_t end = start;
-        if (file) {
-            len = file.size();
-            size_t flen = len;
-            start = millis();
-            while (len) {
-                size_t toRead = len;
-                if (toRead > 512) {
-                    toRead = 512;
-                }
-                file.read(buf, toRead);
-                len -= toRead;
-            }
-            end = millis() - start;
-            Serial.printf("%u bytes read for %u ms\n", flen, end);
-            file.close();
-        } else {
-            Serial.println("Failed to open file for reading");
-        }
+        ulong start = millis();
 
-        file = fs.open(path, FILE_WRITE);
+        File file = fs.open(path, FILE_WRITE);
         if (!file) {
-            Serial.println("Failed to open file for writing");
+            log_i("Failed to open file for writing");
             return;
         }
-
-        size_t i;
-        start = millis();
-        for (i = 0; i < 2048; i++) {
+        for (size_t i = 0; i < 2048; i++) {
             file.write(buf, 512);
         }
-        end = millis() - start;
-        Serial.printf("%u bytes written for %u ms\n", 2048 * 512, end);
+        log_i("%u bytes written in %u ms", 2048 * 512, millis() - start);
+        file.close();
+
+        file = fs.open(path);
+        if (!file) {
+            log_i("Failed to open file for reading");
+            return;
+        }
+        len = file.size();
+        size_t flen = len;
+        start = millis();
+        while (len) {
+            size_t toRead = len;
+            if (toRead > 512) {
+                toRead = 512;
+            }
+            file.read(buf, toRead);
+            len -= toRead;
+        }
+        log_i("%u bytes read in %u ms", flen, millis() - start);
         file.close();
     }
 };
