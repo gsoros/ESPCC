@@ -19,6 +19,7 @@
 class Board : public Atoll::Task,
               public Atoll::Preferences {
    public:
+    const char *taskName() { return "Board"; }
     char hostName[SETTINGS_STR_LENGTH] = HOSTNAME;
     ::Preferences arduinoPreferences = ::Preferences();
     Atoll::GPS gps;
