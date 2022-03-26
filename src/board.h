@@ -9,7 +9,7 @@
 #include "ble_server.h"
 #include "atoll_gps.h"
 #include "atoll_oled.h"
-#include "sdcard.h"
+#include "atoll_sdcard.h"
 #include "api.h"
 #include "atoll_wifi.h"
 #include "atoll_ota.h"
@@ -30,7 +30,7 @@ class Board : public Atoll::Task,
             OLED_SDA_PIN));
     BleClient bleClient;
     BleServer bleServer;
-    SdCard sd;
+    Atoll::SdCard sdcard = Atoll::SdCard(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
     Touch touch = Touch(TOUCH_PAD_0_PIN);
     Api api;
     Atoll::Wifi wifi;
@@ -51,23 +51,24 @@ class Board : public Atoll::Task,
         gps.setup(9600, SWSERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN, &touch, &oled);
         oled.setup();
         bleClient.setup(hostName, &arduinoPreferences, &bleServer);
-        sd.setup();
-        if (sd.mounted) sd.test();
+        sdcard.setup();
+        // if (sdcard.mounted) sdcard.test();
         touch.setup(&arduinoPreferences, "Touch");
-        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
+        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder);
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
-        recorder.setup(&gps);
+        recorder.setup(&gps, &sdcard);
 
-        gps.taskStart("Gps Task", GPS_TASK_FREQ);
-        bleClient.taskStart("BleClient Task", BLE_CLIENT_TASK_FREQ);
-        bleServer.taskStart("BleServer Task", BLE_SERVER_TASK_FREQ);
-        touch.taskStart("Touch Task", TOUCH_TASK_FREQ);
-        oled.taskStart("Oled Task", OLED_TASK_FREQ);
-        battery.taskStart("Battery Task", BATTERY_TASK_FREQ);
-        recorder.taskStart("Recorder Task", RECORDER_TASK_FREQ);
-        taskStart("Board Task", BOARD_TASK_FREQ);
+        gps.taskStart(GPS_TASK_FREQ);
+        bleClient.taskStart(BLE_CLIENT_TASK_FREQ);
+        bleServer.taskStart(BLE_SERVER_TASK_FREQ);
+        touch.taskStart(TOUCH_TASK_FREQ);
+        oled.taskStart(OLED_TASK_FREQ);
+        battery.taskStart(BATTERY_TASK_FREQ);
+        recorder.taskStart(RECORDER_TASK_FREQ);
+        taskStart(BOARD_TASK_FREQ);
 
         bleServer.start();
+        recorder.start();
     }
 
     void loop() {

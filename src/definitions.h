@@ -33,6 +33,11 @@
 #define TOUCH_NUM_PADS 1                                               //
 #define TOUCH_PAD_0_PIN 4                                              //
 ;                                                                      //
+#define SD_SCK_PIN 18                                                  //
+#define SD_MISO_PIN 19                                                 //
+#define SD_MOSI_PIN 23                                                 //
+#define SD_CS_PIN 5                                                    //
+;                                                                      //
 ;                                                                      //
 #define ESPCC_API_SERVICE_UUID "f2d59f15-1fb3-4b22-b8cc-b554debb2720"  //
 #define API_SERVICE_UUID ESPCC_API_SERVICE_UUID                        //
