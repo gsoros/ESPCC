@@ -18,7 +18,7 @@ void Touch::fireEvent(uint8_t index, Event event) {
             //         break;
             //     }
             // }
-            board.recorder.stop();
+            board.recorder.end();
         } break;
         default:
             break;

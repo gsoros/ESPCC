@@ -21,6 +21,7 @@
 #include "atoll_ota.h"
 #include "atoll_battery.h"
 #include "atoll_recorder.h"
+#include "atoll_uploader.h"
 
 class Board : public Atoll::Task,
               public Atoll::Preferences {
@@ -48,6 +49,7 @@ class Board : public Atoll::Task,
     Atoll::Ota ota;
     Atoll::Battery battery;
     Atoll::Recorder recorder;
+    Atoll::Uploader uploader;
 
     Board() {}
     virtual ~Board() {}
@@ -79,7 +81,8 @@ class Board : public Atoll::Task,
 #endif
         );
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
-        recorder.setup(&gps, &sdcard);
+        recorder.setup(&gps, &sdcard, &api, &recorder);
+        uploader.setup(&recorder, &sdcard, &wifi);
 
         gps.taskStart(GPS_TASK_FREQ);
         bleClient.taskStart(BLE_CLIENT_TASK_FREQ);
@@ -88,6 +91,7 @@ class Board : public Atoll::Task,
         oled.taskStart(OLED_TASK_FREQ);
         battery.taskStart(BATTERY_TASK_FREQ);
         recorder.taskStart(RECORDER_TASK_FREQ);
+        uploader.taskStart(UPLOADER_TASK_FREQ);
         taskStart(BOARD_TASK_FREQ);
 
         bleServer.start();

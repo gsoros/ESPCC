@@ -13,7 +13,8 @@
 #define OLED_TASK_FREQ 25.0f                                           //
 #define OTA_TASK_FREQ 1.0f                                             //
 #define BATTERY_TASK_FREQ 1.0f                                         //
-#define RECORDER_TASK_FREQ 0.1f                                        // once every 10 secs
+#define RECORDER_TASK_FREQ 1.0f                                        //
+#define UPLOADER_TASK_FREQ 0.1f                                        // once every 10 secs
 ;                                                                      //
 #define SLEEP_DELAY_DEFAULT 15 * 60 * 1000                             // 15m
 #define SLEEP_DELAY_MIN 1 * 60 * 1000                                  // 1m
