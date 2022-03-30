@@ -115,6 +115,9 @@ class Board : public Atoll::Task,
         if (lastSync < t - 60000 || !lastSync)
             if (gps.syncSystemTime())
                 lastSync = t;
+#ifdef FEATURE_SERIAL
+        while (wifiSerial.available()) Serial.write(wifiSerial.read());
+#endif
     }
 
     bool loadSettings() {
