@@ -5,12 +5,12 @@
 #define BLE_CHAR_VALUE_MAXLENGTH 512                                   // maximum number of bytes written to ble characteristic values
 ;                                                                      //
 ;                                                                      // task frequencies in Hz
-#define BOARD_TASK_FREQ 10.0f                                          //
+#define BOARD_TASK_FREQ 0.1f                                           //
 #define BLE_CLIENT_TASK_FREQ 10.0f                                     //
 #define BLE_SERVER_TASK_FREQ 1.0f                                      //
 #define GPS_TASK_FREQ 20.0f                                            //
 #define TOUCH_TASK_FREQ 20.0f                                          //
-#define OLED_TASK_FREQ 25.0f                                           //
+#define OLED_TASK_FREQ 1.0f                                           //
 #define OTA_TASK_FREQ 1.0f                                             //
 #define BATTERY_TASK_FREQ 1.0f                                         //
 #define RECORDER_TASK_FREQ 1.0f                                        //
@@ -21,7 +21,8 @@
 #define SLEEP_COUNTDOWN_AFTER 30 * 1000                                // 30s countdown on the serial console
 #define SLEEP_COUNTDOWN_EVERY 2000                                     // 2s
 ;                                                                      //
-#define HOSTNAME "ESPCC"                                               // default host name, used by ble and ota mdns
+#define HOSTNAME "ESPCC"                                               // default host name
+#define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"                          //
 ;                                                                      //
 #define LED_PIN 22                                                     // onboard LED pin
 #define BATTERY_PIN 35                                                 // pin for battery voltage measurement

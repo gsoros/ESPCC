@@ -5,17 +5,15 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
-#include "atoll_task.h"
 #include "atoll_fs.h"
 #include "atoll_recorder.h"
 #include "atoll_ota.h"
 
-class RecWebserver : public Atoll::Task {
+class RecWebserver {
     typedef AsyncWebServerRequest Req;
     typedef AsyncWebServerResponse Resp;
 
    public:
-    const char *taskName() { return "RecWebserver"; }
     FS *fs = nullptr;                     //
     AsyncWebServer *server = nullptr;     //
     Atoll::Recorder *recorder = nullptr;  //
@@ -60,10 +58,6 @@ class RecWebserver : public Atoll::Task {
         });
         server->begin();
         log_i("serving on port 80");
-    }
-
-    void loop() {
-        taskStop();
     }
 
     void list(Req *request) {
@@ -112,6 +106,7 @@ class RecWebserver : public Atoll::Task {
         char gpxPath[ATOLL_RECORDER_PATH_LENGTH] = "";
         const char *currentRecPath = recorder->currentPath();
         uint8_t basePathLen = strlen(recorder->basePath);
+        uint16_t recordings = 0;
         while (file = dir.openNextFile()) {
             if (strlen(file.name()) - strlen(recorder->basePath) - 1 != 8) {
                 // log_i("%s is not a recording, skipping", file.name());
@@ -147,11 +142,14 @@ class RecWebserver : public Atoll::Task {
             snprintf(item, sizeof(item), itemFormat, gpxId, gpxId, gpxId);
             log_i("item: %s", item);
             strncat(html, item, sizeof(item));
+            recordings++;
         }
         dir.close();
-
+        if (0 == recordings) {
+            request->send(200, "text/html", "<!DOCTYPE html><html><body>No recordings</body></html>");
+            return;
+        }
         strncat(html, footer, footerLen);
-
         request->send(200, "text/html", html);
     }
 
