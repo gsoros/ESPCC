@@ -124,7 +124,7 @@ class RecWebserver : public Atoll::Task {
                 continue;
             }
             if (0 == strcmp(recorder->continuePath, file.name())) {
-                // log_i("skipping %s", file.name());
+                log_i("%s is paused, skipping", file.name());
                 file.close();
                 continue;
             }
@@ -175,7 +175,7 @@ class RecWebserver : public Atoll::Task {
             return;
         }
         if (nullptr != ota)
-            ota->off();
+            ota->off();  // ota crashes on long download
         request->send(*fs, path, "application/gpx+xml", true);
     }
 
