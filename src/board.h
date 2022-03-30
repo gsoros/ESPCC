@@ -26,6 +26,7 @@
 #include "atoll_recorder.h"
 #include "atoll_uploader.h"
 #include "rec_webserver.h"
+#include "atoll_log.h"
 
 class Board : public Atoll::Task,
               public Atoll::Preferences {
@@ -71,7 +72,7 @@ class Board : public Atoll::Task,
 #endif
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
-        log_i("Setting timezone %s", timezone);
+        logI("Setting timezone %s", timezone);
         Atoll::setTimezone(timezone);
 
         bleServer.setup(hostName);
