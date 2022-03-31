@@ -23,7 +23,7 @@
 #include "atoll_wifi.h"
 #include "atoll_ota.h"
 #include "atoll_battery.h"
-#include "atoll_recorder.h"
+#include "recorder.h"
 #include "atoll_uploader.h"
 #include "rec_webserver.h"
 #include "atoll_log.h"
@@ -54,7 +54,7 @@ class Board : public Atoll::Task,
     Atoll::Wifi wifi;
     Atoll::Ota ota;
     Atoll::Battery battery;
-    Atoll::Recorder recorder;
+    Recorder recorder;
     // Atoll::Uploader uploader;
     RecWebserver recWebserver;
 
@@ -72,7 +72,7 @@ class Board : public Atoll::Task,
 #endif
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
-        logI("Setting timezone %s", timezone);
+        log_i("Setting timezone %s", timezone);
         Atoll::setTimezone(timezone);
 
         bleServer.setup(hostName);
@@ -112,7 +112,8 @@ class Board : public Atoll::Task,
         ulong t = millis();
 
         static ulong lastSync = 0;
-        if (lastSync < t - 60000 || !lastSync)
+        const uint syncFreq = 600000;  // every 10 minutes
+        if (((lastSync < t - syncFreq) && (syncFreq < t)) || !lastSync)
             if (gps.syncSystemTime())
                 lastSync = t;
 #ifdef FEATURE_SERIAL

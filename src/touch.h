@@ -3,6 +3,7 @@
 
 #include "definitions.h"
 
+#undef ATOLL_TOUCH_NUM_PADS
 #define ATOLL_TOUCH_NUM_PADS TOUCH_NUM_PADS
 #include "atoll_touch.h"
 

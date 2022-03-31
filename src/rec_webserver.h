@@ -14,10 +14,13 @@ class RecWebserver {
     typedef AsyncWebServerResponse Resp;
 
    public:
-    FS *fs = nullptr;                     //
-    AsyncWebServer *server = nullptr;     //
-    Atoll::Recorder *recorder = nullptr;  //
-    Atoll::Ota *ota = nullptr;            //
+    FS *fs = nullptr;                             //
+    AsyncWebServer *server = nullptr;             //
+    Atoll::Recorder *recorder = nullptr;          //
+    Atoll::Ota *ota = nullptr;                    //
+    const char *indexFileName = "index.html";     //
+    TaskHandle_t generateIndexTaskHandle = NULL;  //
+    bool generatingIndex = false;                 // TODO checking TaskHandle == NULL does not work reliably
 
     void setup(
         Atoll::Fs *fs,
@@ -50,7 +53,14 @@ class RecWebserver {
         server->on("/remove", HTTP_GET, [this](Req *request) {
             remove(request);
         });
-        server->onNotFound([this](Req *request) {
+        server->on("/genIndex", HTTP_GET, [this](Req *request) {
+            genIndex(request);
+        });
+        server->onNotFound([](Req *request) {
+            if (nullptr == strstr("favicon.ico", request->url().c_str())) {
+                request->send(404, "text/plain", "404 Not found");
+                return;
+            }
             log_i("404 request %s", request->url().c_str());
             Resp *response = request->beginResponse(302, "text/plain", "Moved");
             response->addHeader("Location", "/");
@@ -73,84 +83,188 @@ class RecWebserver {
             request->send(500, "text/html", "rec error");
             return;
         }
+        char indexPath[strlen(recorder->basePath) + strlen(indexFileName) + 2] = "";
+        snprintf(indexPath, sizeof(indexPath), "%s/%s", recorder->basePath, indexFileName);
+        log_i("checking %s", indexPath);
+        bool indexExists = fs->exists(indexPath);
+        if (!indexExists || generatingIndex) {
+            if (!indexExists)
+                log_i("%s does not exist", indexPath);
+            if (!generatingIndex) {
+                log_i("calling generator");
+                generateIndex();
+            } else
+                log_i("generator is running");
+            genIndexResponse(request);
+            return;
+        }
+        log_i("sending %s", indexPath);
+        request->send(*fs, indexPath, "text/html; charset=iso8859-1");
+    }
+
+    void genIndex(Req *request) {
+        genIndexResponse(request);
+        generateIndex();
+    }
+
+    void genIndexResponse(Req *request) {
+        request->send(200, "text/html", R"====(<!DOCTYPE html><html><body>
+        <p>Generating index...</p><a href="/">reload</a></body></html>)====");
+    }
+
+    void generateIndex() {
+        if (generatingIndex) {
+            log_i("already generating");
+            return;
+        }
+        log_i("starting task");
+        xTaskCreatePinnedToCore(
+            generateIndexTask,
+            "Generate Index",
+            4096,
+            this,
+            1,
+            &generateIndexTaskHandle,
+            1);
+    }
+
+    static void generateIndexTask(void *p) {
+        RecWebserver *thisP = (RecWebserver *)p;
+        thisP->generateIndexRunner();
+        thisP->generateIndexTaskStop();
+    }
+
+    void generateIndexTaskStop() {
+        generatingIndex = false;
+        if (NULL != generateIndexTaskHandle) {
+            log_i("deleting task");
+            vTaskDelete(generateIndexTaskHandle);
+        }
+    }
+
+    void generateIndexRunner() {
+        log_i("starting run");
+        generatingIndex = true;
+        if (nullptr == fs) {
+            log_e("fs is null");
+            generateIndexTaskStop();
+        }
+        if (nullptr == recorder) {
+            log_e("recorder is null");
+            generateIndexTaskStop();
+        }
         File dir = fs->open(recorder->basePath);
         if (!dir) {
             log_e("could not open %s", recorder->basePath);
-            request->send(500, "text/html", "basepath error");
             dir.close();
-            return;
+            generateIndexTaskStop();
         }
         if (!dir.isDirectory()) {
             log_e("%s is not a directory", recorder->basePath);
-            request->send(500, "text/html", "basepath not dir error");
             dir.close();
-            return;
+            generateIndexTaskStop();
+        }
+        char indexPath[strlen(recorder->basePath) + strlen(indexFileName) + 2] = "";
+        snprintf(indexPath, sizeof(indexPath), "%s/%s", recorder->basePath, indexFileName);
+        File index = fs->open(indexPath, FILE_WRITE);
+        if (!index) {
+            log_e("could not open %s for writing", indexPath);
+            dir.close();
+            generateIndexTaskStop();
         }
 
-        char html[1024] = R"====(<!DOCTYPE html>
+        char header[1024] = R"====(<!DOCTYPE html>
 <html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1">
     </head>
-    <body>)====";
+    <body>
+        <table>
+            <tr>
+            <td></td>
+            <td>distance</td>
+            <td>alt gain</td>
+            <td>remove</td>
+            </tr>)====";
+
         const char *itemFormat = R"====(
-        <p><a href="download?f=%s">%s</a> <a href="remove?f=%s">remove</a></p>)====";
+            <tr>
+            <td><a href="download?f=%s">%s</a></td>
+            <td>%.0fm</td>
+            <td>%dm</td>
+            <td><a href="remove?f=%s">remove</a></td>
+            </tr>)====";
+
         const char *footer = R"====(
+        </table>
     </body>
 </html>
 )====";
 
-        uint16_t footerLen = strlen(footer);
+        if (strlen(header) != index.write((uint8_t *)header, strlen(header))) {
+            log_e("could not write header to %s", indexPath);
+            index.close();
+            dir.close();
+            generateIndexTaskStop();
+        }
         File file;
         char filePath[ATOLL_RECORDER_PATH_LENGTH] = "";
-        char gpxPath[ATOLL_RECORDER_PATH_LENGTH] = "";
-        const char *currentRecPath = recorder->currentPath();
         uint8_t basePathLen = strlen(recorder->basePath);
-        uint16_t recordings = 0;
+        uint16_t files = 0;
+        char ext[5] = "";
         while (file = dir.openNextFile()) {
-            if (strlen(file.name()) - strlen(recorder->basePath) - 1 != 8) {
-                // log_i("%s is not a recording, skipping", file.name());
-                file.close();
-                continue;
-            }
-            if (currentRecPath && 0 == strcmp(currentRecPath, file.name())) {
-                log_i("currently recording %s, skipping", file.name());
-                file.close();
-                continue;
-            }
-            if (0 == strcmp(recorder->continuePath, file.name())) {
-                log_i("%s is paused, skipping", file.name());
+            snprintf(ext, sizeof(ext), "%s", file.name() + strlen(file.name()) - 4);
+            // log_i("%s ext is %s", file.name(), ext);
+            if (0 != strcmp(ext, ".gpx")) {
+                // log_i("%s is not a gpx file, skipping", file.name());
                 file.close();
                 continue;
             }
             strncpy(filePath, file.name(), sizeof(filePath));
             file.close();
-            log_i("found a recording: %s", filePath);
-            snprintf(gpxPath, sizeof(gpxPath), "%s.gpx", filePath);
-            if (!fs->exists(gpxPath)) continue;
-            log_i("gpx exists: %s", gpxPath);
-            char gpxId[strlen(filePath) - basePathLen] = "";
-            strncat(gpxId, filePath + basePathLen + 1, sizeof(gpxId));
-            log_i("gpxId: %s", gpxId);
-            char item[strlen(itemFormat)   //
-                      + sizeof(gpxId) * 3  //
-            ];
-            if (sizeof(html) < strlen(html) + sizeof(item) + footerLen + 1) {
-                log_e("could not add %s, buffer too small", gpxId);
-                break;
+            log_i("found %s", filePath);
+            char id[strlen(filePath) - basePathLen - 5] = "";
+            strncat(id, filePath + basePathLen + 1, sizeof(id));
+            // log_i("id: %s", id);
+            char stxPath[basePathLen + strlen(id) + 6] = "";
+            snprintf(stxPath, sizeof(stxPath), "%s/%s.stx",
+                     recorder->basePath, id);
+            Recorder::Stats stats;
+            if (fs->exists(stxPath)) {
+                File stx = fs->open(stxPath);
+                stx.read((uint8_t *)&stats, sizeof(stats));
+                stx.close();
             }
-            snprintf(item, sizeof(item), itemFormat, gpxId, gpxId, gpxId);
-            log_i("item: %s", item);
-            strncat(html, item, sizeof(item));
-            recordings++;
+            char item[strlen(itemFormat)  //
+                      + sizeof(id) * 3    //
+                      + 10                // distance
+                      + 5                 // altGain
+            ];
+            snprintf(item, sizeof(item), itemFormat,
+                     id,
+                     id,
+                     stats.distance,
+                     stats.altGain,
+                     id);
+            // log_i("item: %s", item);
+            if (strlen(item) != index.write((uint8_t *)item, strlen(item))) {
+                log_e("could not write item to %s", indexPath);
+                continue;
+            }
+            files++;
         }
         dir.close();
-        if (0 == recordings) {
-            request->send(200, "text/html", "<!DOCTYPE html><html><body>No recordings</body></html>");
-            return;
+        if (0 == files) {
+            const char *nr = "No files";
+            index.write((uint8_t *)nr, strlen(nr));
         }
-        strncat(html, footer, footerLen);
-        request->send(200, "text/html", html);
+        if (strlen(footer) != index.write((uint8_t *)footer, strlen(footer)))
+            log_e("could not write footer to %s", indexPath);
+        index.close();  // re-open to get size
+        index = fs->open(indexPath);
+        log_i("generated %s %d bytes", indexPath, index.size());
+        index.close();
+        generateIndexTaskStop();
     }
 
     void download(Req *request) {
@@ -167,13 +281,13 @@ class RecWebserver {
             return;
         }
         char path[strlen(recorder->basePath) + 14] = "";
-        if (!recPathFromRequest(request, path, sizeof(path))) {
+        if (!pathFromRequest(request, path, sizeof(path), ".gpx")) {
             log_i("could not get path");
             request->send(404, "text/html", "not found");
             return;
         }
         if (nullptr != ota)
-            ota->off();  // ota crashes on long download
+            ota->off();  // ota crashes esp on long download, TODO restart after done
         request->send(*fs, path, "application/gpx+xml", true);
     }
 
@@ -191,29 +305,27 @@ class RecWebserver {
             return;
         }
         char path[strlen(recorder->basePath) + 14] = "";
-        if (!recPathFromRequest(request, path, sizeof(path))) {
+        if (!pathFromRequest(request, path, sizeof(path))) {
             log_i("could not get path");
             request->send(404, "text/html", "not found");
             return;
         }
-        if (!fs->remove(path)) {
-            log_e("could not remove %s", path);
-            request->send(500, "text/html", "error deleting file");
-            return;
-        }
-        char extPath[strlen(path) + 4];
+        if (fs->exists(path))
+            log_i("%s %s", fs->remove(path) ? "removed" : "could not remove", path);
+        char extPath[strlen(path) + 5];
         snprintf(extPath, sizeof(extPath), "%s.gpx", path);
-        if (fs->exists(extPath) && !fs->remove(extPath))
-            log_e("could not remove %s", extPath);
+        if (fs->exists(extPath))
+            log_i("%s %s", fs->remove(extPath) ? "removed" : "could not remove", extPath);
         snprintf(extPath, sizeof(extPath), "%s.stx", path);
-        if (fs->exists(extPath) && !fs->remove(extPath))
-            log_e("could not remove %s", extPath);
+        if (fs->exists(extPath))
+            log_i("%s %s", fs->remove(extPath) ? "removed" : "could not remove", extPath);
         Resp *response = request->beginResponse(302, "text/plain", "Moved");
         response->addHeader("Location", "/");
         request->send(response);
+        generateIndex();
     }
 
-    bool recPathFromRequest(Req *request, char *path, size_t len) {
+    bool pathFromRequest(Req *request, char *path, size_t len, const char *ext = "") {
         if (!request->hasParam("f")) {
             log_e("no param");
             return false;
@@ -223,12 +335,13 @@ class RecWebserver {
             log_e("slash in param '%s'", f);
             return false;
         }
-        snprintf(path, len, "%s/%s.gpx",
+        snprintf(path, len, "%s/%s%s",
                  recorder->basePath,
-                 f);
+                 f,
+                 ext);
         if (!fs->exists(path)) {
-            log_e("%s does not exist", path);
-            return false;
+            log_i("%s does not exist", path);
+            // return false;
         }
         return true;
     }
