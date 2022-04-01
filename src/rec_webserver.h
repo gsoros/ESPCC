@@ -10,17 +10,17 @@
 #include "atoll_ota.h"
 
 class RecWebserver {
-    typedef AsyncWebServerRequest Req;
-    typedef AsyncWebServerResponse Resp;
+    typedef AsyncWebServerRequest Request;
+    typedef AsyncWebServerResponse Response;
 
    public:
-    FS *fs = nullptr;                             //
-    AsyncWebServer *server = nullptr;             //
-    Atoll::Recorder *recorder = nullptr;          //
-    Atoll::Ota *ota = nullptr;                    //
-    const char *indexFileName = "index.html";     //
-    TaskHandle_t generateIndexTaskHandle = NULL;  //
-    bool generatingIndex = false;                 // TODO checking TaskHandle == NULL does not work reliably
+    FS *fs = nullptr;                              //
+    AsyncWebServer *server = nullptr;              //
+    Atoll::Recorder *recorder = nullptr;           //
+    Atoll::Ota *ota = nullptr;                     //
+    const char *indexFileName = "index.html";      //
+    TaskHandle_t indexGeneratorTaskHandle = NULL;  //
+    bool indexGeneratorRunning = false;            //
 
     void setup(
         Atoll::Fs *fs,
@@ -44,33 +44,34 @@ class RecWebserver {
         this->ota = ota;
 
         server = new AsyncWebServer(80);
-        server->on("/", HTTP_GET, [this](Req *request) {
-            list(request);
+        server->on("/", HTTP_GET, [this](Request *request) {
+            onIndex(request);
         });
-        server->on("/download", HTTP_GET, [this](Req *request) {
-            download(request);
+        server->on("/download", HTTP_GET, [this](Request *request) {
+            onDownload(request);
         });
-        server->on("/remove", HTTP_GET, [this](Req *request) {
-            remove(request);
+        server->on("/remove", HTTP_GET, [this](Request *request) {
+            onRemove(request);
         });
-        server->on("/genIndex", HTTP_GET, [this](Req *request) {
-            genIndex(request);
+        server->on("/genIndex", HTTP_GET, [this](Request *request) {
+            onGenIndex(request);
         });
-        server->onNotFound([](Req *request) {
-            if (nullptr == strstr("favicon.ico", request->url().c_str())) {
-                request->send(404, "text/plain", "404 Not found");
+        server->onNotFound([](Request *request) {
+            if (nullptr != strstr(request->url().c_str(), "favicon.ico")) {
+                request->send(404, "text/plain", "404");
+                // log_i("404 %s", request->url().c_str());
                 return;
             }
-            log_i("404 request %s", request->url().c_str());
-            Resp *response = request->beginResponse(302, "text/plain", "Moved");
+            Response *response = request->beginResponse(302, "text/plain", "Moved");
             response->addHeader("Location", "/");
             request->send(response);
+            log_i("302 %s", request->url().c_str());
         });
         server->begin();
         log_i("serving on port 80");
     }
 
-    void list(Req *request) {
+    void onIndex(Request *request) {
         log_i("request %s", request->url().c_str());
 
         if (nullptr == fs) {
@@ -87,10 +88,10 @@ class RecWebserver {
         snprintf(indexPath, sizeof(indexPath), "%s/%s", recorder->basePath, indexFileName);
         log_i("checking %s", indexPath);
         bool indexExists = fs->exists(indexPath);
-        if (!indexExists || generatingIndex) {
+        if (!indexExists || indexGeneratorRunning) {
             if (!indexExists)
                 log_i("%s does not exist", indexPath);
-            if (!generatingIndex) {
+            if (!indexGeneratorRunning) {
                 log_i("calling generator");
                 generateIndex();
             } else
@@ -102,67 +103,67 @@ class RecWebserver {
         request->send(*fs, indexPath, "text/html; charset=iso8859-1");
     }
 
-    void genIndex(Req *request) {
+    void onGenIndex(Request *request) {
         genIndexResponse(request);
         generateIndex();
     }
 
-    void genIndexResponse(Req *request) {
+    void genIndexResponse(Request *request) {
         request->send(200, "text/html", R"====(<!DOCTYPE html><html><body>
         <p>Generating index...</p><a href="/">reload</a></body></html>)====");
     }
 
     void generateIndex() {
-        if (generatingIndex) {
+        if (indexGeneratorRunning) {
             log_i("already generating");
             return;
         }
         log_i("starting task");
         xTaskCreatePinnedToCore(
-            generateIndexTask,
+            indexGeneratorTask,
             "Generate Index",
             4096,
             this,
             1,
-            &generateIndexTaskHandle,
+            &indexGeneratorTaskHandle,
             1);
     }
 
-    static void generateIndexTask(void *p) {
+    static void indexGeneratorTask(void *p) {
         RecWebserver *thisP = (RecWebserver *)p;
-        thisP->generateIndexRunner();
-        thisP->generateIndexTaskStop();
+        thisP->indexGeneratorRunner();
+        thisP->indexGeneratorTaskStop();
     }
 
-    void generateIndexTaskStop() {
-        generatingIndex = false;
-        if (NULL != generateIndexTaskHandle) {
+    void indexGeneratorTaskStop() {
+        indexGeneratorRunning = false;
+        if (NULL != indexGeneratorTaskHandle) {
             log_i("deleting task");
-            vTaskDelete(generateIndexTaskHandle);
+            vTaskDelete(indexGeneratorTaskHandle);
         }
     }
 
-    void generateIndexRunner() {
+    void indexGeneratorRunner() {
         log_i("starting run");
-        generatingIndex = true;
+        indexGeneratorRunning = true;
         if (nullptr == fs) {
             log_e("fs is null");
-            generateIndexTaskStop();
+            indexGeneratorTaskStop();
         }
         if (nullptr == recorder) {
             log_e("recorder is null");
-            generateIndexTaskStop();
+            indexGeneratorTaskStop();
         }
         File dir = fs->open(recorder->basePath);
         if (!dir) {
             log_e("could not open %s", recorder->basePath);
             dir.close();
-            generateIndexTaskStop();
+            indexGeneratorTaskStop();
         }
         if (!dir.isDirectory()) {
             log_e("%s is not a directory", recorder->basePath);
             dir.close();
-            generateIndexTaskStop();
+            indexGeneratorTaskStop();
         }
         char indexPath[strlen(recorder->basePath) + strlen(indexFileName) + 2] = "";
         snprintf(indexPath, sizeof(indexPath), "%s/%s", recorder->basePath, indexFileName);
@@ -170,7 +171,7 @@ class RecWebserver {
         if (!index) {
             log_e("could not open %s for writing", indexPath);
             dir.close();
-            generateIndexTaskStop();
+            indexGeneratorTaskStop();
         }
 
         char header[1024] = R"====(<!DOCTYPE html>
@@ -205,7 +206,7 @@ class RecWebserver {
             log_e("could not write header to %s", indexPath);
             index.close();
             dir.close();
-            generateIndexTaskStop();
+            indexGeneratorTaskStop();
         }
         File file;
         char filePath[ATOLL_RECORDER_PATH_LENGTH] = "";
@@ -264,10 +265,10 @@ class RecWebserver {
         index = fs->open(indexPath);
         log_i("generated %s %d bytes", indexPath, index.size());
         index.close();
-        generateIndexTaskStop();
+        indexGeneratorTaskStop();
     }
 
-    void download(Req *request) {
+    void onDownload(Request *request) {
         log_i("request %s", request->url().c_str());
 
         if (nullptr == fs) {
@@ -291,7 +292,7 @@ class RecWebserver {
         request->send(*fs, path, "application/gpx+xml", true);
     }
 
-    void remove(Req *request) {
+    void onRemove(Request *request) {
         log_i("request %s", request->url().c_str());
 
         if (nullptr == fs) {
@@ -319,13 +320,13 @@ class RecWebserver {
         snprintf(extPath, sizeof(extPath), "%s.stx", path);
         if (fs->exists(extPath))
             log_i("%s %s", fs->remove(extPath) ? "removed" : "could not remove", extPath);
-        Resp *response = request->beginResponse(302, "text/plain", "Moved");
+        Response *response = request->beginResponse(302, "text/plain", "Moved");
         response->addHeader("Location", "/");
         request->send(response);
         generateIndex();
     }
 
-    bool pathFromRequest(Req *request, char *path, size_t len, const char *ext = "") {
+    bool pathFromRequest(Request *request, char *path, size_t len, const char *ext = "") {
         if (!request->hasParam("f")) {
             log_e("no param");
             return false;
