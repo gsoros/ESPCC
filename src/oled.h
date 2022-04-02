@@ -19,6 +19,7 @@ class Oled : public Atoll::Oled {
               feedbackWidth,
               fieldHeight) {}
 
+    void setup();
     void loop();
     void showSatellites();
     void animateRecording(bool clear = false);
