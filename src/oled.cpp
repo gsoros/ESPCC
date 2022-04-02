@@ -43,11 +43,6 @@ void Oled::animateRecording(bool clear) {
         0x00, 0x04, 0x80, 0x0a, 0x40, 0x05, 0xa0, 0x02, 0x50, 0x04, 0xa0, 0x08,
         0x50, 0x15, 0x80, 0x00, 0x5e, 0x1e, 0xb3, 0x33, 0x61, 0x21, 0x21, 0x21,
         0x33, 0x33, 0x1e, 0x1e};  // 14 x 14px
-    if (clear) {
-        fill(&rider, 0);
-        return;
-    }
-
     // log_i("track{%d, %d, %d, %d}, rider{%d, %d, %d, %d}",  //
     //       track.x, track.y, track.w, track.h,              //
     //       rider.x, rider.y, rider.w, rider.h);
@@ -56,6 +51,11 @@ void Oled::animateRecording(bool clear) {
     device->setClipWindow(track.x, track.y, track.x + track.w, track.y + track.h);
     device->setDrawColor(0);
     device->drawBox(rider.x - rider.w, rider.y, rider.w, rider.h);
+    if (clear) {
+        device->sendBuffer();
+        releaseMutex();
+        return;
+    }
     rider.x += 1;
     if (track.x + track.w + rider.w <= rider.x) rider.x = track.x;
     device->setDrawColor(1);
