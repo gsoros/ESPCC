@@ -8,3 +8,8 @@ bool Recorder::rec2gpx(const char *in, const char *out) {
         board.recWebserver.generateIndex();
     return res;
 }
+
+bool Recorder::stop(bool forgetLast) {
+    board.oled.animateRecording(true);
+    return Atoll::Recorder::stop(forgetLast);
+}

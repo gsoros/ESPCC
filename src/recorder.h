@@ -6,6 +6,7 @@
 
 class Recorder : public Atoll::Recorder {
     bool rec2gpx(const char *in, const char *out);
+    bool stop(bool forgetLast = false);
 };
 
 #endif
