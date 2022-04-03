@@ -20,15 +20,20 @@ void Oled::loop() {
         if (Atoll::systemTimeLastSet()) {
             showTime();
         } else
-            showSatellites();
+            showSatellites(1);
     }
-    if (lastHeartrate < t - 3000)
-        if (Atoll::systemTimeLastSet())
-            showDate();
+    if (lastHeartrate < t - 3000) {
+        if (Atoll::systemTimeLastSet()) {
+            if (!board.gps.locationIsValid())
+                showSatellites(2);
+            else
+                showDate();
+        }
+    }
 }
 
-void Oled::showSatellites() {
-    printfField(1, true, 1, 0, "-%02d", board.gps.satellites());
+void Oled::showSatellites(uint8_t fieldIndex) {
+    printfField(fieldIndex, true, 1, 0, "-%02d", board.gps.satellites());
 }
 
 void Oled::animateRecording(bool clear) {
@@ -49,24 +54,29 @@ void Oled::animateRecording(bool clear) {
         0x00, 0x04, 0x80, 0x0a, 0x40, 0x05, 0xa0, 0x02, 0x50, 0x04, 0xa0, 0x08,
         0x50, 0x15, 0x80, 0x00, 0x5e, 0x1e, 0xb3, 0x33, 0x61, 0x21, 0x21, 0x21,
         0x33, 0x33, 0x1e, 0x1e};
-    // log_i("track{%d, %d, %d, %d}, rider{%d, %d, %d, %d}",  //
-    //       track.x, track.y, track.w, track.h,              //
-    //       rider.x, rider.y, rider.w, rider.h);
+    static uint8_t fg;
+    static uint8_t bg;
+
+    if (board.gps.locationIsValid()) {
+        fg = Color::FG;
+        bg = Color::BG;
+    } else {
+        fg = Color::BG;
+        bg = Color::FG;
+    }
 
     if (!aquireMutex()) return;
-    device->setClipWindow(track.x, track.y, track.x + track.w, track.y + track.h);
-    device->setDrawColor(Color::BG);
-    // device->drawBox(rider.x - rider.w, rider.y, rider.w, rider.h);
-    device->drawXBM(rider.x - rider.w, rider.y, rider.w, rider.h, riderBmp);
+    device->setDrawColor(bg);
+    device->drawBox(track.x, track.y, track.w, track.h);
     if (clear) {
         device->sendBuffer();
-        device->setMaxClipWindow();
         releaseMutex();
         return;
     }
     rider.x += 1;
     if (track.x + track.w + rider.w <= rider.x) rider.x = track.x;
-    device->setDrawColor(Color::FG);
+    device->setDrawColor(fg);
+    device->setClipWindow(track.x, track.y, track.x + track.w, track.y + track.h);
     device->drawXBM(rider.x - rider.w, rider.y, rider.w, rider.h, riderBmp);
     device->sendBuffer();
     device->setMaxClipWindow();

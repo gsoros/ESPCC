@@ -21,7 +21,7 @@ class Oled : public Atoll::Oled {
 
     void setup();
     void loop();
-    void showSatellites();
+    void showSatellites(uint8_t fieldIndex = 1);
     void animateRecording(bool clear = false);
 };
 

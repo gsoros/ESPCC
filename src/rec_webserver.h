@@ -277,9 +277,9 @@ class RecWebserver {
         <table>
             <tr>
             <td></td>
-            <td>distance</td>
-            <td>alt gain</td>
-            <td>remove</td>
+            <td>Distance</td>
+            <td>Alt. gain</td>
+            <td></td>
             </tr>)====";
 
         const char *itemFormat = R"====(
@@ -287,7 +287,7 @@ class RecWebserver {
             <td><a href="download?f=%s">%s</a></td>
             <td>%.0fm</td>
             <td>%dm</td>
-            <td><a href="remove?f=%s">remove</a></td>
+            <td><a href="remove?f=%s">delete</a></td>
             </tr>)====";
 
         const char *footer = R"====(
@@ -352,7 +352,7 @@ class RecWebserver {
         }
         dir.close();
         if (0 == files) {
-            const char *nr = "No files";
+            const char *nr = "<tr><td colspan=4>No files</td></tr>";
             index.write((uint8_t *)nr, strlen(nr));
         }
         if (strlen(footer) != index.write((uint8_t *)footer, strlen(footer)))
