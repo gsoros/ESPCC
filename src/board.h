@@ -16,7 +16,7 @@
 #include "touch.h"
 #include "ble_client.h"
 #include "ble_server.h"
-#include "atoll_gps.h"
+#include "gps.h"
 #include "oled.h"
 #include "atoll_sdcard.h"
 #include "api.h"
@@ -39,7 +39,7 @@ class Board : public Atoll::Task,
     HardwareSerial hwSerial = HardwareSerial(0);
     Atoll::WifiSerial wifiSerial;
 #endif
-    Atoll::GPS gps;
+    GPS gps;
     Oled oled = Oled(
         new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
             U8G2_R1,        // rotation 90˚
@@ -81,7 +81,6 @@ class Board : public Atoll::Task,
         oled.setup();
         bleClient.setup(hostName, &arduinoPreferences, &bleServer);
         sdcard.setup();
-        // if (sdcard.mounted) sdcard.test();
         touch.setup(&arduinoPreferences, "Touch");
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder
 #ifdef FEATURE_SERIAL
@@ -95,7 +94,7 @@ class Board : public Atoll::Task,
         recWebserver.setup(&sdcard, &recorder, &ota);
 
         gps.taskStart(GPS_TASK_FREQ);
-        bleClient.taskStart(BLE_CLIENT_TASK_FREQ);
+        bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 8192);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ);
         touch.taskStart(TOUCH_TASK_FREQ);
         oled.taskStart(OLED_TASK_FREQ);

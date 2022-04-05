@@ -23,6 +23,7 @@ class Oled : public Atoll::Oled {
     void loop();
     void showSatellites(uint8_t fieldIndex = 1);
     void animateRecording(bool clear = false);
+    void onTouchEvent(Touch::Pad *pad, Touch::Event event);
 };
 
 #endif
