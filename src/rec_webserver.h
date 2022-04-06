@@ -20,6 +20,7 @@ class RecWebserver {
         REMOVE_ALL_TASK
     };
     FS *fs = nullptr;                             //
+    Atoll::Fs *atollFs = nullptr;                 //
     AsyncWebServer *server = nullptr;             //
     Atoll::Recorder *recorder = nullptr;          //
     Atoll::Ota *ota = nullptr;                    //
@@ -39,6 +40,7 @@ class RecWebserver {
             log_e("fs not mounted");
             return;
         }
+        this->atollFs = fs;
         this->fs = fs->pFs();
 
         if (nullptr == recorder) {
@@ -60,6 +62,9 @@ class RecWebserver {
         });
         server->on("/removeAll", HTTP_GET, [this](Request *request) {
             onRemoveAll(request);
+        });
+        server->on("/format", HTTP_GET, [this](Request *request) {
+            onFormat(request);
         });
         server->on("/genIndex", HTTP_GET, [this](Request *request) {
             onGenIndex(request);
@@ -182,6 +187,15 @@ class RecWebserver {
         generateIndex();
     }
 
+    void onFormat(Request *request) {
+        genIndexResponse(request);
+        // atollFs->unmount();
+        // atollFs->format();
+        // atollFs->setup();
+        // delay(500);
+        // generateIndex();
+    }
+
     void genIndexResponse(Request *request) {
         request->send(200, "text/html", R"====(<!DOCTYPE html><html><body>
         <p>Generating index...</p><a href="/">reload</a></body></html>)====");
@@ -294,6 +308,7 @@ class RecWebserver {
         </table>
         <p><a href="/genIndex">Regenerate index</a></p>
         <p><a href="/removeAll">Delete all</a></p>
+        <p><a href="/format">Format SD</a></p>
     </body>
 </html>
 )====";

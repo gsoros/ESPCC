@@ -96,11 +96,11 @@ class Board : public Atoll::Task,
         gps.taskStart(GPS_TASK_FREQ);
         bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 8192);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ);
-        touch.taskStart(TOUCH_TASK_FREQ);
         oled.taskStart(OLED_TASK_FREQ);
         battery.taskStart(BATTERY_TASK_FREQ);
         recorder.taskStart(RECORDER_TASK_FREQ);
         // uploader.taskStart(UPLOADER_TASK_FREQ);
+        touch.taskStart(TOUCH_TASK_FREQ);
         taskStart(BOARD_TASK_FREQ);
 
         bleServer.start();

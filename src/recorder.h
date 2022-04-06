@@ -8,7 +8,6 @@ class Recorder : public Atoll::Recorder {
     void onDistanceChanged(double value);
     void onAltGainChanged(uint16_t value);
     bool rec2gpx(const char *in, const char *out);
-    bool stop(bool forgetLast = false);
 };
 
 #endif
