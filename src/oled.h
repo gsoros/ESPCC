@@ -571,11 +571,11 @@ class Oled : public Atoll::Oled {
             case FC_CADENCE:
                 return snprintf(buf, len, "Cadence");
             case FC_HEARTRATE:
-                return snprintf(buf, len, "Heartrate");
+                return snprintf(buf, len, "HR");
             case FC_SPEED:
                 return snprintf(buf, len, "Speed");
             case FC_DISTANCE:
-                return snprintf(buf, len, "Distance");
+                return snprintf(buf, len, "Dist.");
             case FC_ALTGAIN:
                 return snprintf(buf, len, "Alt. gain");
             case FC_MOVETIME:
@@ -587,14 +587,14 @@ class Oled : public Atoll::Oled {
             case FC_LAP_POWER:
                 return snprintf(buf, len, "Lap power");
             case FC_SATELLITES:
-                return snprintf(buf, len, "Satellites");
+                return snprintf(buf, len, "Sat.");
             case FC_BATTERY:
                 return snprintf(buf, len, "Battery");
             case FC_BATTERY_POWER:
             case FC_BATTERY_CADENCE:
-                return snprintf(buf, len, "PM Batt.");
+                return snprintf(buf, len, "PM Bat.");
             case FC_BATTERY_HEARTRATE:
-                return snprintf(buf, len, "HRM Batt.");
+                return snprintf(buf, len, "HRM Bat.");
             default:
                 log_e("unhandled %d", content);
                 return -1;

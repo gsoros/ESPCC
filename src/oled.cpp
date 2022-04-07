@@ -10,7 +10,7 @@ void Oled::setup() {
 void Oled::loop() {
     displayStatus();
 
-    if (lastFieldUpdate < millis() - 5000 && Atoll::systemTimeLastSet())
+    if (lastFieldUpdate < millis() - 15000 && Atoll::systemTimeLastSet())
         showTime();
 }
 
@@ -54,20 +54,21 @@ void Oled::displayStatus() {
         return;
 
     if (!aquireMutex()) return;
-    if (isMoving != lastIsMoving) {
-        fill(&icon, C_BG, false);
-        if (isMoving) {
-            device->setDrawColor(C_FG);
-            device->drawXBM(icon.x, icon.y, icon.w, icon.h, riderXbm);
-        }
-    }
-    icon.x = a.x + a.w - iconSize;
+
     if (isRecording != lastIsRecording) {
         fill(&icon, C_BG, false);
         if (isRecording) {
             device->setDrawColor(C_FG);
             device->drawXBM(icon.x, icon.y, icon.w, icon.h, recXbm);
-            // device->drawDisc(icon.x + icon.w / 2, icon.y + icon.h / 2, icon.w / 2);
+        }
+    }
+
+    icon.x = a.x + a.w - iconSize;
+    if (isMoving != lastIsMoving) {
+        fill(&icon, C_BG, false);
+        if (isMoving) {
+            device->setDrawColor(C_FG);
+            device->drawXBM(icon.x, icon.y, icon.w, icon.h, riderXbm);
         }
     }
     device->sendBuffer();
@@ -107,12 +108,14 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
                     continue;
                 a = &field[i].area;
+                device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
                 fill(a, C_BG, false);
                 device->setCursor(a->x, a->y + a->h - 4);
                 device->setDrawColor(C_FG);
                 device->print(label);
             }
             device->sendBuffer();
+            device->setMaxClipWindow();
             delay(1000);
             displayFieldValues(false);
             device->sendBuffer();
