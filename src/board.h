@@ -22,7 +22,7 @@
 #include "api.h"
 #include "atoll_wifi.h"
 #include "atoll_ota.h"
-#include "atoll_battery.h"
+#include "battery.h"
 #include "recorder.h"
 #include "atoll_uploader.h"
 #include "rec_webserver.h"
@@ -53,7 +53,7 @@ class Board : public Atoll::Task,
     Api api;
     Atoll::Wifi wifi;
     Atoll::Ota ota;
-    Atoll::Battery battery;
+    Battery battery;
     Recorder recorder;
     // Atoll::Uploader uploader;
     RecWebserver recWebserver;

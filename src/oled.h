@@ -4,7 +4,7 @@
 #include "touch.h"  // avoid "NUM_PADS redefined"
 #include "atoll_oled.h"
 
-#define OLED_NUM_PAGES 2
+#define OLED_NUM_PAGES 3
 #define OLED_NUM_FIELDS 3
 #define OLED_NUM_FEEDBACK 4
 
@@ -50,6 +50,7 @@ class Oled : public Atoll::Oled {
     const uint8_t numFields = OLED_NUM_FIELDS;                // helper
     Area feedback[OLED_NUM_FEEDBACK];                         // touch feedback areas
     const uint8_t *fieldDigitFont = u8g2_font_logisoso32_tn;  // font for displaying up to 3 digits
+    const uint8_t *fieldFont = u8g2_font_logisoso32_tr;       // font for displaying field chars
     const uint8_t *timeFont = u8g2_font_logisoso28_tr;        // font for displaying the time
     const uint8_t timeFontHeight = 28;                        //
     const uint8_t *dateFont = u8g2_font_fur14_tr;             // font for displaying the date
@@ -80,22 +81,28 @@ class Oled : public Atoll::Oled {
         field[0].area.y = 0;
         field[0].area.w = fieldWidth;
         field[0].area.h = fieldHeight;
-        field[0].content[0] = FC_POWER;
-        field[0].content[1] = FC_SPEED;
 
         field[1].area.x = feedbackWidth;
         field[1].area.y = fieldHeight + fieldVSeparation;
         field[1].area.w = fieldWidth;
         field[1].area.h = fieldHeight;
-        field[1].content[0] = FC_CADENCE;
-        field[1].content[1] = FC_DISTANCE;
 
         field[2].area.x = feedbackWidth;
         field[2].area.y = height - fieldHeight;
         field[2].area.w = fieldWidth;
         field[2].area.h = fieldHeight;
+
+        field[0].content[0] = FC_POWER;
+        field[1].content[0] = FC_CADENCE;
         field[2].content[0] = FC_HEARTRATE;
+
+        field[0].content[1] = FC_SPEED;
+        field[1].content[1] = FC_DISTANCE;
         field[2].content[1] = FC_ALTGAIN;
+
+        field[0].content[2] = FC_BATTERY;
+        field[1].content[2] = FC_BATTERY_POWER;
+        field[2].content[2] = FC_BATTERY_HEARTRATE;
 
         feedback[0].x = 0;
         feedback[0].y = 0;
@@ -161,10 +168,38 @@ class Oled : public Atoll::Oled {
         vsnprintf(out, 4, format, argp);
         va_end(argp);
         if (send && !aquireMutex()) return;
-        if ((0 == fieldIndex || 1 == fieldIndex) && -1 != lastMinute)
+        if ((0 == fieldIndex || 1 == fieldIndex) && -1 != lastMinute) {
             showTime(false, true);  // clear time area
-        log_i("printing '%s' to field %d", out, fieldIndex);
+            // TODO redisplay other field
+        }
+        // log_i("printing '%s' to field %d", out, fieldIndex);
         printField(fieldIndex, out, false, fieldDigitFont, color, bgColor);
+        if (send) {
+            device->sendBuffer();
+            releaseMutex();
+        }
+        if (0 == fieldIndex || 1 == fieldIndex)
+            lastMinute = -1;  // trigger time display
+    }
+
+    void printfFieldChars(const uint8_t fieldIndex,
+                          const bool send,
+                          const uint8_t color,
+                          const uint8_t bgColor,
+                          const char *format,
+                          ...) {
+        char out[5];
+        va_list argp;
+        va_start(argp, format);
+        vsnprintf(out, 5, format, argp);
+        va_end(argp);
+        if (send && !aquireMutex()) return;
+        if ((0 == fieldIndex || 1 == fieldIndex) && -1 != lastMinute) {
+            showTime(false, true);  // clear time area
+            // TODO redisplay other field
+        }
+        // log_i("printing '%s' to field %d", out, fieldIndex);
+        printField(fieldIndex, out, false, fieldFont, color, bgColor);
         if (send) {
             device->sendBuffer();
             releaseMutex();
@@ -219,65 +254,71 @@ class Oled : public Atoll::Oled {
         return -1;
     }
 
-    void displayFieldValues() {
+    void displayFieldValues(bool send = true) {
         for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
-            displayFieldContent(i, field[i].content[currentPage]);
+            displayFieldContent(i, field[i].content[currentPage], send);
     }
 
-    uint16_t power = 0;
-    uint16_t lastPower = 0;
+    int16_t power = 0;
+    int16_t lastPower = 0;
 
-    void onPower(uint16_t value) {
+    void onPower(int16_t value) {
         power = value;
         if (lastPower == power) return;
         displayPower();
         lastPower = power;
     }
 
-    void displayPower(int8_t fieldIndex = -1) {
+    void displayPower(int8_t fieldIndex = -1, bool send = true) {
         if (-1 == fieldIndex)
             fieldIndex = getFieldIndex(FC_POWER);
         if (-1 == fieldIndex) return;
-        printfFieldDigits(fieldIndex, true, C_FG, C_BG,
-                          "%3d", power);
+        if (0 <= power)
+            printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", power);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "--");
         lastFieldUpdate = millis();
     }
 
-    uint16_t cadence = 0;
-    uint16_t lastCadence = 0;
+    int16_t cadence = 0;
+    int16_t lastCadence = 0;
 
-    void onCadence(uint16_t value) {
+    void onCadence(int16_t value) {
         cadence = value;
         if (lastCadence == cadence) return;
         displayCadence();
         lastCadence = cadence;
     }
 
-    void displayCadence(int8_t fieldIndex = -1) {
+    void displayCadence(int8_t fieldIndex = -1, bool send = true) {
         if (-1 == fieldIndex)
             fieldIndex = getFieldIndex(FC_CADENCE);
         if (-1 == fieldIndex) return;
-        printfFieldDigits(fieldIndex, true, C_FG, C_BG,
-                          "%3d", cadence);
+        if (0 <= cadence)
+            printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", cadence);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "--");
         lastFieldUpdate = millis();
     }
 
-    uint16_t heartrate = 0;
-    uint16_t lastHeartrate = 0;
+    int16_t heartrate = 0;
+    int16_t lastHeartrate = 0;
 
-    void onHeartrate(uint16_t value) {
+    void onHeartrate(int16_t value) {
         heartrate = value;
         if (lastHeartrate == heartrate) return;
         displayHeartrate();
         lastHeartrate = heartrate;
     }
 
-    void displayHeartrate(int8_t fieldIndex = -1) {
+    void displayHeartrate(int8_t fieldIndex = -1, bool send = true) {
         if (-1 == fieldIndex)
             fieldIndex = getFieldIndex(FC_HEARTRATE);
         if (-1 == fieldIndex) return;
-        printfFieldDigits(fieldIndex, true, C_FG, C_BG,
-                          "%3d", heartrate);
+        if (0 < heartrate)
+            printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", heartrate);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "--");
         lastFieldUpdate = millis();
     }
 
@@ -291,12 +332,16 @@ class Oled : public Atoll::Oled {
         lastSpeed = speed;
     }
 
-    void displaySpeed(int8_t fieldIndex = -1) {
+    void displaySpeed(int8_t fieldIndex = -1, bool send = true) {
         if (-1 == fieldIndex)
             fieldIndex = getFieldIndex(FC_SPEED);
         if (-1 == fieldIndex) return;
-        printfFieldDigits(fieldIndex, true, C_FG, C_BG,
+        printfFieldDigits(fieldIndex, send, C_FG, C_BG,
                           "%3d", (uint16_t)speed);
+        if (100.0 <= speed)
+            printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", speed);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "%.1f", speed);
         lastFieldUpdate = millis();
     }
 
@@ -304,22 +349,28 @@ class Oled : public Atoll::Oled {
     uint lastDistance = 0;
 
     void onDistance(uint value) {
+        log_i("%d", value);
         distance = value;
         if (lastDistance == distance) return;
         displayDistance();
         lastDistance = distance;
     }
 
-    void displayDistance(int8_t fieldIndex = -1) {
+    void displayDistance(int8_t fieldIndex = -1, bool send = true) {
         if (-1 == fieldIndex)
             fieldIndex = getFieldIndex(FC_DISTANCE);
         if (-1 == fieldIndex) return;
         if (distance < 1000)
-            printfFieldDigits(fieldIndex, true, C_FG, C_BG,
+            printfFieldDigits(fieldIndex, send, C_FG, C_BG,
                               "%3d", distance);
-        else
-            printfFieldDigits(fieldIndex, true, C_FG, C_BG,
-                              "%3d", distance / 1000);
+        else {
+            if (100000 < distance)
+                printfFieldChars(fieldIndex, send, C_FG, C_BG,
+                                 "%.0f", (double)distance / 1000.0);
+            else
+                printfFieldChars(fieldIndex, send, C_FG, C_BG,
+                                 "%.1f", (double)distance / 1000.0);
+        }
         lastFieldUpdate = millis();
     }
 
@@ -333,50 +384,145 @@ class Oled : public Atoll::Oled {
         lastAltGain = altGain;
     }
 
-    void displayAltGain(int8_t fieldIndex = -1) {
+    void displayAltGain(int8_t fieldIndex = -1, bool send = true) {
         if (-1 == fieldIndex)
             fieldIndex = getFieldIndex(FC_ALTGAIN);
         if (-1 == fieldIndex) return;
         if (altGain < 1000)
-            printfFieldDigits(fieldIndex, true, C_FG, C_BG,
+            printfFieldDigits(fieldIndex, send, C_FG, C_BG,
                               "%3d", altGain);
         else
-            printfFieldDigits(fieldIndex, true, C_FG, C_BG,
-                              "%3d", altGain / 10);
+            printfFieldChars(fieldIndex, send, C_FG, C_BG,
+                             "%.1fk", (double)altGain / 1000.0);
         lastFieldUpdate = millis();
     }
 
-    void displayFieldContent(uint8_t fieldIndex, FieldContent content) {
+    int8_t battery = -1;
+    int8_t lastBattery = -1;
+
+    void onBattery(int8_t value) {
+        // log_i("%d", value);
+        battery = value;
+        if (lastBattery == battery) return;
+        displayBattery();
+        lastBattery = battery;
+    }
+
+    void displayBattery(int8_t fieldIndex = -1, bool send = true) {
+        if (-1 == fieldIndex)
+            fieldIndex = getFieldIndex(FC_BATTERY);
+        if (-1 == fieldIndex) return;
+        if (battery < 0)
+            printField(fieldIndex, "--", send, fieldFont, C_FG, C_BG);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "%3d%", battery);
+        lastFieldUpdate = millis();
+    }
+
+    int8_t battPM = -1;
+    int8_t lastBattPM = -1;
+
+    void onBattPM(int8_t value) {
+        log_i("%d", value);
+        battPM = value;
+        if (lastBattPM == battPM) return;
+        displayBattPM();
+        lastBattPM = battPM;
+    }
+
+    void displayBattPM(int8_t fieldIndex = -1, bool send = true) {
+        if (-1 == fieldIndex)
+            fieldIndex = getFieldIndex(FC_BATTERY_POWER);
+        if (-1 == fieldIndex) return;
+        if (battPM < 0)
+            printField(fieldIndex, "--", send, fieldFont, C_FG, C_BG);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "%3d%", battPM);
+        lastFieldUpdate = millis();
+    }
+
+    int8_t battHRM = -1;
+    int8_t lastBattHRM = -1;
+
+    void onBattHRM(int8_t value) {
+        log_i("%d", value);
+        battHRM = value;
+        if (lastBattHRM == battHRM) return;
+        displayBattHRM();
+        lastBattHRM = battHRM;
+    }
+
+    void displayBattHRM(int8_t fieldIndex = -1, bool send = true) {
+        if (-1 == fieldIndex)
+            fieldIndex = getFieldIndex(FC_BATTERY_HEARTRATE);
+        if (-1 == fieldIndex) return;
+        if (battHRM < 0)
+            printField(fieldIndex, "--", send, fieldFont, C_FG, C_BG);
+        else
+            printfFieldChars(fieldIndex, send, C_FG, C_BG, "%3d%", battHRM);
+        lastFieldUpdate = millis();
+    }
+
+    void onPMDisconnected() {
+        onPower(-1);
+        onCadence(-1);
+        onBattPM(-1);
+    }
+
+    void onHRMDisconnected() {
+        onHeartrate(-1);
+        onBattHRM(-1);
+    }
+
+    void displayFieldContent(uint8_t fieldIndex,
+                             FieldContent content,
+                             bool send = true) {
         switch (content) {
             case FC_EMPTY:
                 return;
             case FC_POWER:
-                displayPower(fieldIndex);
+                displayPower(fieldIndex, send);
                 return;
             case FC_CADENCE:
-                displayCadence(fieldIndex);
+                displayCadence(fieldIndex, send);
                 return;
             case FC_HEARTRATE:
-                displayHeartrate(fieldIndex);
+                displayHeartrate(fieldIndex, send);
                 return;
             case FC_SPEED:
-                displaySpeed(fieldIndex);
+                displaySpeed(fieldIndex, send);
                 return;
             case FC_DISTANCE:
-                displayDistance(fieldIndex);
+                displayDistance(fieldIndex, send);
                 return;
             case FC_ALTGAIN:
-                displayAltGain(fieldIndex);
+                displayAltGain(fieldIndex, send);
                 return;
             case FC_MOVETIME:
+                log_e("unhandled %d", content);
+                return;
             case FC_LAP_TIME:
+                log_e("unhandled %d", content);
+                return;
             case FC_LAP_DISTANCE:
+                log_e("unhandled %d", content);
+                return;
             case FC_LAP_POWER:
+                log_e("unhandled %d", content);
+                return;
             case FC_SATELLITES:
+                log_e("unhandled %d", content);
+                return;
             case FC_BATTERY:
+                displayBattery(fieldIndex, send);
+                return;
             case FC_BATTERY_POWER:
             case FC_BATTERY_CADENCE:
+                displayBattPM(fieldIndex, send);
+                return;
             case FC_BATTERY_HEARTRATE:
+                displayBattHRM(fieldIndex, send);
+                return;
             default:
                 log_e("unhandled %d", content);
         }
@@ -399,14 +545,22 @@ class Oled : public Atoll::Oled {
             case FC_ALTGAIN:
                 return snprintf(buf, len, "Alt. gain");
             case FC_MOVETIME:
+                return snprintf(buf, len, "Move time");
             case FC_LAP_TIME:
+                return snprintf(buf, len, "Lap time");
             case FC_LAP_DISTANCE:
+                return snprintf(buf, len, "Lap dist.");
             case FC_LAP_POWER:
+                return snprintf(buf, len, "Lap power");
             case FC_SATELLITES:
+                return snprintf(buf, len, "Satellites");
             case FC_BATTERY:
+                return snprintf(buf, len, "Battery");
             case FC_BATTERY_POWER:
             case FC_BATTERY_CADENCE:
+                return snprintf(buf, len, "PM Batt.");
             case FC_BATTERY_HEARTRATE:
+                return snprintf(buf, len, "HRM Batt.");
             default:
                 log_e("unhandled %d", content);
                 return -1;

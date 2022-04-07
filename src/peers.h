@@ -4,12 +4,12 @@
 #include "atoll_peer.h"
 #include "atoll_peer_characteristic.h"
 
+class BattPMChar : public Atoll::PeerCharacteristicBattery {
+    virtual void notify() override;
+};
+
 class PowerChar : public Atoll::PeerCharacteristicPower {
-    void onNotify(
-        BLERemoteCharacteristic* c,
-        uint8_t* data,
-        size_t length,
-        bool isNotify);
+    virtual void notify() override;
 };
 
 class PowerMeter : public Atoll::PowerMeter {
@@ -24,16 +24,18 @@ class PowerMeter : public Atoll::PowerMeter {
               addressType,
               type,
               name,
-              new PowerChar()) {
+              new PowerChar(),
+              new BattPMChar()) {
     }
+    virtual void onDisconnect(BLEClient* client) override;
+};
+
+class BattHRMChar : public Atoll::PeerCharacteristicBattery {
+    virtual void notify() override;
 };
 
 class HeartrateChar : public Atoll::PeerCharacteristicHeartrate {
-    void onNotify(
-        BLERemoteCharacteristic* c,
-        uint8_t* data,
-        size_t length,
-        bool isNotify);
+    virtual void notify() override;
 };
 
 class HeartrateMonitor : public Atoll::HeartrateMonitor {
@@ -48,7 +50,9 @@ class HeartrateMonitor : public Atoll::HeartrateMonitor {
               addressType,
               type,
               name,
-              new HeartrateChar()) {}
+              new HeartrateChar(),
+              new BattHRMChar()) {}
+    virtual void onDisconnect(BLEClient* client) override;
 };
 
 #endif

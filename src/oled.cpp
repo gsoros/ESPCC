@@ -100,14 +100,23 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             log_i("currentPage %d", currentPage);
             if (!aquireMutex()) return;
             showTime(false, true);  // clear
-            char buf[10] = "";
-            for (uint8_t i = 0; i < numFields; i++)
-                if (0 < fieldLabel(field[i].content[currentPage], buf, sizeof(buf)))
-                    printField(i, buf, false, labelFont);
+            char label[10] = "";
+            Area *a;
+            device->setFont(labelFont);
+            for (uint8_t i = 0; i < numFields; i++) {
+                if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
+                    continue;
+                a = &field[i].area;
+                fill(a, C_BG, false);
+                device->setCursor(a->x, a->y + a->h - 4);
+                device->setDrawColor(C_FG);
+                device->print(label);
+            }
             device->sendBuffer();
             delay(1000);
+            displayFieldValues(false);
+            device->sendBuffer();
             releaseMutex();
-            displayFieldValues();
             lastFieldUpdate = millis();
 
             return;
