@@ -42,7 +42,7 @@ class ESPM : public Atoll::ESPM {
               type,
               name,
               new PowerChar(),
-              new BattPower(),
+              new BattPMChar(),
               new Atoll::PeerCharacteristicApiTX(),
               new Atoll::PeerCharacteristicApiRX(),
               new Atoll::PeerCharacteristicWeightscale()) {}
