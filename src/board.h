@@ -20,7 +20,7 @@
 #include "oled.h"
 #include "atoll_sdcard.h"
 #include "api.h"
-#include "atoll_wifi.h"
+#include "wifi.h"
 #include "atoll_ota.h"
 #include "battery.h"
 #include "recorder.h"
@@ -51,7 +51,7 @@ class Board : public Atoll::Task,
     Atoll::SdCard sdcard = Atoll::SdCard(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
     Touch touch = Touch(TOUCH_PAD_0_PIN);
     Api api;
-    Atoll::Wifi wifi;
+    Wifi wifi;
     Atoll::Ota ota;
     Battery battery;
     Recorder recorder;

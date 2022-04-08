@@ -6,7 +6,7 @@
 #include <ESPAsyncWebServer.h>
 
 #include "atoll_fs.h"
-#include "atoll_recorder.h"
+#include "recorder.h"
 #include "atoll_ota.h"
 
 class RecWebserver {
@@ -22,15 +22,17 @@ class RecWebserver {
     FS *fs = nullptr;                             //
     Atoll::Fs *atollFs = nullptr;                 //
     AsyncWebServer *server = nullptr;             //
-    Atoll::Recorder *recorder = nullptr;          //
+    Recorder *recorder = nullptr;                 //
     Atoll::Ota *ota = nullptr;                    //
     const char *indexFileName = "index.html";     //
     TaskHandle_t fsTaskHandle = NULL;             //
     uint8_t fsTaskRunning = FsTaskType::NO_TASK;  //
+    uint16_t port = 80;                           //
+    bool serving = false;                         //
 
     void setup(
         Atoll::Fs *fs,
-        Atoll::Recorder *recorder,
+        Recorder *recorder,
         Atoll::Ota *ota) {
         if (nullptr == fs) {
             log_e("fs is null");
@@ -50,7 +52,7 @@ class RecWebserver {
         this->recorder = recorder;
         this->ota = ota;
 
-        server = new AsyncWebServer(80);
+        server = new AsyncWebServer(port);
         server->on("/", HTTP_GET, [this](Request *request) {
             onIndex(request);
         });
@@ -80,9 +82,11 @@ class RecWebserver {
             request->send(response);
             log_i("302 %s", request->url().c_str());
         });
-        server->begin();
-        log_i("serving on port 80");
+        begin();
     }
+
+    void begin();
+    void end();
 
     void onIndex(Request *request) {
         log_i("request %s", request->url().c_str());
@@ -308,7 +312,7 @@ class RecWebserver {
         </table>
         <p><a href="/genIndex">Regenerate index</a></p>
         <p><a href="/removeAll">Delete all</a></p>
-        <p><a href="/format">Format SD</a></p>
+        <!--<p><a href="/format">Format SD</a></p>-->
     </body>
 </html>
 )====";
