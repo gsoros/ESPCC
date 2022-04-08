@@ -75,9 +75,9 @@ Peer *BleClient::createPeer(
     const char *name) {
     // log_i("creating %s,%d,%s,%s", address, addressType, type, name);
     Peer *peer;
-    //    if (strstr(type, "E"))
-    //        peer = new ESPM(address, addressType, type, name); else
-    if (strstr(type, "P"))
+    if (strstr(type, "E"))
+        peer = new ESPM(address, addressType, type, name);
+    else if (strstr(type, "P"))
         peer = new PowerMeter(address, addressType, type, name);
     else if (strstr(type, "H"))
         peer = new HeartrateMonitor(address, addressType, type, name);
@@ -94,9 +94,9 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     strncpy(name, device->getName().c_str(), sizeof(name));
 
     Peer *peer = nullptr;
-    //    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID)))
-    //        peer = new ESPM(address, addressType, "E", name); else
-    if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID)))
+    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID)))
+        peer = new ESPM(address, addressType, "E", name);
+    else if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID)))
         peer = new PowerMeter(address, addressType, "P", name);
     else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID)))
         peer = new HeartrateMonitor(address, addressType, "H", name);

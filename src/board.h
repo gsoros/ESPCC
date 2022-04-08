@@ -48,8 +48,14 @@ class Board : public Atoll::Task,
             OLED_SDA_PIN));
     BleClient bleClient;
     BleServer bleServer;
-    Atoll::SdCard sdcard = Atoll::SdCard(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
-    Touch touch = Touch(TOUCH_PAD_0_PIN);
+    Atoll::SdCard sdcard = Atoll::SdCard(SD_SCK_PIN,
+                                         SD_MISO_PIN,
+                                         SD_MOSI_PIN,
+                                         SD_CS_PIN);
+    Touch touch = Touch(TOUCH_PAD_0_PIN,
+                        TOUCH_PAD_1_PIN,
+                        TOUCH_PAD_2_PIN,
+                        TOUCH_PAD_3_PIN);
     Api api;
     Wifi wifi;
     Atoll::Ota ota;
@@ -112,7 +118,7 @@ class Board : public Atoll::Task,
 
         static ulong lastSync = 0;
         const uint syncFreq = 600000;  // every 10 minutes
-        if (((lastSync < t - syncFreq) && (syncFreq < t)) || !lastSync)
+        if ((lastSync + syncFreq < t) || !lastSync)
             if (gps.syncSystemTime())
                 lastSync = t;
 #ifdef FEATURE_SERIAL
@@ -123,15 +129,19 @@ class Board : public Atoll::Task,
     bool loadSettings() {
         if (!preferencesStartLoad()) return false;
         char tmpHostName[sizeof(hostName)];
-        strncpy(tmpHostName, preferences->getString("hostName", hostName).c_str(), sizeof(hostName));
-        if (1 < strlen(tmpHostName)) {
-            strncpy(hostName, tmpHostName, sizeof(hostName));
-        }
+        strncpy(tmpHostName,
+                preferences->getString("hostName", hostName).c_str(),
+                sizeof(hostName));
+        if (1 < strlen(tmpHostName))
+            strncpy(hostName,
+                    tmpHostName,
+                    sizeof(hostName));
         char tmpTz[sizeof(timezone)];
-        strncpy(tmpTz, preferences->getString("tz", timezone).c_str(), sizeof(timezone));
-        if (1 < strlen(tmpTz)) {
+        strncpy(tmpTz,
+                preferences->getString("tz", timezone).c_str(),
+                sizeof(timezone));
+        if (1 < strlen(tmpTz))
             strncpy(timezone, tmpTz, sizeof(timezone));
-        }
         preferencesEnd();
         return true;
     }

@@ -32,8 +32,11 @@
 #define OLED_SCK_PIN 14                                                //
 #define OLED_SDA_PIN 12                                                //
 ;                                                                      //
-#define TOUCH_NUM_PADS 1                                               //
+#define TOUCH_NUM_PADS 4                                               //
 #define TOUCH_PAD_0_PIN 4                                              //
+#define TOUCH_PAD_1_PIN 0                                              //
+#define TOUCH_PAD_2_PIN 2                                              //
+#define TOUCH_PAD_3_PIN 15                                             //
 ;                                                                      //
 #define SD_SCK_PIN 18                                                  //
 #define SD_MISO_PIN 19                                                 //

@@ -25,9 +25,27 @@ class PowerMeter : public Atoll::PowerMeter {
               type,
               name,
               new PowerChar(),
-              new BattPMChar()) {
-    }
+              new BattPMChar()) {}
+
     virtual void onDisconnect(BLEClient* client) override;
+};
+
+class ESPM : public Atoll::ESPM {
+   public:
+    ESPM(const char* address,
+         uint8_t addressType,
+         const char* type,
+         const char* name)
+        : Atoll::ESPM(
+              address,
+              addressType,
+              type,
+              name,
+              new PowerChar(),
+              new BattPower(),
+              new Atoll::PeerCharacteristicApiTX(),
+              new Atoll::PeerCharacteristicApiRX(),
+              new Atoll::PeerCharacteristicWeightscale()) {}
 };
 
 class BattHRMChar : public Atoll::PeerCharacteristicBattery {
