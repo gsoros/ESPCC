@@ -13,28 +13,34 @@ void HeartrateMonitor::onDisconnect(BLEClient* client) {
 
 void BattPMChar::notify() {
     Atoll::PeerCharacteristicBattery::notify();
-    log_i("%d", lastValue);
+    log_i("BattPMChar %d", lastValue);
     board.oled.onBattPM(lastValue);
 }
 
 void BattHRMChar::notify() {
     Atoll::PeerCharacteristicBattery::notify();
-    log_i("%d", lastValue);
+    log_i("BattHRMChar %d", lastValue);
     board.oled.onBattHRM(lastValue);
 }
 
 void PowerChar::notify() {
     Atoll::PeerCharacteristicPower::notify();
-    // log_i("PowerChar::onNotify %d %d", lastValue, lastCadence);
+    // log_i("PowerChar %d %d", lastValue, lastCadence);
     board.oled.onPower(lastValue);
     board.oled.onCadence(lastCadence);
     board.recorder.onPower(lastValue);
     board.recorder.onCadence(lastCadence);
 }
 
+void WeightChar::notify() {
+    Atoll::PeerCharacteristicWeightscale::notify();
+    // log_i("WeightChar %2.2f", lastValue);
+    board.oled.onWeight(lastValue);
+}
+
 void HeartrateChar::notify() {
     Atoll::PeerCharacteristicHeartrate::notify();
-    // log_i("HRChar::onNotify %d", lastValue);
+    // log_i("HeartrateChar %d", lastValue);
     board.oled.onHeartrate(lastValue);
     board.recorder.onHeartrate(lastValue);
 }

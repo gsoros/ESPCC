@@ -211,11 +211,19 @@ class Oled : public Atoll::Oled {
                           const bool send = true,
                           const uint8_t color = C_FG,
                           const uint8_t bgColor = C_BG) {
-        while (100.0 <= value) value /= 10.0;  // reduce to 2 digits before the decimal point
+        if (100.0 <= abs(value)) {
+            log_w("reducing %.2f", value);
+            while (100.0 <= abs(value)) value /= 10.0;  // reduce to 2 digits before the decimal point
+        }
+        if (value < -10.0) {
+            // -10.1 will be printed as "-10"
+            printfFieldChars(fieldIndex, send, color, bgColor, "%3d", (int)value);
+            return;
+        }
         char dec[3];
-        snprintf(dec, sizeof(dec), "%2d", (int)value);  // digits before the decimal point
+        snprintf(dec, sizeof(dec), "%2.0f", value);  // digits before the decimal point
         char rem[2];
-        snprintf(rem, sizeof(rem), "%1d", ((int)(value * 10)) % 10);  // first digit after the decimal point
+        snprintf(rem, sizeof(rem), "%1d", abs((int)(value * 10)) % 10);  // first digit after the decimal point
         printField2plus1(fieldIndex, dec, rem, send, color, bgColor);
     }
 
@@ -305,13 +313,15 @@ class Oled : public Atoll::Oled {
             displayFieldContent(i, field[i].content[currentPage], send);
     }
 
-    int16_t power = 0;
+    int16_t power = -1;
+    ulong lastPowerUpdate = 0;
 
     void onPower(int16_t value) {
         static int16_t lastPower = 0;
         power = value;
         if (lastPower == power) return;
-        displayPower();
+        if (lastWeightUpdate + 1000 < millis())
+            displayPower();
         lastPower = power;
     }
 
@@ -324,9 +334,31 @@ class Oled : public Atoll::Oled {
         else
             printfFieldChars(fieldIndex, send, C_FG, C_BG, " --");
         lastFieldUpdate = millis();
+        lastPowerUpdate = lastFieldUpdate;
     }
 
-    int16_t cadence = 0;
+    double weight = 0.0;
+    ulong lastWeightUpdate = 0;
+
+    void onWeight(double value) {
+        static double lastWeight = 0.0;
+        weight = value;
+        if (lastWeight == weight) return;
+        if (lastPowerUpdate + 1000 < millis())
+            displayWeight();
+        lastWeight = weight;
+    }
+
+    void displayWeight(int8_t fieldIndex = -1, bool send = true) {
+        if (fieldIndex < 0)
+            fieldIndex = getFieldIndex(FC_POWER);
+        if (fieldIndex < 0) return;
+        printFieldDouble(fieldIndex, weight, send);
+        lastFieldUpdate = millis();
+        lastWeightUpdate = lastFieldUpdate;
+    }
+
+    int16_t cadence = -1;
 
     void onCadence(int16_t value) {
         static int16_t lastCadence = 0;

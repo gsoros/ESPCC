@@ -30,6 +30,10 @@ class PowerMeter : public Atoll::PowerMeter {
     virtual void onDisconnect(BLEClient* client) override;
 };
 
+class WeightChar : public Atoll::PeerCharacteristicWeightscale {
+    virtual void notify() override;
+};
+
 class ESPM : public Atoll::ESPM {
    public:
     ESPM(const char* address,
@@ -45,7 +49,7 @@ class ESPM : public Atoll::ESPM {
               new BattPMChar(),
               new Atoll::PeerCharacteristicApiTX(),
               new Atoll::PeerCharacteristicApiRX(),
-              new Atoll::PeerCharacteristicWeightscale()) {}
+              new WeightChar()) {}
 };
 
 class BattHRMChar : public Atoll::PeerCharacteristicBattery {
