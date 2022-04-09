@@ -50,6 +50,8 @@ class ESPM : public Atoll::ESPM {
               new Atoll::PeerCharacteristicApiTX(),
               new Atoll::PeerCharacteristicApiRX(),
               new WeightChar()) {}
+
+    virtual void onDisconnect(BLEClient* client) override;
 };
 
 class BattHRMChar : public Atoll::PeerCharacteristicBattery {

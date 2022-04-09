@@ -6,6 +6,11 @@ void PowerMeter::onDisconnect(BLEClient* client) {
     board.oled.onPMDisconnected();
 }
 
+void ESPM::onDisconnect(BLEClient* client) {
+    Atoll::ESPM::onDisconnect(client);
+    board.oled.onPMDisconnected();
+}
+
 void HeartrateMonitor::onDisconnect(BLEClient* client) {
     Atoll::HeartrateMonitor::onDisconnect(client);
     board.oled.onHRMDisconnected();
