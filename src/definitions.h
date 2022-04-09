@@ -34,7 +34,7 @@
 ;                                                                      //
 #define TOUCH_NUM_PADS 4                                               //
 #define TOUCH_PAD_0_PIN 4                                              //
-#define TOUCH_PAD_1_PIN 0                                              //
+#define TOUCH_PAD_1_PIN 13                                             //
 #define TOUCH_PAD_2_PIN 2                                              //
 #define TOUCH_PAD_3_PIN 15                                             //
 ;                                                                      //

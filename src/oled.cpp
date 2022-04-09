@@ -5,7 +5,7 @@ void Oled::setup() {
     Atoll::Oled::setup();
     // device->setFontMode(1);  // transparent
     // device->setBitmapMode(1);  // transparent
-    displayFieldValues();
+    splash();
 }
 
 void Oled::loop() {
@@ -24,14 +24,12 @@ void Oled::loop() {
 }
 
 void Oled::displayStatus() {
-    static const uint8_t iconSize = 14;  // width and height
+    static const uint8_t iconSize = 14;  // status icon width and height
+    // status area
     static const Area a = {
-        x : field[1].area.x,
-        y : (uint8_t)(field[1].area.y +
-                      field[1].area.h +
-                      fieldVSeparation / 2 -
-                      iconSize / 2),
-        w : field[1].area.w,
+        x : feedbackWidth,
+        y : (uint8_t)(height - iconSize),
+        w : fieldWidth,
         h : iconSize
     };
 
@@ -157,8 +155,7 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             if (numPages <= currentPage) currentPage = 0;
             log_i("currentPage %d", currentPage);
             if (!aquireMutex()) return;
-            // log_i("got mutex, clearing clock");
-            displayClock(false, true);  // clear
+            displayClock(false, true);  // clear clock
             char label[10] = "";
             Area *a;
             device->setFont(labelFont);
@@ -170,19 +167,13 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 fill(a, C_BG, false);
                 device->setCursor(a->x, a->y + a->h - 4);
                 device->setDrawColor(C_FG);
-                // log_i("printing %s", label);
                 device->print(label);
             }
-            // log_i("sending buffer 1");
             device->sendBuffer();
             device->setMaxClipWindow();
-            // log_i("delaying 1000");
             delay(1000);
-            // log_i("calling displayFieldValues");
             displayFieldValues(false);
-            // log_i("sending buffer 2");
             device->sendBuffer();
-            // log_i("releasing mutex");
             releaseMutex();
             lastFieldUpdate = millis();
 

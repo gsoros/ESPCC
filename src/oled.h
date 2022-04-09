@@ -42,10 +42,10 @@ class Oled : public Atoll::Oled {
         FieldContent content[OLED_NUM_PAGES];
     };
 
-    uint8_t feedbackWidth;                                    // touch feedback area width
-    uint8_t fieldWidth;                                       // width of the number output fields
-    uint8_t fieldHeight;                                      // height of the number output fields
-    uint8_t fieldVSeparation;                                 // vertical distance between the number output fields
+    uint8_t feedbackWidth = 1;                                // touch feedback area width
+    uint8_t fieldWidth = 1;                                   // width of the output fields
+    uint8_t fieldHeight = 1;                                  // height of the output fields
+    uint8_t fieldVSeparation = 1;                             // vertical distance between the output fields
     OutputField field[OLED_NUM_FIELDS];                       // output fields
     const uint8_t numFields = OLED_NUM_FIELDS;                // helper
     Area feedback[OLED_NUM_FEEDBACK];                         // touch feedback areas
@@ -53,13 +53,14 @@ class Oled : public Atoll::Oled {
     const uint8_t *smallDigitFont = u8g2_font_logisoso18_tn;  // font for displaying small digits
     const uint8_t *fieldFont = u8g2_font_logisoso32_tr;       // font for displaying field chars
     const uint8_t *smallFont = u8g2_font_logisoso18_tr;       // font for displaying small chars
-    const uint8_t *timeFont = u8g2_font_logisoso28_tn;        // font for displaying the time
-    const uint8_t timeFontHeight = 28;                        //
+    const uint8_t smallFontHeight = 18;                       //
+    const uint8_t *timeFont = u8g2_font_logisoso32_tn;        // font for displaying the time
+    const uint8_t timeFontHeight = 32;                        //
     const uint8_t *dateFont = u8g2_font_fur14_tn;             // font for displaying the date
     const uint8_t dateFontHeight = 14;                        //
     const uint8_t *labelFont = u8g2_font_bytesize_tr;         // font for displaying the field labels
     const uint8_t labelFontHeight = 12;                       //
-    Area timeArea;                                            //
+    Area clockArea;                                           //
     int8_t lastMinute = -1;                                   // last minute displayed
     uint8_t currentPage = 0;                                  //
     const uint8_t numPages = OLED_NUM_PAGES;                  // helper
@@ -77,7 +78,7 @@ class Oled : public Atoll::Oled {
         this->fieldHeight = fieldHeight;
 
         fieldWidth = width - 2 * feedbackWidth;
-        fieldVSeparation = (height - 3 * fieldHeight) / 2;
+        fieldVSeparation = (height - 3 * fieldHeight) / 4;
 
         field[0].area.x = feedbackWidth;
         field[0].area.y = 0;
@@ -90,7 +91,7 @@ class Oled : public Atoll::Oled {
         field[1].area.h = fieldHeight;
 
         field[2].area.x = feedbackWidth;
-        field[2].area.y = height - fieldHeight;
+        field[2].area.y = 2 * fieldHeight + 2 * fieldVSeparation;
         field[2].area.w = fieldWidth;
         field[2].area.h = fieldHeight;
 
@@ -128,10 +129,10 @@ class Oled : public Atoll::Oled {
         feedback[3].w = feedbackWidth;
         feedback[3].h = height / 2;
 
-        timeArea.x = field[0].area.x;
-        timeArea.y = field[0].area.y;
-        timeArea.w = field[0].area.w;
-        timeArea.h = field[0].area.h + fieldVSeparation + field[1].area.h;
+        clockArea.x = field[0].area.x;
+        clockArea.y = field[0].area.y;
+        clockArea.w = fieldWidth;
+        clockArea.h = numFields * fieldHeight + (numFields - 1) * fieldVSeparation;
     }
 
     void setup();
@@ -170,8 +171,8 @@ class Oled : public Atoll::Oled {
         vsnprintf(out, 4, format, argp);
         va_end(argp);
         if (send && !aquireMutex()) return;
-        if ((0 == fieldIndex || 1 == fieldIndex) && 0 < lastMinute)
-            displayClock(false, true, !fieldIndex);  // clear clock area, update other field
+        if (0 < lastMinute)
+            displayClock(false, true, fieldIndex);  // clear clock area, update other fields
         // log_i("printing '%s' to field %d", out, fieldIndex);
         printField(fieldIndex, out, false, fieldDigitFont, color, bgColor);
         if (send) {
@@ -194,8 +195,8 @@ class Oled : public Atoll::Oled {
         vsnprintf(out, 5, format, argp);
         va_end(argp);
         if (send && !aquireMutex()) return;
-        if ((0 == fieldIndex || 1 == fieldIndex) && 0 < lastMinute)
-            displayClock(false, true, !fieldIndex);  // clear clock area, update other field
+        if (0 < lastMinute)
+            displayClock(false, true, fieldIndex);  // clear clock area, update other fields
         // log_i("printing '%s' to field %d", out, fieldIndex);
         printField(fieldIndex, out, false, fieldFont, color, bgColor);
         if (send) {
@@ -235,8 +236,8 @@ class Oled : public Atoll::Oled {
                           const uint8_t bgColor = C_BG) {
         Area *a = &field[fieldIndex].area;
         if (send && !aquireMutex()) return;
-        if ((0 == fieldIndex || 1 == fieldIndex) && 0 < lastMinute)
-            displayClock(false, true, !fieldIndex);  // clear clock area, update other field
+        if (0 < lastMinute)
+            displayClock(false, true, fieldIndex);  // clear clock area, update other fields
         device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
         fill(a, bgColor, false);
         device->setDrawColor(color);
@@ -264,8 +265,8 @@ class Oled : public Atoll::Oled {
         releaseMutex();
     }
 
-    void displayClock(bool send = true, bool clear = false, int8_t redrawFieldIndex = -1) {
-        static const Area *a = &timeArea;
+    void displayClock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) {
+        static const Area *a = &clockArea;
         if (-2 == lastMinute) return;  // avoid recursion
         tm t = Atoll::localTm();
         if (t.tm_min == lastMinute && !clear) return;
@@ -275,11 +276,11 @@ class Oled : public Atoll::Oled {
         if (clear) {
             device->setMaxClipWindow();
             lastMinute = -2;  // avoid recursion
-            if (-1 != redrawFieldIndex)
-                displayFieldContent(
-                    redrawFieldIndex,
-                    field[redrawFieldIndex].content[currentPage],
-                    false);
+            for (uint8_t i = 0; i < numFields; i++)
+                if ((int8_t)i != skipFieldIndex)
+                    displayFieldContent(i,
+                                        field[i].content[currentPage],
+                                        false);
             if (!send) return;
             device->sendBuffer();
             releaseMutex();
@@ -298,6 +299,21 @@ class Oled : public Atoll::Oled {
         lastMinute = t.tm_min;
         if (!send) return;
         device->sendBuffer();
+        releaseMutex();
+    }
+
+    void splash() {
+        if (!aquireMutex()) return;
+        Area *a = &field[1].area;
+        device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
+        device->setFont(smallFont);
+        device->setFontPosBottom();
+        device->setCursor(a->x, a->y + a->h);
+        device->setDrawColor(C_FG);
+        device->print("espcc");
+        device->sendBuffer();
+        device->setMaxClipWindow();
+        device->setFontPosBaseline();
         releaseMutex();
     }
 
@@ -332,7 +348,7 @@ class Oled : public Atoll::Oled {
         if (0 <= power)
             printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", power);
         else
-            printfFieldChars(fieldIndex, send, C_FG, C_BG, " --");
+            fill(&field[fieldIndex].area, C_BG, send);
         lastFieldUpdate = millis();
         lastPowerUpdate = lastFieldUpdate;
     }
@@ -375,7 +391,7 @@ class Oled : public Atoll::Oled {
         if (0 <= cadence)
             printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", cadence);
         else
-            printfFieldChars(fieldIndex, send, C_FG, C_BG, " --");
+            fill(&field[fieldIndex].area, C_BG, send);
         lastFieldUpdate = millis();
     }
 
@@ -396,7 +412,7 @@ class Oled : public Atoll::Oled {
         if (0 < heartrate)
             printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", heartrate);
         else
-            printfFieldChars(fieldIndex, send, C_FG, C_BG, " --");
+            fill(&field[fieldIndex].area, C_BG, send);
         lastFieldUpdate = millis();
     }
 
@@ -414,7 +430,6 @@ class Oled : public Atoll::Oled {
             printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", (int)speed);
         } else
             printFieldDouble(fieldIndex, speed, send);
-        // printfFieldChars(fieldIndex, send, C_FG, C_BG, "%.1f", speed);
         lastFieldUpdate = millis();
     }
 
@@ -433,7 +448,6 @@ class Oled : public Atoll::Oled {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_DISTANCE);
         if (fieldIndex < 0) return;
-        // log_i("%d start", fieldIndex);
         if (distance < 1000)
             printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", distance);  // < 1000 m
         else if (distance < 100000)
@@ -442,8 +456,6 @@ class Oled : public Atoll::Oled {
             while (1000 <= distance) distance /= 10;
             printfFieldDigits(fieldIndex, send, C_FG, C_BG, "%3d", distance);  // >= 100 km
         }
-        // log_i("%d done", fieldIndex);
-
         lastFieldUpdate = millis();
     }
 
@@ -485,12 +497,12 @@ class Oled : public Atoll::Oled {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_BATTERY);
         if (fieldIndex < 0) return;
-        char level[3];
-        if (battery < 0)
-            snprintf(level, 3, "--");
-        else
+        char level[3] = "";
+        if (0 <= battery) {
             snprintf(level, 3, "%2d", battery);
-        printField2plus1(fieldIndex, level, "%", send);
+            printField2plus1(fieldIndex, level, "%", send);
+        } else
+            fill(&field[fieldIndex].area, C_BG, send);
         lastFieldUpdate = millis();
     }
 
@@ -509,12 +521,12 @@ class Oled : public Atoll::Oled {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_BATTERY_POWER);
         if (fieldIndex < 0) return;
-        char level[3];
-        if (battPM < 0)
-            snprintf(level, 3, "--");
-        else
+        char level[3] = "";
+        if (0 <= battPM) {
             snprintf(level, 3, "%2d", battPM);
-        printField2plus1(fieldIndex, level, "%", send);
+            printField2plus1(fieldIndex, level, "%", send);
+        } else
+            fill(&field[fieldIndex].area, C_BG, send);
         lastFieldUpdate = millis();
     }
 
@@ -533,12 +545,12 @@ class Oled : public Atoll::Oled {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_BATTERY_HEARTRATE);
         if (fieldIndex < 0) return;
-        char level[3];
-        if (battHRM < 0)
-            snprintf(level, 3, "--");
-        else
+        char level[3] = "";
+        if (0 <= battHRM) {
             snprintf(level, 3, "%2d", battHRM);
-        printField2plus1(fieldIndex, level, "%", send);
+            printField2plus1(fieldIndex, level, "%", send);
+        } else
+            fill(&field[fieldIndex].area, C_BG, send);
         lastFieldUpdate = millis();
     }
 

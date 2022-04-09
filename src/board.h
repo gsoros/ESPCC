@@ -99,6 +99,8 @@ class Board : public Atoll::Task,
         // uploader.setup(&recorder, &sdcard, &wifi);
         recWebserver.setup(&sdcard, &recorder, &ota);
 
+        bleServer.start();
+
         gps.taskStart(GPS_TASK_FREQ);
         bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 8192);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ);
@@ -109,7 +111,6 @@ class Board : public Atoll::Task,
         touch.taskStart(TOUCH_TASK_FREQ);
         taskStart(BOARD_TASK_FREQ);
 
-        bleServer.start();
         recorder.start();
     }
 
