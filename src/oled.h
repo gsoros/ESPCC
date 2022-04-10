@@ -493,12 +493,39 @@ class Oled : public Atoll::Oled {
         lastBattery = battery;
     }
 
+    void printBattCharging(int8_t fieldIndex = -1,
+                           bool send = true,
+                           uint8_t color = C_FG,
+                           uint8_t bgColor = C_BG) {
+        static const uint8_t chgIconSize = 24;
+        static const uint8_t chgIcon[] = {
+            0x00, 0x00, 0x10, 0x00, 0x40, 0x18, 0x00, 0xe0, 0x0c, 0x00, 0xb0, 0xc7,
+            0x00, 0x18, 0xe7, 0x00, 0x08, 0x76, 0x00, 0x0c, 0x3c, 0x00, 0x0c, 0x18,
+            0x00, 0x0c, 0x10, 0x00, 0x08, 0x30, 0x00, 0x1c, 0x18, 0x00, 0x7f, 0x0e,
+            0x80, 0xc7, 0x07, 0x80, 0x03, 0x00, 0x80, 0x01, 0x00, 0x80, 0x01, 0x00,
+            0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00, 0x03, 0x00,
+            0x00, 0x03, 0x00, 0xfc, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x03, 0x00, 0x00};
+        if (fieldIndex < 0) return;
+        Area *a = &field[fieldIndex].area;
+        if (send && !aquireMutex()) return;
+        device->setClipWindow(a->x, a->y, a->x + a->w, a->y + a->h);
+        fill(a, bgColor, false);
+        device->setDrawColor(color);
+        device->drawXBMP(a->x + a->w - chgIconSize, a->y, chgIconSize, chgIconSize, chgIcon);
+        device->setMaxClipWindow();
+        if (!send) return;
+        device->sendBuffer();
+        releaseMutex();
+    }
+
     void displayBattery(int8_t fieldIndex = -1, bool send = true) {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_BATTERY);
         if (fieldIndex < 0) return;
-        char level[3] = "";
-        if (0 <= battery) {
+        if (99 <= battery) {
+            printBattCharging(fieldIndex, send);
+        } else if (0 <= battery) {
+            char level[3] = "";
             snprintf(level, 3, "%2d", battery);
             printField2plus1(fieldIndex, level, "%", send);
         } else
@@ -521,8 +548,10 @@ class Oled : public Atoll::Oled {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_BATTERY_POWER);
         if (fieldIndex < 0) return;
-        char level[3] = "";
-        if (0 <= battPM) {
+        if (99 <= battPM) {
+            printBattCharging(fieldIndex, send);
+        } else if (0 <= battPM) {
+            char level[3] = "";
             snprintf(level, 3, "%2d", battPM);
             printField2plus1(fieldIndex, level, "%", send);
         } else
@@ -545,8 +574,10 @@ class Oled : public Atoll::Oled {
         if (fieldIndex < 0)
             fieldIndex = getFieldIndex(FC_BATTERY_HEARTRATE);
         if (fieldIndex < 0) return;
-        char level[3] = "";
-        if (0 <= battHRM) {
+        if (99 <= battHRM) {
+            printBattCharging(fieldIndex, send);
+        } else if (0 <= battHRM) {
+            char level[3] = "";
             snprintf(level, 3, "%2d", battHRM);
             printField2plus1(fieldIndex, level, "%", send);
         } else
