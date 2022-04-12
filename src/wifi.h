@@ -6,6 +6,7 @@
 
 class Wifi : public Atoll::Wifi {
    public:
+    virtual void applySettings() override;
     virtual void onApConnected(WiFiEvent_t event, WiFiEventInfo_t info) override;
     virtual void onApDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) override;
     virtual void onStaConnected(WiFiEvent_t event, WiFiEventInfo_t info) override;

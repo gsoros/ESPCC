@@ -1,7 +1,7 @@
-#include "rec_webserver.h"
+#include "webserver.h"
 #include "board.h"
 
-void RecWebserver::begin() {
+void Webserver::begin() {
     if (serving) {
         log_i("already serving");
         return;
@@ -15,7 +15,7 @@ void RecWebserver::begin() {
     log_i("serving on port %d", port);
 }
 
-void RecWebserver::end() {
+void Webserver::end() {
     if (!serving) {
         log_i("not serving");
         return;

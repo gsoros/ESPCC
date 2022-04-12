@@ -18,7 +18,7 @@ bool Recorder::start() {
         // disable wifi but don't save
         board.wifi.setEnabled(false, false);
         // stop webserver
-        board.recWebserver.end();
+        board.webserver.end();
     }
     return res;
 }
@@ -34,6 +34,6 @@ bool Recorder::rec2gpx(const char *in, const char *out) {
     bool res = Atoll::Recorder::rec2gpx(in, out);
     log_i("rec2gpx returned %d", res);
     if (res)
-        board.recWebserver.generateIndex();
+        board.webserver.generateIndex();
     return res;
 }

@@ -1,5 +1,5 @@
-#ifndef __rec_webserver_h
-#define __rec_webserver_h
+#ifndef __webserver_h
+#define __webserver_h
 
 #include <Arduino.h>
 #include <AsyncTCP.h>
@@ -9,7 +9,7 @@
 #include "recorder.h"
 #include "atoll_ota.h"
 
-class RecWebserver {
+class Webserver {
     typedef AsyncWebServerRequest Request;
     typedef AsyncWebServerResponse Response;
 
@@ -233,7 +233,7 @@ class RecWebserver {
         }
         xTaskCreatePinnedToCore(
             task,
-            "RecWebserver FsTask",
+            "Webserver FsTask",
             4096,
             this,
             1,
@@ -250,7 +250,7 @@ class RecWebserver {
     }
 
     static void indexGeneratorTask(void *p) {
-        RecWebserver *thisP = (RecWebserver *)p;
+        Webserver *thisP = (Webserver *)p;
         thisP->indexGeneratorRunner();
         thisP->fsTaskStop();
     }
@@ -384,7 +384,7 @@ class RecWebserver {
     }
 
     static void removeAllTask(void *p) {
-        RecWebserver *thisP = (RecWebserver *)p;
+        Webserver *thisP = (Webserver *)p;
         thisP->removeAllRunner();
         thisP->fsTaskStop();
     }
@@ -440,8 +440,12 @@ class RecWebserver {
             return false;
         }
         const char *f = request->getParam("f")->value().c_str();
+        if (strlen(f) < 1) {
+            log_e("param is empty");
+            return false;
+        }
         if (strchr(f, '/')) {
-            log_e("slash in param '%s'", f);
+            log_e("'/' in param '%s'", f);
             return false;
         }
         snprintf(path, len, "%s/%s%s",

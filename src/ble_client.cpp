@@ -112,17 +112,6 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
         for (int i = 0; i < device->getTargetAddressCount(); i++)
             log_i("Target address %i: %s", device->getTargetAddress(i).toString().c_str());
 
-    // scan->stop();
-    // BLEClient *client = BLEDevice::createClient(device->getAddress());
-    // while (!client->isConnected()) {
-    //     if (client->connect())
-    //         log_i("connected");
-    //     else
-    //         log_i("could not connect");
-    //     delay(500);
-    // }
-    // return;
-
     Peer *peer = createPeer(device);
     if (nullptr == peer) {  // delete nullptr should be safe!
         log_i("not adding peer %s", device->getName().c_str());

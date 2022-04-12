@@ -46,7 +46,7 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
     }
     // get touchpad thresholds
     // value format: padIndex1:threshold1,padIndex2:threshold2...
-    char thresholds[valueLength] = "";
+    char thresholds[replyValueLength] = "";
     for (int i = 0; i < board.touch.numPads; i++) {
         char token[9];
         snprintf(
@@ -55,14 +55,14 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
             0 == i ? "%d:%d" : ",%d:%d",
             i,
             board.touch.pads[i].threshold);
-        int16_t remaining = valueLength - strlen(thresholds) - 1;
+        int16_t remaining = replyValueLength - strlen(thresholds) - 1;
         if (remaining < strlen(token)) {
             if (reply->log) log_e("no space left for adding %s to %s", token, thresholds);
             return result("internalError");
         }
         strncat(thresholds, token, remaining);
     }
-    strncpy(reply->value, thresholds, valueLength);
+    strncpy(reply->value, thresholds, replyValueLength);
     return success();
 }
 
@@ -74,7 +74,7 @@ ApiResult *Api::touchReadProcessor(ApiReply *reply) {
     uint8_t padIndex = atoi(reply->arg);
     if (reply->log) log_i("index %d numPads %d", padIndex, board.touch.numPads);
     if (board.touch.numPads <= padIndex) return result("argInvalid");
-    snprintf(reply->value, valueLength, "%d:%d", padIndex, board.touch.read(padIndex));
+    snprintf(reply->value, replyValueLength, "%d:%d", padIndex, board.touch.read(padIndex));
     return success();
 }
 
@@ -82,7 +82,7 @@ ApiResult *Api::hostnameProcessor(ApiReply *reply) {
     // set hostname
     // TODO
     // get hostname
-    strncpy(reply->value, board.hostName, valueLength);
+    strncpy(reply->value, board.hostName, replyValueLength);
     return success();
 }
 
@@ -105,7 +105,7 @@ ApiResult *Api::scanResultProcessor(ApiReply *reply) {
 }
 
 ApiResult *Api::peersProcessor(ApiReply *reply) {
-    char value[valueLength] = "";
+    char value[replyValueLength] = "";
     int16_t remaining = 0;
     for (int i = 0; i < board.bleClient.peersMax; i++) {
         if (nullptr == board.bleClient.peers[i]) continue;
@@ -113,14 +113,14 @@ ApiResult *Api::peersProcessor(ApiReply *reply) {
         char token[Peer::packedMaxLength + 1];
         board.bleClient.peers[i]->pack(token, sizeof(token) - 1);
         strcat(token, ";");
-        remaining = valueLength - strlen(value) - 1;
+        remaining = replyValueLength - strlen(value) - 1;
         if (remaining < strlen(token)) {
             if (reply->log) log_e("no space left for adding %s to %s", token, value);
             return result("internalError");
         }
         strncat(value, token, remaining);
     }
-    strncpy(reply->value, value, valueLength);
+    strncpy(reply->value, value, replyValueLength);
     return success();
 }
 

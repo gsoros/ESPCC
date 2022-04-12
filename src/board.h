@@ -25,7 +25,7 @@
 #include "battery.h"
 #include "recorder.h"
 #include "atoll_uploader.h"
-#include "rec_webserver.h"
+#include "webserver.h"
 #include "atoll_log.h"
 
 class Board : public Atoll::Task,
@@ -62,7 +62,7 @@ class Board : public Atoll::Task,
     Battery battery;
     Recorder recorder;
     // Atoll::Uploader uploader;
-    RecWebserver recWebserver;
+    Webserver webserver;
 
     Board() {}
     virtual ~Board() {}
@@ -97,7 +97,7 @@ class Board : public Atoll::Task,
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
         recorder.setup(&gps, &sdcard, &api, &recorder);
         // uploader.setup(&recorder, &sdcard, &wifi);
-        recWebserver.setup(&sdcard, &recorder, &ota);
+        webserver.setup(&sdcard, &recorder, &ota);
 
         bleServer.start();
 

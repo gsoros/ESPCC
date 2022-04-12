@@ -693,7 +693,7 @@ class Oled : public Atoll::Oled {
     void onTouchEvent(Touch::Pad *pad, Touch::Event event);
 
     int8_t wifiState = -1;
-    void onWifiEvent();
+    void onWifiStateChange();
 };
 
 #endif
