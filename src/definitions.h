@@ -36,7 +36,7 @@
 #define TOUCH_PAD_0_PIN 4                                              //
 #define TOUCH_PAD_1_PIN 13                                             //
 #define TOUCH_PAD_2_PIN 2                                              //
-#define TOUCH_PAD_3_PIN 15                                             //
+#define TOUCH_PAD_3_PIN 33                                             //
 ;                                                                      //
 #define SD_SCK_PIN 18                                                  //
 #define SD_MISO_PIN 19                                                 //

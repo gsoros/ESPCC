@@ -107,6 +107,9 @@ class Oled : public Atoll::Oled {
         field[1].content[2] = FC_BATTERY_POWER;
         field[2].content[2] = FC_BATTERY_HEARTRATE;
 
+        // 0 2
+        // 1 3
+
         feedback[0].x = 0;
         feedback[0].y = 0;
         feedback[0].w = feedbackWidth;
@@ -286,7 +289,7 @@ class Oled : public Atoll::Oled {
             releaseMutex();
             return;
         }
-        device->setCursor(a->x + a->w - timeFontHeight, a->y);
+        device->setCursor(a->x + a->w - timeFontHeight - 1, a->y);
         device->setDrawColor(C_FG);
         device->setFont(timeFont);
         device->setFontDirection(1);  // 90˚
