@@ -67,12 +67,25 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
 }
 
 // get touchpad reading
-// arg: padIndex
-// reply format: padIndex:currentValue
+// arg: [padIndex]
+// reply format: padIndex:currentValue[,padIndex:currentValue...]
 ApiResult *Api::touchReadProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < 1) return result("argInvalid");
-    uint8_t padIndex = atoi(reply->arg);
-    if (reply->log) log_i("index %d numPads %d", padIndex, board.touch.numPads);
+    if (strlen(reply->arg) < 1) {
+        char buf[10] = "";
+        for (uint8_t i = 0; i < board.touch.numPads; i++) {
+            snprintf(buf,
+                     sizeof(buf),
+                     0 < i ? ",%d:%d" : "%d:%d",
+                     i,
+                     board.touch.read(i));
+            // log_i("buf: %s", buf);
+            strncat(reply->value, buf, replyValueLength - strlen(reply->value));
+        }
+        // log_i("val: %s", reply->value);
+        return success();
+    }
+    uint8_t padIndex = (uint8_t)atoi(reply->arg);
+    // if (reply->log) log_i("index %d numPads %d", padIndex, board.touch.numPads);
     if (board.touch.numPads <= padIndex) return result("argInvalid");
     snprintf(reply->value, replyValueLength, "%d:%d", padIndex, board.touch.read(padIndex));
     return success();
