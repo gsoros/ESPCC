@@ -103,8 +103,31 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     return peer;
 }
 
+uint32_t BleClient::startScan(uint32_t duration) {
+    uint32_t ret = Atoll::BleClient::startScan(duration);
+
+    char value[ATOLL_API_VALUE_LENGTH];
+    snprintf(value, sizeof(value), "%d;%d=%d",
+             board.api.success()->code,
+             board.api.command("scan")->code,
+             ret);
+
+    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
+    board.bleServer.notify(
+        BLEUUID(ESPCC_API_SERVICE_UUID),
+        BLEUUID(API_TX_CHAR_UUID),
+        (uint8_t *)value, strlen(value));
+
+    return ret;
+}
+
+// overriden in order to call our version of static onScanComplete
+bool BleClient::callScanStart(uint32_t duration) {
+    return scan->start(duration, onScanComplete, false);
+}
+
 void BleClient::onResult(BLEAdvertisedDevice *device) {
-    log_i("scan found %s", device->toString().c_str());
+    Atoll::BleClient::onResult(device);
 
     if (peerExists(device->getAddress().toString().c_str())) return;
 
@@ -113,16 +136,16 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
             log_i("Target address %i: %s", device->getTargetAddress(i).toString().c_str());
 
     Peer *peer = createPeer(device);
-    if (nullptr == peer) {  // delete nullptr should be safe!
-        log_i("not adding peer %s", device->getName().c_str());
+    if (nullptr == peer) {
+        log_i("peer %s is null", device->getName().c_str());
         return;
     }
-    if (!addPeer(peer))
-        delete peer;
-    else
-        saveSettings();
-
-    if (nullptr == bleServer) return;
+    // if (!addPeer(peer)) {
+    //     delete peer;
+    //     return ret;
+    // }
+    // else
+    //     saveSettings();
 
     char value[ATOLL_API_VALUE_LENGTH];
     snprintf(value, sizeof(value), "%d;%d=%s,%d,%s,%s",
@@ -134,7 +157,25 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
              peer->name);
 
     log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
-    bleServer->notify(
+    board.bleServer.notify(
+        BLEUUID(ESPCC_API_SERVICE_UUID),
+        BLEUUID(API_TX_CHAR_UUID),
+        (uint8_t *)value, strlen(value));
+
+    delete peer;
+}
+
+void BleClient::onScanComplete(BLEScanResults results) {
+    Atoll::BleClient::onScanComplete(results);
+
+    char value[ATOLL_API_VALUE_LENGTH];
+    snprintf(value, sizeof(value), "%d;%d=%d",
+             board.api.success()->code,
+             board.api.command("scan")->code,
+             0);
+
+    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
+    board.bleServer.notify(
         BLEUUID(ESPCC_API_SERVICE_UUID),
         BLEUUID(API_TX_CHAR_UUID),
         (uint8_t *)value, strlen(value));

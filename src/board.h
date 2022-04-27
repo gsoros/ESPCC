@@ -85,7 +85,7 @@ class Board : public Atoll::Task,
         api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
         gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
         oled.setup();
-        bleClient.setup(hostName, &arduinoPreferences, &bleServer);
+        bleClient.setup(hostName, &arduinoPreferences);
         sdcard.setup();
         touch.setup(&arduinoPreferences, "Touch");
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder

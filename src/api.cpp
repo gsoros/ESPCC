@@ -112,7 +112,7 @@ ApiResult *Api::peersProcessor(ApiReply *reply) {
         if (board.bleClient.peers[i]->markedForRemoval) continue;
         char token[Peer::packedMaxLength + 1];
         board.bleClient.peers[i]->pack(token, sizeof(token) - 1);
-        strcat(token, ";");
+        strcat(token, "|");
         remaining = replyValueLength - strlen(value) - 1;
         if (remaining < strlen(token)) {
             if (reply->log) log_e("no space left for adding %s to %s", token, value);
