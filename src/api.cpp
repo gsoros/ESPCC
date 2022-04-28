@@ -66,11 +66,23 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
     return success();
 }
 
-// get touchpad reading
-// arg: [padIndex]
+// get touchpad reading or disable touchpad
+// arg: [padIndex|disableFor:intNumSeconds]
 // reply format: padIndex:currentValue[,padIndex:currentValue...]
 ApiResult *Api::touchReadProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < 1) {
+    char *disable = strstr(reply->arg, "disableFor:");
+    if (strlen(reply->arg) < 1 || nullptr != disable) {
+        if (nullptr != disable) {
+            if (disable + strlen("disableFor:") < reply->arg + strlen(reply->arg)) {
+                // log_i("disable: %s", disable + strlen("disableFor:"));
+                int secs = atoi(disable + strlen("disableFor:"));
+                if (0 < secs && secs < UINT8_MAX) {
+                    if (reply->log) log_i("touch disabled for %ds", secs);
+                    board.touch.enabled = false;
+                    board.touch.enableAfter = millis() + secs * 1000;
+                }
+            }
+        }
         char buf[10] = "";
         for (uint8_t i = 0; i < board.touch.numPads; i++) {
             snprintf(buf,
