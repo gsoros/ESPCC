@@ -1,26 +1,24 @@
-#include "wifi.h"
 #include "board.h"
+#include "wifi.h"
 
 void Wifi::applySettings() {
     Atoll::Wifi::applySettings();
     board.oled.onWifiStateChange();
 };
 
-void Wifi::onApConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    Atoll::Wifi::onApConnected(event, info);
-    board.oled.onWifiStateChange();
-    board.webserver.begin();
-}
-void Wifi::onApDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    Atoll::Wifi::onApDisconnected(event, info);
-    board.oled.onWifiStateChange();
-}
-void Wifi::onStaConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    Atoll::Wifi::onStaConnected(event, info);
-    board.oled.onWifiStateChange();
-    board.webserver.begin();
-}
-void Wifi::onStaDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
-    Atoll::Wifi::onStaDisconnected(event, info);
-    board.oled.onWifiStateChange();
+void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
+    Atoll::Wifi::onEvent(event, info);
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+            board.oled.onWifiStateChange();
+            board.webserver.begin();
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            board.oled.onWifiStateChange();
+            break;
+        default:
+            break;
+    }
 }

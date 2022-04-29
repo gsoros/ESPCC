@@ -1,5 +1,5 @@
-#include "ble_client.h"
 #include "board.h"
+#include "ble_client.h"
 #include "peers.h"
 
 void BleClient::loadSettings() {

@@ -1,5 +1,5 @@
-#include "api.h"
 #include "board.h"
+#include "api.h"
 
 void Api::setup(
     Api *instance,

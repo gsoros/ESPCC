@@ -1,5 +1,5 @@
-#include "oled.h"
 #include "board.h"
+#include "oled.h"
 
 void Oled::setup() {
     Atoll::Oled::setup();

@@ -1,5 +1,5 @@
-#include "peers.h"
 #include "board.h"
+#include "peers.h"
 
 void PowerMeter::onDisconnect(BLEClient* client) {
     Atoll::PowerMeter::onDisconnect(client);

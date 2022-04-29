@@ -1,5 +1,5 @@
-#include "battery.h"
 #include "board.h"
+#include "battery.h"
 
 bool Battery::report() {
     bool res = Atoll::Battery::report();

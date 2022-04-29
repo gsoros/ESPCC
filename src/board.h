@@ -4,15 +4,16 @@
 #include <Arduino.h>
 
 #include "definitions.h"
-#include "atoll_preferences.h"
-#include "atoll_task.h"
-#include "atoll_time.h"
 #ifdef FEATURE_SERIAL
 #include "atoll_split_stream.h"
 #include "atoll_wifi_serial.h"
 #else
 #include "atoll_null_serial.h"
 #endif
+#include "atoll_preferences.h"
+#include "atoll_task.h"
+#include "atoll_time.h"
+
 #include "touch.h"
 #include "ble_client.h"
 #include "ble_server.h"
@@ -72,7 +73,8 @@ class Board : public Atoll::Task,
 
 #ifdef FEATURE_SERIAL
         hwSerial.begin(115200);
-        Serial.setup(&hwSerial, &wifiSerial, true, true);
+        wifiSerial.setup(hostName);
+        Serial.setup(&hwSerial, &wifiSerial);
         while (!hwSerial) vTaskDelay(10);
         Serial.printf("\n\n\nESPCC %s %s\n\n\n", __DATE__, __TIME__);
 #endif
@@ -109,7 +111,10 @@ class Board : public Atoll::Task,
         recorder.taskStart(RECORDER_TASK_FREQ);
         // uploader.taskStart(UPLOADER_TASK_FREQ);
         touch.taskStart(TOUCH_TASK_FREQ);
-        taskStart(BOARD_TASK_FREQ);
+#ifdef FEATURE_SERIAL
+        wifiSerial.taskStart(WIFISERIAL_TASK_FREQ);
+#endif
+        taskStart(BOARD_TASK_FREQ, 8192);
 
         recorder.start();
     }
@@ -122,8 +127,30 @@ class Board : public Atoll::Task,
         if ((lastSync + syncFreq < t) || !lastSync)
             if (gps.syncSystemTime())
                 lastSync = t;
+
 #ifdef FEATURE_SERIAL
-        while (wifiSerial.available()) Serial.write(wifiSerial.read());
+        // while (wifiSerial.available()) {
+        //     const int i = wifiSerial.read();
+        //     if (0 <= i && i < UINT8_MAX) {
+        //         Serial.write((const uint8_t)i);     // echo wifiserial input on both streams
+        //         api.write((const uint8_t *)&i, 1);  // feed  wifiserial input to api
+        //     }
+        // }
+        while (Serial.available()) {
+            int i = Serial.read();
+            if (0 <= i && i < UINT8_MAX) {
+                char serialBuf[5] = "";
+                sprintf(serialBuf, "%c", i);
+                switch (i) {
+                    case 24:  // ^X
+                        snprintf(serialBuf, sizeof(serialBuf), "[^X]");
+                        break;
+                }
+                Serial.write((const uint8_t *)serialBuf, strlen(serialBuf));  // echo serial input
+                if (0 <= i)
+                    api.write((const uint8_t *)&i, 1);  // feed serial input to api
+            }
+        }
 #endif
     }
 

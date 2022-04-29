@@ -1,5 +1,5 @@
-#include "recorder.h"
 #include "board.h"
+#include "recorder.h"
 
 void Recorder::onDistanceChanged(double value) {
     Atoll::Recorder::onDistanceChanged(value);

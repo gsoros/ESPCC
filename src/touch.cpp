@@ -1,5 +1,5 @@
-#include "touch.h"
 #include "board.h"
+#include "touch.h"
 
 void Touch::fireEvent(uint8_t index, Event event) {
     Atoll::Touch::fireEvent(index, event);

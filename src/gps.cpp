@@ -1,5 +1,5 @@
-#include "gps.h"
 #include "board.h"
+#include "gps.h"
 
 void GPS::loop() {
     Atoll::GPS::loop();
