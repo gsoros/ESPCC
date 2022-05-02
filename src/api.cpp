@@ -9,7 +9,7 @@ void Api::setup(
     const char *serviceUuid) {
     Atoll::Api::setup(instance, p, preferencesNS, bleServer, serviceUuid);
 
-    addCommand(ApiCommand("hostname", Api::hostnameProcessor));
+    addCommand(ApiCommand("system", Api::systemProcessor));
     addCommand(ApiCommand("touchThres", Api::touchThresProcessor));
     addCommand(ApiCommand("touchRead", Api::touchReadProcessor));
     addCommand(ApiCommand("scan", Api::scanProcessor));
@@ -19,19 +19,45 @@ void Api::setup(
     addCommand(ApiCommand("deletePeer", Api::deletePeerProcessor));
 }
 
-ApiResult *Api::touchThresProcessor(ApiReply *reply) {
+ApiResult *Api::systemProcessor(ApiMessage *msg) {
+    const char *arg = msg->arg;
+    const char *str = "hostname";
+    uint8_t sStr = strlen(str);
+    if (sStr == strspn(arg, str)) {
+        size_t sArg = strlen(arg);
+        if (sStr < sArg) {
+            // set hostname
+            if (':' != arg[sStr]) return result("argInvalid");
+            arg += sStr + 1;
+            sArg = strlen(arg);
+            if (sArg < 2) return result("argInvalid");
+            if (sizeof(board.hostName) - 1 < sArg) return result("argInvalid");
+            if (!isAlNumStr(arg)) return result("argInvalid");
+            strncpy(board.hostName, arg, sizeof(board.hostName));
+            board.saveSettings();
+        }
+        // get hostname
+        strncpy(msg->reply, board.hostName, msgReplyLength);
+        return success();
+    }
+    msg->appendToValue("|", true);
+    msg->appendToValue("hostname");
+    return Atoll::Api::systemProcessor(msg);
+}
+
+ApiResult *Api::touchThresProcessor(ApiMessage *msg) {
     // arg format: padIndex:threshold
     // set touchpad threshold
-    if (reply->log) log_i("arg: %s", reply->arg);
-    if (0 < strlen(reply->arg)) {
-        char *colon = strstr(reply->arg, ":");
+    if (msg->log) log_i("arg: %s", msg->arg);
+    if (0 < strlen(msg->arg)) {
+        char *colon = strstr(msg->arg, ":");
         if (!colon) return result("argInvalid");
-        int argLen = strlen(reply->arg);
+        int argLen = strlen(msg->arg);
         if (argLen < 3) return result("argInvalid");
-        int indexEnd = colon ? colon - reply->arg : argLen;
+        int indexEnd = colon ? colon - msg->arg : argLen;
         if (indexEnd < 1) return result("argInvalid");
         char indexStr[3] = "";
-        strncpy(indexStr, reply->arg, sizeof indexStr);
+        strncpy(indexStr, msg->arg, sizeof indexStr);
         int index = atoi(indexStr);
         if (index < 0 || board.touch.numPads - 1 < index) return result("argInvalid");
         int thresLen = argLen - indexEnd - 1;
@@ -40,13 +66,13 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
         strncpy(thresStr, colon + 1, sizeof thresStr);
         int thres = atoi(thresStr);
         if (thres < 1 || 99 < thres) return result("argInvalid");
-        if (reply->log) log_i("touchPad %d new threshold %d", index, thres);
+        if (msg->log) log_i("touchPad %d new threshold %d", index, thres);
         board.touch.setPadThreshold(index, thres);
         board.touch.saveSettings();
     }
     // get touchpad thresholds
     // value format: padIndex1:threshold1,padIndex2:threshold2...
-    char thresholds[replyValueLength] = "";
+    char thresholds[msgReplyLength] = "";
     for (int i = 0; i < board.touch.numPads; i++) {
         char token[9];
         snprintf(
@@ -55,29 +81,29 @@ ApiResult *Api::touchThresProcessor(ApiReply *reply) {
             0 == i ? "%d:%d" : ",%d:%d",
             i,
             board.touch.pads[i].threshold);
-        int16_t remaining = replyValueLength - strlen(thresholds) - 1;
+        int16_t remaining = msgReplyLength - strlen(thresholds) - 1;
         if (remaining < strlen(token)) {
-            if (reply->log) log_e("no space left for adding %s to %s", token, thresholds);
+            if (msg->log) log_e("no space left for adding %s to %s", token, thresholds);
             return result("internalError");
         }
         strncat(thresholds, token, remaining);
     }
-    strncpy(reply->value, thresholds, replyValueLength);
+    strncpy(msg->reply, thresholds, msgReplyLength);
     return success();
 }
 
 // get touchpad reading or disable touchpad
 // arg: [padIndex|disableFor:intNumSeconds]
 // reply format: padIndex:currentValue[,padIndex:currentValue...]
-ApiResult *Api::touchReadProcessor(ApiReply *reply) {
-    char *disable = strstr(reply->arg, "disableFor:");
-    if (strlen(reply->arg) < 1 || nullptr != disable) {
+ApiResult *Api::touchReadProcessor(ApiMessage *msg) {
+    char *disable = strstr(msg->arg, "disableFor:");
+    if (strlen(msg->arg) < 1 || nullptr != disable) {
         if (nullptr != disable) {
-            if (disable + strlen("disableFor:") < reply->arg + strlen(reply->arg)) {
+            if (disable + strlen("disableFor:") < msg->arg + strlen(msg->arg)) {
                 // log_i("disable: %s", disable + strlen("disableFor:"));
                 int secs = atoi(disable + strlen("disableFor:"));
                 if (0 < secs && secs < UINT8_MAX) {
-                    if (reply->log) log_i("touch disabled for %ds", secs);
+                    if (msg->log) log_i("touch disabled for %ds", secs);
                     board.touch.enabled = false;
                     board.touch.enableAfter = millis() + secs * 1000;
                 }
@@ -91,46 +117,38 @@ ApiResult *Api::touchReadProcessor(ApiReply *reply) {
                      i,
                      board.touch.read(i));
             // log_i("buf: %s", buf);
-            strncat(reply->value, buf, replyValueLength - strlen(reply->value));
+            strncat(msg->reply, buf, msgReplyLength - strlen(msg->reply));
         }
-        // log_i("val: %s", reply->value);
+        // log_i("val: %s", msg->value);
         return success();
     }
-    uint8_t padIndex = (uint8_t)atoi(reply->arg);
-    // if (reply->log) log_i("index %d numPads %d", padIndex, board.touch.numPads);
+    uint8_t padIndex = (uint8_t)atoi(msg->arg);
+    // if (msg->log) log_i("index %d numPads %d", padIndex, board.touch.numPads);
     if (board.touch.numPads <= padIndex) return result("argInvalid");
-    snprintf(reply->value, replyValueLength, "%d:%d", padIndex, board.touch.read(padIndex));
+    snprintf(msg->reply, msgReplyLength, "%d:%d", padIndex, board.touch.read(padIndex));
     return success();
 }
 
-ApiResult *Api::hostnameProcessor(ApiReply *reply) {
-    // set hostname
-    // TODO
-    // get hostname
-    strncpy(reply->value, board.hostName, replyValueLength);
-    return success();
-}
-
-ApiResult *Api::scanProcessor(ApiReply *reply) {
-    if (!strlen(reply->arg)) return result("argInvalid");
-    uint32_t duration = atoi(reply->arg);
+ApiResult *Api::scanProcessor(ApiMessage *msg) {
+    if (!strlen(msg->arg)) return result("argInvalid");
+    uint32_t duration = atoi(msg->arg);
     if (duration < 1 || 120 < duration) return result("argInvalid");
     if (board.bleClient.scan->isScanning()) {
-        snprintf(reply->value, sizeof(reply->value), "%s", "already scanning");
+        snprintf(msg->reply, sizeof(msg->reply), "%s", "already scanning");
         return error();
     }
     board.bleClient.startScan(duration);
-    snprintf(reply->value, sizeof(reply->value), "%d", duration);
+    snprintf(msg->reply, sizeof(msg->reply), "%d", duration);
     return success();
 }
 
-ApiResult *Api::scanResultProcessor(ApiReply *reply) {
-    if (reply->log) log_e("command scanResult cannot be called directly, replies are generated after starting a scan");
+ApiResult *Api::scanResultProcessor(ApiMessage *msg) {
+    if (msg->log) log_e("command scanResult cannot be called directly, replies are generated after starting a scan");
     return error();
 }
 
-ApiResult *Api::peersProcessor(ApiReply *reply) {
-    char value[replyValueLength] = "";
+ApiResult *Api::peersProcessor(ApiMessage *msg) {
+    char value[msgReplyLength] = "";
     int16_t remaining = 0;
     for (int i = 0; i < board.bleClient.peersMax; i++) {
         if (nullptr == board.bleClient.peers[i]) continue;
@@ -138,20 +156,20 @@ ApiResult *Api::peersProcessor(ApiReply *reply) {
         char token[Peer::packedMaxLength + 1];
         board.bleClient.peers[i]->pack(token, sizeof(token) - 1);
         strcat(token, "|");
-        remaining = replyValueLength - strlen(value) - 1;
+        remaining = msgReplyLength - strlen(value) - 1;
         if (remaining < strlen(token)) {
-            if (reply->log) log_e("no space left for adding %s to %s", token, value);
+            if (msg->log) log_e("no space left for adding %s to %s", token, value);
             return result("internalError");
         }
         strncat(value, token, remaining);
     }
-    strncpy(reply->value, value, replyValueLength);
+    strncpy(msg->reply, value, msgReplyLength);
     return success();
 }
 
-ApiResult *Api::addPeerProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < sizeof(Peer::address) + 5) {
-        if (reply->log) log_e("arg too short (%d)", strlen(reply->arg));
+ApiResult *Api::addPeerProcessor(ApiMessage *msg) {
+    if (strlen(msg->arg) < sizeof(Peer::address) + 5) {
+        if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
         return result("argInvalid");
     }
     char address[sizeof(Peer::address)] = "";
@@ -159,42 +177,42 @@ ApiResult *Api::addPeerProcessor(ApiReply *reply) {
     char type[sizeof(Peer::type)] = "";
     char name[sizeof(Peer::name)] = "";
     if (!Peer::unpack(
-            reply->arg,
+            msg->arg,
             address, sizeof(address),
             &addressType,
             type, sizeof(type),
             name, sizeof(name))) {
-        if (reply->log) log_e("could not unpack %s", reply->arg);
+        if (msg->log) log_e("could not unpack %s", msg->arg);
         return result("argInvalid");
     }
     if (board.bleClient.peerExists(address)) {
-        if (reply->log) log_e("peer already exists: %s", reply->arg);
+        if (msg->log) log_e("peer already exists: %s", msg->arg);
         return result("argInvalid");
     }
     Peer *peer = board.bleClient.createPeer(address, addressType, type, name);
     if (nullptr == peer) {
-        if (reply->log) log_e("could not create peer from %s", reply->arg);
+        if (msg->log) log_e("could not create peer from %s", msg->arg);
         return error();
     }
     if (!board.bleClient.addPeer(peer)) {
         delete peer;
-        if (reply->log) log_e("could not add peer from %s", reply->arg);
+        if (msg->log) log_e("could not add peer from %s", msg->arg);
         return error();
     }
     board.bleClient.saveSettings();
     return success();
 }
 
-ApiResult *Api::deletePeerProcessor(ApiReply *reply) {
-    if (strlen(reply->arg) < sizeof(Peer::address) - 1) {
-        if (reply->log) log_e("arg too short (%d)", strlen(reply->arg));
+ApiResult *Api::deletePeerProcessor(ApiMessage *msg) {
+    if (strlen(msg->arg) < sizeof(Peer::address) - 1) {
+        if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
         return result("argInvalid");
     }
-    log_i("calling bleClient.removePeer(%s)", reply->arg);
-    uint8_t removed = board.bleClient.removePeer(reply->arg);
+    log_i("calling bleClient.removePeer(%s)", msg->arg);
+    uint8_t removed = board.bleClient.removePeer(msg->arg);
     if (0 < removed) {
         board.bleClient.saveSettings();
-        snprintf(reply->value, sizeof(reply->value), "%d", removed);
+        snprintf(msg->reply, sizeof(msg->reply), "%d", removed);
         return success();
     }
     return error();

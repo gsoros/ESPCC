@@ -9,6 +9,10 @@
 #include "recorder.h"
 #include "atoll_ota.h"
 
+#ifndef WEBSERVER_FS_TASK_STACK
+#define WEBSERVER_FS_TASK_STACK 8192
+#endif
+
 class Webserver {
     typedef AsyncWebServerRequest Request;
     typedef AsyncWebServerResponse Response;
@@ -38,10 +42,10 @@ class Webserver {
             log_e("fs is null");
             return;
         }
-        if (!fs->mounted) {
-            log_e("fs not mounted");
-            return;
-        }
+        // if (!fs->mounted) {
+        //     log_e("fs not mounted");
+        //     return;
+        // }
         this->atollFs = fs;
         this->fs = fs->pFs();
 
@@ -82,7 +86,7 @@ class Webserver {
             request->send(response);
             log_i("302 %s", request->url().c_str());
         });
-        begin();
+        // begin();
     }
 
     void begin();
@@ -126,7 +130,7 @@ class Webserver {
     }
 
     void onDownload(Request *request) {
-        log_i("request %s", request->url().c_str());
+        log_i("request %s%s", request->url().c_str());
 
         if (nullptr == fs) {
             log_e("fs is null");
@@ -192,10 +196,11 @@ class Webserver {
     }
 
     void onFormat(Request *request) {
-        genIndexResponse(request);
-        // atollFs->unmount();
+        request->send(200, "text/html", "not supported");
+        // genIndexResponse(request);
+        //  atollFs->unmount();
         // atollFs->format();
-        // atollFs->setup();
+        //  atollFs->setup();
         // delay(500);
         // generateIndex();
     }
@@ -234,7 +239,7 @@ class Webserver {
         xTaskCreatePinnedToCore(
             task,
             "Webserver FsTask",
-            4096,
+            WEBSERVER_FS_TASK_STACK,
             this,
             1,
             &fsTaskHandle,
@@ -336,12 +341,16 @@ class Webserver {
                 file.close();
                 continue;
             }
-            strncpy(filePath, file.name(), sizeof(filePath));
+            // file.name() used to return the path, now it returns the file name
+            strncpy(filePath, file.path(), sizeof(filePath));
             file.close();
             log_i("found %s", filePath);
+
             char id[strlen(filePath) - basePathLen - 5] = "";
             strncat(id, filePath + basePathLen + 1, sizeof(id));
-            // log_i("id: %s", id);
+            // char id[strlen(filePath) - 4] = "";
+            // strncat(id, filePath, sizeof(id));
+            log_i("id: %s", id);
             char stxPath[basePathLen + strlen(id) + 6] = "";
             snprintf(stxPath, sizeof(stxPath), "%s/%s.stx",
                      recorder->basePath, id);
@@ -350,7 +359,8 @@ class Webserver {
                 File stx = fs->open(stxPath);
                 stx.read((uint8_t *)&stats, sizeof(stats));
                 stx.close();
-            }
+            } else
+                log_w("missing %s", stxPath);
             char item[strlen(itemFormat)  //
                       + sizeof(id) * 3    //
                       + 10                // distance
@@ -448,6 +458,7 @@ class Webserver {
             log_e("'/' in param '%s'", f);
             return false;
         }
+        log_i("f: %s, f");
         snprintf(path, len, "%s/%s%s",
                  recorder->basePath,
                  f,

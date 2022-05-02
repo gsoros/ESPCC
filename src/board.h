@@ -73,13 +73,13 @@ class Board : public Atoll::Task,
 
 #ifdef FEATURE_SERIAL
         hwSerial.begin(115200);
-        wifiSerial.setup(hostName);
+        wifiSerial.setup(hostName, 0, 0, WIFISERIAL_TASK_FREQ);
         Serial.setup(&hwSerial, &wifiSerial);
         while (!hwSerial) vTaskDelay(10);
-        Serial.printf("\n\n\nESPCC %s %s\n\n\n", __DATE__, __TIME__);
 #endif
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
+        log_i("\n\n\n%s %s %s\n\n\n", hostName, __DATE__, __TIME__);
         log_i("Setting timezone %s", timezone);
         Atoll::setTimezone(timezone);
 
@@ -90,16 +90,16 @@ class Board : public Atoll::Task,
         bleClient.setup(hostName, &arduinoPreferences);
         sdcard.setup();
         touch.setup(&arduinoPreferences, "Touch");
+        battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
+        recorder.setup(&gps, &sdcard, &api, &recorder);
+        // uploader.setup(&recorder, &sdcard, &wifi);
+        webserver.setup(&sdcard, &recorder, &ota);
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder
 #ifdef FEATURE_SERIAL
                    ,
                    &wifiSerial
 #endif
         );
-        battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
-        recorder.setup(&gps, &sdcard, &api, &recorder);
-        // uploader.setup(&recorder, &sdcard, &wifi);
-        webserver.setup(&sdcard, &recorder, &ota);
 
         bleServer.start();
 
@@ -112,7 +112,7 @@ class Board : public Atoll::Task,
         // uploader.taskStart(UPLOADER_TASK_FREQ);
         touch.taskStart(TOUCH_TASK_FREQ);
 #ifdef FEATURE_SERIAL
-        wifiSerial.taskStart(WIFISERIAL_TASK_FREQ);
+        // wifiSerial.taskStart(WIFISERIAL_TASK_FREQ);
 #endif
         taskStart(BOARD_TASK_FREQ, 8192);
 
@@ -129,26 +129,26 @@ class Board : public Atoll::Task,
                 lastSync = t;
 
 #ifdef FEATURE_SERIAL
-        // while (wifiSerial.available()) {
-        //     const int i = wifiSerial.read();
+        // while (Serial.available()) {
+        //     int i = Serial.read();
         //     if (0 <= i && i < UINT8_MAX) {
-        //         Serial.write((const uint8_t)i);     // echo wifiserial input on both streams
-        //         api.write((const uint8_t *)&i, 1);  // feed  wifiserial input to api
+        //         char serialBuf[5] = "";
+        //         sprintf(serialBuf, "%c", i);
+        //         switch (i) {
+        //             case 24:  // ^X
+        //                 snprintf(serialBuf, sizeof(serialBuf), "[^X]");
+        //                 break;
+        //         }
+        //         Serial.write((const uint8_t *)serialBuf, strlen(serialBuf));  // echo serial input
+        //         if (0 <= i)
+        //             api.write((const uint8_t *)&i, 1);  // feed serial input to api
         //     }
         // }
         while (Serial.available()) {
             int i = Serial.read();
             if (0 <= i && i < UINT8_MAX) {
-                char serialBuf[5] = "";
-                sprintf(serialBuf, "%c", i);
-                switch (i) {
-                    case 24:  // ^X
-                        snprintf(serialBuf, sizeof(serialBuf), "[^X]");
-                        break;
-                }
-                Serial.write((const uint8_t *)serialBuf, strlen(serialBuf));  // echo serial input
-                if (0 <= i)
-                    api.write((const uint8_t *)&i, 1);  // feed serial input to api
+                Serial.write((uint8_t)i);           // echo serial input
+                api.write((const uint8_t *)&i, 1);  // feed serial input to api
             }
         }
 #endif

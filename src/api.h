@@ -6,9 +6,9 @@
 #include "ble_server.h"
 
 typedef Atoll::ApiResult ApiResult;
-typedef Atoll::ApiReply ApiReply;
+typedef Atoll::ApiMessage ApiMessage;
 
-typedef ApiResult *(*ApiProcessor)(ApiReply *reply);
+typedef ApiResult *(*ApiProcessor)(ApiMessage *reply);
 
 class ApiCommand : public Atoll::ApiCommand {
    public:
@@ -28,14 +28,14 @@ class Api : public Atoll::Api {
                       const char *serviceUuid = nullptr);
 
    protected:
-    static ApiResult *hostnameProcessor(ApiReply *reply);
-    static ApiResult *touchThresProcessor(ApiReply *reply);
-    static ApiResult *touchReadProcessor(ApiReply *reply);
-    static ApiResult *scanProcessor(ApiReply *reply);
-    static ApiResult *scanResultProcessor(ApiReply *reply);
-    static ApiResult *peersProcessor(ApiReply *reply);
-    static ApiResult *addPeerProcessor(ApiReply *reply);
-    static ApiResult *deletePeerProcessor(ApiReply *reply);
+    static ApiResult *systemProcessor(ApiMessage *reply);
+    static ApiResult *touchThresProcessor(ApiMessage *reply);
+    static ApiResult *touchReadProcessor(ApiMessage *reply);
+    static ApiResult *scanProcessor(ApiMessage *reply);
+    static ApiResult *scanResultProcessor(ApiMessage *reply);
+    static ApiResult *peersProcessor(ApiMessage *reply);
+    static ApiResult *addPeerProcessor(ApiMessage *reply);
+    static ApiResult *deletePeerProcessor(ApiMessage *reply);
 };
 
 #endif

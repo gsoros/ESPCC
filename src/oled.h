@@ -539,7 +539,7 @@ class Oled : public Atoll::Oled {
     int8_t battPM = -1;
 
     void onBattPM(int8_t value) {
-        log_i("%d", value);
+        // log_i("%d", value);
         static int8_t lastBattPM = -1;
         battPM = value;
         if (lastBattPM == battPM) return;

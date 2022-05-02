@@ -5,7 +5,11 @@
 #define BLE_CHAR_VALUE_MAXLENGTH 512                                   // maximum number of bytes written to ble characteristic values
 ;                                                                      //
 ;                                                                      // task frequencies in Hz
+#ifdef FEATURE_SERIAL                                                  //
 #define BOARD_TASK_FREQ 2.0f                                           //
+#else                                                                  //
+#define BOARD_TASK_FREQ 0.1f                                           //
+#endif                                                                 //
 #define BLE_CLIENT_TASK_FREQ 0.1f                                      //
 #define BLE_SERVER_TASK_FREQ 1.0f                                      //
 #define GPS_TASK_FREQ 3.0f                                             //

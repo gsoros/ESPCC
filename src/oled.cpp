@@ -239,7 +239,7 @@ void Oled::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
 
 void Oled::onWifiStateChange() {
     wifiState = board.wifi.isEnabled()
-                    ? board.wifi.connected()
+                    ? board.wifi.isConnected()
                           ? 2
                           : 1
                     : 0;

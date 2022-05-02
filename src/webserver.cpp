@@ -10,6 +10,10 @@ void Webserver::begin() {
         log_i("Wifi is disabled, not starting");
         return;
     }
+    if (nullptr == server) {
+        log_e("server is null");
+        return;
+    }
     server->begin();
     serving = true;
     log_i("serving on port %d", port);
@@ -18,6 +22,10 @@ void Webserver::begin() {
 void Webserver::end() {
     if (!serving) {
         log_i("not serving");
+        return;
+    }
+    if (nullptr == server) {
+        log_e("server is null");
         return;
     }
     server->end();

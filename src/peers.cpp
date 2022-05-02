@@ -18,7 +18,7 @@ void HeartrateMonitor::onDisconnect(BLEClient* client) {
 
 void BattPMChar::notify() {
     Atoll::PeerCharacteristicBattery::notify();
-    log_i("BattPMChar %d", lastValue);
+    //log_i("BattPMChar %d", lastValue);
     board.oled.onBattPM(lastValue);
 }
 

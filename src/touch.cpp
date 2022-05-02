@@ -6,19 +6,16 @@ void Touch::fireEvent(uint8_t index, Event event) {
     board.oled.onTouchEvent(&pads[index], event);
     switch (event) {
         case Event::longTouch: {
-            // board.bleClient.startScan(5);
-            board.recorder.start();
+            if (board.recorder.start()) {
+                // disable wifi but don't save
+                board.wifi.setEnabled(false, false);
+            }
         } break;
         case Event::doubleTouch: {
-            // for (uint8_t i = 0; i < board.bleClient.peersMax; i++) {
-            //     if (board.bleClient.peers[i] != nullptr) {
-            //         board.bleClient.peers[i]->disconnect();
-            //         board.bleClient.removePeer(board.bleClient.peers[i]);
-            //         board.bleClient.saveSettings();
-            //         break;
-            //     }
-            // }
-            board.recorder.end();
+            if (board.recorder.end()) {
+                // enable wifi but don't save
+                board.wifi.setEnabled(true, false);
+            }
         } break;
         default:
             break;

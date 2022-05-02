@@ -106,17 +106,17 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
 uint32_t BleClient::startScan(uint32_t duration) {
     uint32_t ret = Atoll::BleClient::startScan(duration);
 
-    char value[ATOLL_API_VALUE_LENGTH];
-    snprintf(value, sizeof(value), "%d;%d=%d",
+    char reply[ATOLL_API_MSG_REPLY_LENGTH];
+    snprintf(reply, sizeof(reply), "%d;%d=%d",
              board.api.success()->code,
              board.api.command("scan")->code,
              ret);
 
-    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
+    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
     board.bleServer.notify(
         BLEUUID(ESPCC_API_SERVICE_UUID),
         BLEUUID(API_TX_CHAR_UUID),
-        (uint8_t *)value, strlen(value));
+        (uint8_t *)reply, strlen(reply));
 
     return ret;
 }
@@ -147,8 +147,8 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
     // else
     //     saveSettings();
 
-    char value[ATOLL_API_VALUE_LENGTH];
-    snprintf(value, sizeof(value), "%d;%d=%s,%d,%s,%s",
+    char reply[ATOLL_API_MSG_REPLY_LENGTH];
+    snprintf(reply, sizeof(reply), "%d;%d=%s,%d,%s,%s",
              board.api.success()->code,
              board.api.command("scanResult")->code,
              peer->address,
@@ -156,11 +156,11 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
              peer->type,
              peer->name);
 
-    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
+    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
     board.bleServer.notify(
         BLEUUID(ESPCC_API_SERVICE_UUID),
         BLEUUID(API_TX_CHAR_UUID),
-        (uint8_t *)value, strlen(value));
+        (uint8_t *)reply, strlen(reply));
 
     delete peer;
 }
@@ -168,15 +168,15 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
 void BleClient::onScanComplete(BLEScanResults results) {
     Atoll::BleClient::onScanComplete(results);
 
-    char value[ATOLL_API_VALUE_LENGTH];
-    snprintf(value, sizeof(value), "%d;%d=%d",
+    char reply[ATOLL_API_MSG_REPLY_LENGTH];
+    snprintf(reply, sizeof(reply), "%d;%d=%d",
              board.api.success()->code,
              board.api.command("scan")->code,
              0);
 
-    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", value, strlen(value));
+    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
     board.bleServer.notify(
         BLEUUID(ESPCC_API_SERVICE_UUID),
         BLEUUID(API_TX_CHAR_UUID),
-        (uint8_t *)value, strlen(value));
+        (uint8_t *)reply, strlen(reply));
 }
