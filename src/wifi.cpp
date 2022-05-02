@@ -22,10 +22,14 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
     if (prevConnected != connected) {
         if (connected) {
             log_i("starting webserver");
-            Serial.flush();
             board.webserver.begin();
+            log_i("starting mdns");
+            board.mdns.begin();
         } else {
+            log_i("stopping webserver");
             board.webserver.end();
+            log_i("stopping mdns");
+            board.mdns.end();
         }
     }
     prevConnected = connected;

@@ -130,8 +130,7 @@ class Webserver {
     }
 
     void onDownload(Request *request) {
-        log_i("request %s%s", request->url().c_str());
-
+        log_i("request %s", request->url().c_str());
         if (nullptr == fs) {
             log_e("fs is null");
             request->send(500, "text/html", "fs error");
@@ -148,8 +147,11 @@ class Webserver {
             request->send(404, "text/html", "not found");
             return;
         }
-        if (nullptr != ota)
-            ota->off();  // ota crashes esp on long download, TODO restart after done
+        log_i("path: %s", path);
+        if (nullptr != ota) {
+            log_i("calling ota->off()");
+            ota->off();  // ota hangs esp networking on long download, TODO restart after done
+        }
         request->send(*fs, path, "application/gpx+xml", true);
     }
 
@@ -190,9 +192,12 @@ class Webserver {
     void onRemoveAll(Request *request) {
         genIndexResponse(request);
         removeAll();
-        delay(500);
-        while (fsTaskRunning) delay(500);
-        generateIndex();
+        // delay(500);
+        // while (fsTaskRunning) {
+        //     delay(500);
+        //     yield();
+        // }
+        // generateIndex();
     }
 
     void onFormat(Request *request) {
@@ -265,22 +270,22 @@ class Webserver {
         fsTaskRunning = FsTaskType::INDEX_GENERATOR_TASK;
         if (nullptr == fs) {
             log_e("fs is null");
-            fsTaskStop();
+            return;
         }
         if (nullptr == recorder) {
             log_e("recorder is null");
-            fsTaskStop();
+            return;
         }
         File dir = fs->open(recorder->basePath);
         if (!dir) {
             log_e("could not open %s", recorder->basePath);
             dir.close();
-            fsTaskStop();
+            return;
         }
         if (!dir.isDirectory()) {
             log_e("%s is not a directory", recorder->basePath);
             dir.close();
-            fsTaskStop();
+            return;
         }
         char indexPath[strlen(recorder->basePath) + strlen(indexFileName) + 2] = "";
         snprintf(indexPath, sizeof(indexPath), "%s/%s", recorder->basePath, indexFileName);
@@ -288,7 +293,7 @@ class Webserver {
         if (!index) {
             log_e("could not open %s for writing", indexPath);
             dir.close();
-            fsTaskStop();
+            return;
         }
 
         char header[1024] = R"====(<!DOCTYPE html>
@@ -326,7 +331,7 @@ class Webserver {
             log_e("could not write header to %s", indexPath);
             index.close();
             dir.close();
-            fsTaskStop();
+            return;
         }
         File file;
         char filePath[ATOLL_RECORDER_PATH_LENGTH] = "";
@@ -390,12 +395,12 @@ class Webserver {
         index = fs->open(indexPath);
         log_i("generated %s %d bytes", indexPath, index.size());
         index.close();
-        fsTaskStop();
     }
 
     static void removeAllTask(void *p) {
         Webserver *thisP = (Webserver *)p;
         thisP->removeAllRunner();
+        thisP->indexGeneratorRunner();
         thisP->fsTaskStop();
     }
 
@@ -404,44 +409,58 @@ class Webserver {
         fsTaskRunning = FsTaskType::REMOVE_ALL_TASK;
         if (nullptr == fs) {
             log_e("fs is null");
-            fsTaskStop();
+            return;
         }
         if (nullptr == recorder) {
             log_e("recorder is null");
-            fsTaskStop();
+            return;
         }
         File dir = fs->open(recorder->basePath);
         if (!dir) {
             log_e("cannot open %s", recorder->basePath);
-            fsTaskStop();
+            return;
         }
         File file;
-        char path[ATOLL_RECORDER_PATH_LENGTH] = "";
-        char cont[sizeof(path)] = "";
-        if (file = fs->open(recorder->continuePath)) {
-            file.read((uint8_t *)cont, sizeof(cont));
+        uint8_t pathLen = ATOLL_RECORDER_PATH_LENGTH;
+        char path[pathLen] = "";
+        char contPath[pathLen] = "";
+        if (fs->exists(recorder->continuePath) &&
+            (file = fs->open(recorder->continuePath))) {
+            file.read((uint8_t *)contPath, pathLen);
             file.close();
         }
-        const char *cp = recorder->currentPath();
-        const char *csp = recorder->currentStatsPath();
+        char contStatsPath[pathLen] = "";
+        if (strlen(contPath)) {
+            strncpy(contStatsPath, contPath, pathLen);
+            recorder->appendStatsExt(contStatsPath, pathLen);
+        }
+        const char *currPath = recorder->currentPath();
+        char currStatsPath[pathLen] = "";
+        if (nullptr != currPath) {
+            strncpy(currStatsPath, currPath, pathLen);
+            recorder->appendStatsExt(currStatsPath, pathLen);
+        }
         while (file = dir.openNextFile()) {
             if (file.isDirectory()) {
                 file.close();
                 continue;
             }
-            snprintf(path, sizeof(path), "%s", file.name());
+            snprintf(path, pathLen, "%s", file.path());
             file.close();
-            if (0 == strcmp(path, cont) ||
+            if (0 == strcmp(path, contPath) ||
+                0 == strcmp(path, contStatsPath) ||
                 0 == strcmp(path, recorder->continuePath) ||
-                (nullptr != cp && 0 == strcmp(path, cp)) ||
-                (nullptr != csp && 0 == strcmp(path, csp))) {
+                (nullptr != currPath && 0 == strcmp(path, currPath)) ||
+                0 == strcmp(path, currStatsPath)) {
                 log_i("skipping %s", path);
+                delay(100);  // for wifiserial
                 continue;
             }
             log_i("%s %s", fs->remove(path) ? "deleted" : "could not delete", path);
+            // log_i("delete %s", path);
+            delay(100);  // for wifiserial
         }
         dir.close();
-        fsTaskStop();
     }
 
     bool pathFromRequest(Request *request, char *path, size_t len, const char *ext = "") {
@@ -450,6 +469,7 @@ class Webserver {
             return false;
         }
         const char *f = request->getParam("f")->value().c_str();
+        // log_i("f: %s", f);
         if (strlen(f) < 1) {
             log_e("param is empty");
             return false;
@@ -458,7 +478,6 @@ class Webserver {
             log_e("'/' in param '%s'", f);
             return false;
         }
-        log_i("f: %s, f");
         snprintf(path, len, "%s/%s%s",
                  recorder->basePath,
                  f,

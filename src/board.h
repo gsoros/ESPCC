@@ -22,6 +22,7 @@
 #include "atoll_sdcard.h"
 #include "api.h"
 #include "wifi.h"
+#include "atoll_mdns.h"
 #include "atoll_ota.h"
 #include "battery.h"
 #include "recorder.h"
@@ -60,6 +61,7 @@ class Board : public Atoll::Task,
     Api api;
     Wifi wifi;
     Atoll::Ota ota;
+    Atoll::Mdns mdns;
     Battery battery;
     Recorder recorder;
     // Atoll::Uploader uploader;
@@ -94,6 +96,7 @@ class Board : public Atoll::Task,
         recorder.setup(&gps, &sdcard, &api, &recorder);
         // uploader.setup(&recorder, &sdcard, &wifi);
         webserver.setup(&sdcard, &recorder, &ota);
+        mdns.setup(hostName, 3232);
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder
 #ifdef FEATURE_SERIAL
                    ,
