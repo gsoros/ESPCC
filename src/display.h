@@ -49,10 +49,10 @@ class Display : public Atoll::Task, public Print {
         }
 
         bool touches(Area *a) const {
-            return contains(a->x, a->y) ||              // topLeft
-                   contains(a->x + a->w, a->y) ||       // topRight
-                   contains(a->x, a->y + a->h) ||       // bottomLeft
-                   contains(a->x + a->w, a->y + a->h);  // bottomRight
+            return x <= a->x + a->w &&
+                   a->x <= x + w &&
+                   y <= a->y + a->h &&
+                   a->y <= y + h;
         }
 
         bool equals(Area *a) const {
@@ -99,7 +99,7 @@ class Display : public Atoll::Task, public Print {
     virtual ~Display() {}
 
     virtual void setup() {
-        log_i("setMaxClip()");
+        // log_i("setMaxClip()");
         setMaxClip();
     }
 
@@ -135,7 +135,7 @@ class Display : public Atoll::Task, public Print {
                             const char *str,
                             const bool send = true,
                             const uint8_t *font = nullptr) {
-        log_i("field %d %s", fieldIndex, str);
+        // log_i("field %d %s", fieldIndex, str);
         assert(fieldIndex < sizeof(field) / sizeof(field[0]));
         if (send && !aquireMutex()) return;
         Area *a = &field[fieldIndex].area;

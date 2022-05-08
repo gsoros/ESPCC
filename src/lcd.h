@@ -5,7 +5,8 @@
 #include <U8g2lib.h>
 
 //#include <Arduino_GFX_Library.h>
-#include "databus/Arduino_HWSPI.h"
+//#include "databus/Arduino_HWSPI.h"
+#include "databus/Arduino_ESP32SPI.h"
 #include "display/Arduino_SSD1283A.h"
 #include "canvas/Arduino_Canvas.h"
 
@@ -179,7 +180,7 @@ class Lcd : public Display, public Arduino_Canvas {
 
     virtual void writeFillRectPreclipped(int16_t x, int16_t y,
                                          int16_t w, int16_t h, uint16_t color) override {
-        Area a = Area(x, y, x + w, y + h);
+        Area a = Area(x, y, w, h);
 
         if (!clip.touches(&a))
             return;
@@ -189,9 +190,9 @@ class Lcd : public Display, public Arduino_Canvas {
             return;
         }
 
-        log_i("before %d %d %d %d", a.x, a.y, a.w, a.h);
-        a.clipTo(&clip);
-        log_i("after  %d %d %d %d", a.x, a.y, a.w, a.h);
+        // log_i("before %d %d %d %d", a.x, a.y, a.w, a.h);
+        // a.clipTo(&clip);
+        // log_i("after  %d %d %d %d", a.x, a.y, a.w, a.h);
         Arduino_Canvas::writeFillRectPreclipped(a.x, a.y, a.w, a.h, color);
     }
 
@@ -202,15 +203,15 @@ class Lcd : public Display, public Arduino_Canvas {
     }
 
     virtual void setClip(int16_t x, int16_t y, int16_t w, int16_t h) override {
-        if (x != 0 || y != 0 || w != Arduino_Canvas::width() || h != Arduino_Canvas::height()) {
-            log_i("%d %d %d %d", x, y, w, h);
-        logAreas(&clip, "clip");
-        }
+        // if (x != 0 || y != 0 || w != Arduino_Canvas::width() || h != Arduino_Canvas::height()) {
+        //     log_i("%d %d %d %d", x, y, w, h);
+        //     logAreas(&clip, "clip");
+        // }
         clip = Area(x, y, w, h);
     }
 
     virtual size_t write(uint8_t c) {
-        log_i("%c", c);
+        // log_i("%c", c);
         return Arduino_Canvas::write(c);
     }
 
@@ -223,16 +224,20 @@ class Lcd : public Display, public Arduino_Canvas {
     }
 
     virtual void fill(const Area *a, uint16_t color, bool send = true) override {
-        logAreas((Area *)a, "fill");
+        // log_i("%d %d %d %d %d", a->x, a->y, a->w, a->h, color);
+        // logAreas((Area *)a, "fill");
         if (send && !aquireMutex()) return;
-        Arduino_Canvas::fillRect(a->x, a->y, a->w, a->h, color);
+        // Arduino_Canvas::fillRect(a->x, a->y, a->w, a->h, color);
+        Arduino_Canvas::startWrite();
+        writeFillRectPreclipped(a->x, a->y, a->w, a->h, color);
+        Arduino_Canvas::endWrite();
         if (!send) return;
         sendBuffer();
         releaseMutex();
     }
 
     virtual void setCursor(int16_t x, int16_t y) override {
-        log_i("%d %d", x, y);
+        // log_i("%d %d", x, y);
         Arduino_Canvas::setCursor(x, y);
     }
 
@@ -247,9 +252,9 @@ class Lcd : public Display, public Arduino_Canvas {
                              const uint8_t *bitmap,
                              uint16_t color,
                              bool send = true) override {
-        log_i("%d %d %d %d %d", x, y, w, h, color);
+        // log_i("%d %d %d %d %d", x, y, w, h, color);
         Area a = Area(x, y, w, h);
-        logAreas(&a, "clip");
+        // logAreas(&a, "clip");
         if (send && !aquireMutex()) return;
         Arduino_Canvas::drawXBitmap(x, y, bitmap, w, h, color);
         if (!send) return;
@@ -258,6 +263,7 @@ class Lcd : public Display, public Arduino_Canvas {
     }
 
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override {
+        // log_i("send: %d clear: %d skip: %d", send, clear, skipFieldIndex);
         static const Area *a = &clockArea;
         if (-2 == lastMinute) return;  // avoid recursion
         tm t = Atoll::localTm();
@@ -273,6 +279,7 @@ class Lcd : public Display, public Arduino_Canvas {
                     displayFieldContent(i,
                                         field[i].content[currentPage],
                                         false);
+            lastMinute = t.tm_min;
             if (!send) return;
             sendBuffer();
             releaseMutex();

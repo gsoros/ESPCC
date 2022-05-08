@@ -2,7 +2,6 @@
 #define __board_h
 
 #define DISPLAY_OLED
-
 #include <Arduino.h>
 
 #include "definitions.h"
@@ -56,7 +55,8 @@ class Board : public Atoll::Task,
             OLED_SCK_PIN,
             OLED_SDA_PIN));
 #else
-    Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
+    // Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
+    Arduino_ESP32SPI lcdDataBus = Arduino_ESP32SPI(
         LCD_A0_PIN,
         LCD_CS_PIN);
     Arduino_SSD1283A lcdDevice = Arduino_SSD1283A(
