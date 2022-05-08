@@ -3,12 +3,12 @@
 
 void Recorder::onDistanceChanged(double value) {
     Atoll::Recorder::onDistanceChanged(value);
-    board.oled.onDistance((uint)value);
+    board.display.onDistance((uint)value);
 }
 
 void Recorder::onAltGainChanged(uint16_t value) {
     Atoll::Recorder::onAltGainChanged(value);
-    board.oled.onAltGain(value);
+    board.display.onAltGain(value);
 }
 
 bool Recorder::rec2gpx(const char *in, const char *out) {

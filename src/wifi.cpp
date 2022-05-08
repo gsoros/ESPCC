@@ -3,7 +3,7 @@
 
 void Wifi::applySettings() {
     Atoll::Wifi::applySettings();
-    board.oled.onWifiStateChange();
+    board.display.onWifiStateChange();
 };
 
 void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
@@ -13,7 +13,7 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
         case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
         case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
         case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-            board.oled.onWifiStateChange();
+            board.display.onWifiStateChange();
             break;
     }
 

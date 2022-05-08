@@ -1,6 +1,8 @@
 #ifndef __board_h
 #define __board_h
 
+#define DISPLAY_OLED
+
 #include <Arduino.h>
 
 #include "definitions.h"
@@ -18,7 +20,11 @@
 #include "ble_client.h"
 #include "ble_server.h"
 #include "gps.h"
+#ifdef DISPLAY_OLED
 #include "oled.h"
+#else
+#include "lcd.h"
+#endif
 #include "atoll_sdcard.h"
 #include "api.h"
 #include "wifi.h"
@@ -42,12 +48,24 @@ class Board : public Atoll::Task,
     Atoll::WifiSerial wifiSerial;
 #endif
     GPS gps;
-    Oled oled = Oled(
+#ifdef DISPLAY_OLED
+    Oled display = Oled(
         new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
             U8G2_R1,        // rotation 90˚
             U8X8_PIN_NONE,  // reset pin none
             OLED_SCK_PIN,
             OLED_SDA_PIN));
+#else
+    Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
+        LCD_A0_PIN,
+        LCD_CS_PIN);
+    Arduino_SSD1283A lcdDevice = Arduino_SSD1283A(
+        &lcdDataBus,
+        LCD_RST_PIN,
+        2  // rotation: 180˚
+    );
+    Lcd display = Lcd(&lcdDevice);
+#endif
     BleClient bleClient;
     BleServer bleServer;
     Atoll::SdCard sdcard = Atoll::SdCard(SD_SCK_PIN,
@@ -88,9 +106,13 @@ class Board : public Atoll::Task,
         bleServer.setup(hostName);
         api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
         gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-        oled.setup();
-        bleClient.setup(hostName, &arduinoPreferences);
         sdcard.setup();
+#ifdef DISPLAY_OLED
+        display.setup();  // oled
+#else
+        display.setup(LCD_SCK_PIN, LCD_MISO_PIN, LCD_SDA_PIN, LCD_CS_PIN, LCD_BACKLIGHT_PIN);
+#endif
+        bleClient.setup(hostName, &arduinoPreferences);
         touch.setup(&arduinoPreferences, "Touch");
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
         recorder.setup(&gps, &sdcard, &api, &recorder);
@@ -109,14 +131,14 @@ class Board : public Atoll::Task,
         gps.taskStart(GPS_TASK_FREQ);
         bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 8192);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ);
-        oled.taskStart(OLED_TASK_FREQ);
+        display.taskStart(DISPLAY_TASK_FREQ);
         battery.taskStart(BATTERY_TASK_FREQ);
         recorder.taskStart(RECORDER_TASK_FREQ);
         // uploader.taskStart(UPLOADER_TASK_FREQ);
         touch.taskStart(TOUCH_TASK_FREQ);
-#ifdef FEATURE_SERIAL
+        //#ifdef FEATURE_SERIAL
         // wifiSerial.taskStart(WIFISERIAL_TASK_FREQ);
-#endif
+        //#endif
         taskStart(BOARD_TASK_FREQ, 8192);
 
         recorder.start();
@@ -132,21 +154,6 @@ class Board : public Atoll::Task,
                 lastSync = t;
 
 #ifdef FEATURE_SERIAL
-        // while (Serial.available()) {
-        //     int i = Serial.read();
-        //     if (0 <= i && i < UINT8_MAX) {
-        //         char serialBuf[5] = "";
-        //         sprintf(serialBuf, "%c", i);
-        //         switch (i) {
-        //             case 24:  // ^X
-        //                 snprintf(serialBuf, sizeof(serialBuf), "[^X]");
-        //                 break;
-        //         }
-        //         Serial.write((const uint8_t *)serialBuf, strlen(serialBuf));  // echo serial input
-        //         if (0 <= i)
-        //             api.write((const uint8_t *)&i, 1);  // feed serial input to api
-        //     }
-        // }
         while (Serial.available()) {
             int i = Serial.read();
             if (0 <= i && i < UINT8_MAX) {

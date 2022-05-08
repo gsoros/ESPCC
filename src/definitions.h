@@ -14,7 +14,7 @@
 #define BLE_SERVER_TASK_FREQ 1.0f                                      //
 #define GPS_TASK_FREQ 3.0f                                             //
 #define TOUCH_TASK_FREQ 20.0f                                          //
-#define OLED_TASK_FREQ 1.0f                                            //
+#define DISPLAY_TASK_FREQ 1.0f                                         //
 #define OTA_TASK_FREQ 1.0f                                             //
 #define BATTERY_TASK_FREQ 1.0f                                         //
 #define WIFISERIAL_TASK_FREQ 2.0f                                      //
@@ -32,6 +32,10 @@
 #define HOSTNAME "ESPCC"                                               // default host name
 #define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"                          //
 ;                                                                      //
+#define DISPLAY_NUM_PAGES 3                                            //
+#define DISPLAY_NUM_FIELDS 3                                           //
+#define DISPLAY_NUM_FEEDBACK 4                                         //
+;                                                                      //
 #define LED_PIN 22                                                     // onboard LED pin
 #define BATTERY_PIN 35                                                 // pin for battery voltage measurement
 #define GPS_RX_PIN 17                                                  //
@@ -40,16 +44,24 @@
 #define OLED_SCK_PIN 14                                                //
 #define OLED_SDA_PIN 12                                                //
 ;                                                                      //
+#define LCD_A0_PIN 27                                                  // A0/DC
+#define LCD_RST_PIN 26                                                 // reset
+#define LCD_SCK_PIN 18                                                 // spi clock
+#define LCD_MISO_PIN -1                                                // spi miso not used with lcd
+#define LCD_SDA_PIN 23                                                 // spi mosi
+#define LCD_CS_PIN 5                                                   // = spi ss
+#define LCD_BACKLIGHT_PIN 25                                           //
+;                                                                      //
 #define TOUCH_NUM_PADS 4                                               //
 #define TOUCH_PAD_0_PIN 4                                              //
 #define TOUCH_PAD_1_PIN 13                                             //
 #define TOUCH_PAD_2_PIN 2                                              //
 #define TOUCH_PAD_3_PIN 33                                             //
 ;                                                                      //
-#define SD_SCK_PIN 18                                                  //
+#define SD_SCK_PIN 18                                                  // spi clock
 #define SD_MISO_PIN 19                                                 //
-#define SD_MOSI_PIN 23                                                 //
-#define SD_CS_PIN 5                                                    //
+#define SD_MOSI_PIN 23                                                 // = sda
+#define SD_CS_PIN 5                                                    // = spi ss
 ;                                                                      //
 ;                                                                      //
 #define ESPCC_API_SERVICE_UUID "f2d59f15-1fb3-4b22-b8cc-b554debb2720"  //

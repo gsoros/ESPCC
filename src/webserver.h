@@ -22,6 +22,7 @@ class Webserver {
         NO_TASK,
         INDEX_GENERATOR_TASK,
         REMOVE_ALL_TASK
+        //, GPX_GENERATOR_TASK
     };
     FS *fs = nullptr;                             //
     Atoll::Fs *atollFs = nullptr;                 //
@@ -66,6 +67,9 @@ class Webserver {
         server->on("/remove", HTTP_GET, [this](Request *request) {
             onRemove(request);
         });
+        // server->on("/gpxregen", HTTP_GET, [this](Request *request) {
+        //     onGpxRegen(request);
+        // });
         server->on("/removeAll", HTTP_GET, [this](Request *request) {
             onRemoveAll(request);
         });
@@ -147,12 +151,59 @@ class Webserver {
             request->send(404, "text/html", "not found");
             return;
         }
+        if (!fs->exists(path)) {
+            log_i("%s does not extist", path);
+            request->send(404, "text/html", "not found");
+            return;
+        }
         log_i("path: %s", path);
         if (nullptr != ota) {
             log_i("calling ota->off()");
             ota->off();  // ota hangs esp networking on long download, TODO restart after done
         }
-        request->send(*fs, path, "application/gpx+xml", true);
+        // request->send(*fs, path, "application/gpx+xml", true);
+
+        File file = fs->open(path);
+        if (!file) {
+            log_i("could not get file");
+            request->send(404, "text/html", "not found");
+            return;
+        }
+        size_t fileSize = file.size();
+        char fileName[20] = "";
+        strncpy(fileName, file.name(), 20);
+        file.close();
+        fs::FS *fsp = fs;
+        char fixedPath[32] = "";
+        strncpy(fixedPath, path, 32);
+        Response *response = request->beginResponse(
+            "application/gpx+xml", fileSize,
+            [fsp, fixedPath](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+                if (!fsp || !fsp->exists(fixedPath)) {
+                    log_e("cannot find %s", fixedPath);
+                    return 0;
+                }
+                File file = fsp->open(fixedPath);
+                if (!file) {
+                    log_e("cannot open %s", fixedPath);
+                    return 0;
+                }
+                if (!file.seek(index)) {
+                    file.close();
+                    log_e("cannot seek to %d", index);
+                    return 0;
+                }
+                size_t bytes = file.read(buffer, maxLen);
+                // log_d("%s read %d (max %d), index %d", file.path(), bytes, maxLen, index);
+                if (bytes + index == file.size())
+                    log_i("sent %s %d bytes", fixedPath, bytes + index);
+                file.close();
+                return bytes;
+            });
+        char buf[64];
+        snprintf(buf, sizeof(buf), "attachment; filename=\"%s\"", fileName);
+        response->addHeader("Content-Disposition", buf);
+        request->send(response);
     }
 
     void onRemove(Request *request) {
@@ -188,6 +239,38 @@ class Webserver {
         request->send(response);
         generateIndex();
     }
+
+    // void onGpxRegen(Request *request)
+    //     log_i("request %s", request->url().c_str());
+    //     if (nullptr == fs) {
+    //         log_e("fs is null");
+    //         request->send(500, "text/html", "fs error");
+    //         return;
+    //     }
+    //     if (nullptr == recorder) {
+    //         log_e("recorder is null");
+    //         request->send(500, "text/html", "rec error");
+    //         return;
+    //     }
+    //     char path[strlen(recorder->basePath) + 14] = "";
+    //     if (!pathFromRequest(request, path, sizeof(path))) {
+    //         log_i("could not get path");
+    //         request->send(404, "text/html", "not found");
+    //         return;
+    //     }
+    //     if (!fs->exists(path)) {
+    //         log_i("%s not found", path);
+    //         request->send(404, "text/html", "not found");
+    //     }
+    //     char gpxPath[strlen(path) + 5];
+    //     snprintf(gpxPath, sizeof(gpxPath), "%s.gpx", path);
+    //     if (fs->exists(gpxPath))
+    //         log_i("%s %s", fs->remove(gpxPath) ? "removed" : "could not remove", gpxPath);
+    //     runFsTask(FsTaskType::GPX_GENERATOR_TASK);
+    //     Response *response = request->beginResponse(302, "text/plain", "Moved");
+    //     response->addHeader("Location", "/");
+    //     request->send(response);
+    // }
 
     void onRemoveAll(Request *request) {
         genIndexResponse(request);
@@ -234,6 +317,9 @@ class Webserver {
             case FsTaskType::INDEX_GENERATOR_TASK:
                 task = indexGeneratorTask;
                 break;
+            // case FsTaskType::GPX_GENERATOR_TASK:
+            //     task = gpxGeneratorTask;
+            //     break;
             case FsTaskType::REMOVE_ALL_TASK:
                 task = removeAllTask;
                 break;
@@ -320,9 +406,9 @@ class Webserver {
 
         const char *footer = R"====(
         </table>
-        <p><a href="/genIndex">Regenerate index</a></p>
-        <p><a href="/removeAll">Delete all</a></p>
-        <!--<p><a href="/format">Format SD</a></p>-->
+        <p><a href="/genIndex">regenerate index</a></p>
+        <p><a href="/removeAll">delete all</a></p>
+        <!--<p><a href="/format">format</a></p>-->
     </body>
 </html>
 )====";

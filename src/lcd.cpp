@@ -1,6 +1,6 @@
 //#include "board.h"
-#include "oled.h"
+#include "lcd.h"
 
-Oled::~Oled() {
+Lcd::~Lcd() {
     delete device;
 }

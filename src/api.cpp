@@ -20,7 +20,7 @@ void Api::setup(
 }
 
 ApiResult *Api::systemProcessor(ApiMessage *msg) {
-    const char *arg = msg->arg;
+    char *arg = msg->arg;
     const char *str = "hostname";
     uint8_t sStr = strlen(str);
     if (sStr == strspn(arg, str)) {
