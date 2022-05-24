@@ -1,16 +1,14 @@
 #ifndef __lcd_h
 #define __lcd_h
 
-#include <SPI.h>
 #include <U8g2lib.h>
 
 //#include <Arduino_GFX_Library.h>
 //#include "databus/Arduino_HWSPI.h"
-#include "databus/Arduino_ESP32SPI.h"
-#include "display/Arduino_SSD1283A.h"
+//#include "databus/Arduino_ESP32SPI.h"
+//#include "display/Arduino_SSD1283A.h"
 #include "canvas/Arduino_Canvas.h"
 
-//#include "touch.h"  // avoid "NUM_PADS redefined"
 #include "atoll_time.h"
 #include "display.h"
 
@@ -22,8 +20,9 @@ class Lcd : public Display, public Arduino_Canvas {
         uint8_t width = 130,
         uint8_t height = 130,
         uint8_t feedbackWidth = 3,
-        uint8_t fieldHeight = 32)
-        : Display(width, height, feedbackWidth, fieldHeight),
+        uint8_t fieldHeight = 32,
+        SemaphoreHandle_t *mutex = nullptr)
+        : Display(width, height, feedbackWidth, fieldHeight, mutex),
           Arduino_Canvas(width, height, device, 0, 0) {
         // ┌──────┬────────────────────────┬──────┐
         // │feedb0│ field0                 │feedb2│
@@ -114,8 +113,7 @@ class Lcd : public Display, public Arduino_Canvas {
 
     virtual ~Lcd();
 
-    virtual void setup(uint8_t sckPin, uint8_t misoPin, uint8_t mosiPin, uint8_t ssPin, uint8_t backlightPin) {
-        SPI.begin(sckPin, misoPin, mosiPin, ssPin);
+    virtual void setup(uint8_t backlightPin) {
         pinMode(backlightPin, OUTPUT);
         digitalWrite(backlightPin, HIGH);
         Arduino_Canvas::begin();

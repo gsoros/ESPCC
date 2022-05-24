@@ -41,16 +41,17 @@
 #define GPS_RX_PIN 17                                                  //
 #define GPS_TX_PIN 16                                                  //
 ;                                                                      //
+#define SPI_SCK_PIN 18                                                 // spi clock
+#define SPI_MISO_PIN 19                                                // spi miso
+#define SPI_MOSI_PIN 23                                                // spi mosi
+;                                                                      //
 #define OLED_SCK_PIN 14                                                //
 #define OLED_SDA_PIN 12                                                //
 ;                                                                      //
-#define LCD_A0_PIN 27                                                  // A0/DC
+#define LCD_A0_PIN 27                                                  // a0/dc
 #define LCD_RST_PIN 26                                                 // reset
-#define LCD_SCK_PIN 18                                                 // spi clock
-#define LCD_MISO_PIN -1                                                // spi miso not used with lcd
-#define LCD_SDA_PIN 23                                                 // spi mosi
-#define LCD_CS_PIN 5                                                   // = spi ss
-#define LCD_BACKLIGHT_PIN 25                                           //
+#define LCD_CS_PIN 32                                                  // ss
+#define LCD_BACKLIGHT_PIN 25                                           // led
 ;                                                                      //
 #define TOUCH_NUM_PADS 4                                               //
 #define TOUCH_PAD_0_PIN 4                                              //
@@ -58,10 +59,7 @@
 #define TOUCH_PAD_2_PIN 2                                              //
 #define TOUCH_PAD_3_PIN 33                                             //
 ;                                                                      //
-#define SD_SCK_PIN 18                                                  // spi clock
-#define SD_MISO_PIN 19                                                 //
-#define SD_MOSI_PIN 23                                                 // = sda
-#define SD_CS_PIN 5                                                    // = spi ss
+#define SD_CS_PIN 5                                                    //
 ;                                                                      //
 ;                                                                      //
 #define ESPCC_API_SERVICE_UUID "f2d59f15-1fb3-4b22-b8cc-b554debb2720"  //

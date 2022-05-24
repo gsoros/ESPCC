@@ -1,8 +1,10 @@
 #ifndef __board_h
 #define __board_h
 
-#define DISPLAY_OLED
+//#define DISPLAY_OLED
 #include <Arduino.h>
+
+#include <SPI.h>
 
 #include "definitions.h"
 #ifdef FEATURE_SERIAL
@@ -22,6 +24,9 @@
 #ifdef DISPLAY_OLED
 #include "oled.h"
 #else
+#include "databus/Arduino_HWSPI.h"
+//#include "databus/Arduino_ESP32SPI.h"
+#include "display/Arduino_SSD1283A.h"
 #include "lcd.h"
 #endif
 #include "atoll_sdcard.h"
@@ -41,6 +46,7 @@ class Board : public Atoll::Task,
     const char *taskName() { return "Board"; }
     char hostName[SETTINGS_STR_LENGTH] = HOSTNAME;
     char timezone[SETTINGS_STR_LENGTH] = TIMEZONE;
+    SemaphoreHandle_t spiMutex = xSemaphoreCreateMutex();
     ::Preferences arduinoPreferences = ::Preferences();
 #ifdef FEATURE_SERIAL
     HardwareSerial hwSerial = HardwareSerial(0);
@@ -55,23 +61,25 @@ class Board : public Atoll::Task,
             OLED_SCK_PIN,
             OLED_SDA_PIN));
 #else
-    // Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
-    Arduino_ESP32SPI lcdDataBus = Arduino_ESP32SPI(
+    Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
+        // Arduino_ESP32SPI lcdDataBus = Arduino_ESP32SPI(
         LCD_A0_PIN,
-        LCD_CS_PIN);
+        LCD_CS_PIN,
+        SPI_SCK_PIN,
+        SPI_MOSI_PIN,
+        SPI_MISO_PIN,
+        &SPI,
+        true);  // shared interface
     Arduino_SSD1283A lcdDevice = Arduino_SSD1283A(
         &lcdDataBus,
         LCD_RST_PIN,
         2  // rotation: 180˚
     );
-    Lcd display = Lcd(&lcdDevice);
+    Lcd display = Lcd(&lcdDevice, 130, 130, 3, 32, &spiMutex);
 #endif
     BleClient bleClient;
     BleServer bleServer;
-    Atoll::SdCard sdcard = Atoll::SdCard(SD_SCK_PIN,
-                                         SD_MISO_PIN,
-                                         SD_MOSI_PIN,
-                                         SD_CS_PIN);
+    Atoll::SdCard sdcard = Atoll::SdCard(SD_CS_PIN, &spiMutex);
     Touch touch = Touch(TOUCH_PAD_0_PIN,
                         TOUCH_PAD_1_PIN,
                         TOUCH_PAD_2_PIN,
@@ -93,24 +101,26 @@ class Board : public Atoll::Task,
 
 #ifdef FEATURE_SERIAL
         hwSerial.begin(115200);
-        wifiSerial.setup(hostName, 0, 0, WIFISERIAL_TASK_FREQ);
+        wifiSerial.setup(hostName, 0, 0, WIFISERIAL_TASK_FREQ, 2048 + 1024);
         Serial.setup(&hwSerial, &wifiSerial);
         while (!hwSerial) vTaskDelay(10);
 #endif
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
         log_i("\n\n\n%s %s %s\n\n\n", hostName, __DATE__, __TIME__);
+        // heap_caps_print_heap_info(MALLOC_CAP_DEFAULT | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
         log_i("Setting timezone %s", timezone);
         Atoll::setTimezone(timezone);
 
         bleServer.setup(hostName);
         api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
         gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+        SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
         sdcard.setup();
 #ifdef DISPLAY_OLED
         display.setup();  // oled
 #else
-        display.setup(LCD_SCK_PIN, LCD_MISO_PIN, LCD_SDA_PIN, LCD_CS_PIN, LCD_BACKLIGHT_PIN);
+        display.setup(LCD_BACKLIGHT_PIN);
 #endif
         bleClient.setup(hostName, &arduinoPreferences);
         touch.setup(&arduinoPreferences, "Touch");
@@ -128,24 +138,49 @@ class Board : public Atoll::Task,
 
         bleServer.start();
 
-        gps.taskStart(GPS_TASK_FREQ);
-        bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 8192);
-        bleServer.taskStart(BLE_SERVER_TASK_FREQ);
-        display.taskStart(DISPLAY_TASK_FREQ);
-        battery.taskStart(BATTERY_TASK_FREQ);
-        recorder.taskStart(RECORDER_TASK_FREQ);
+        gps.taskStart(GPS_TASK_FREQ, 4096 - 2048);
+        bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 4096);
+        bleServer.taskStart(BLE_SERVER_TASK_FREQ, 2048);
+        display.taskStart(DISPLAY_TASK_FREQ, 4096 - 2048);
+        battery.taskStart(BATTERY_TASK_FREQ, 1024);
+        recorder.taskStart(RECORDER_TASK_FREQ, 4096 - 1024);
         // uploader.taskStart(UPLOADER_TASK_FREQ);
-        touch.taskStart(TOUCH_TASK_FREQ);
+        touch.taskStart(TOUCH_TASK_FREQ, 4096);
         //#ifdef FEATURE_SERIAL
         // wifiSerial.taskStart(WIFISERIAL_TASK_FREQ);
         //#endif
-        taskStart(BOARD_TASK_FREQ, 8192);
+        taskStart(BOARD_TASK_FREQ, 4096 + 1024);
 
         recorder.start();
+        wifi.start();
     }
 
     void loop() {
         ulong t = millis();
+
+        static ulong lastStatus = 0;
+        const uint statusFreq = 5000;
+        if ((lastStatus + statusFreq < t) || !lastStatus) {
+            log_i("              free heap: %d", xPortGetFreeHeapSize());
+            log_i("lowest stack        gps: %d", gps.taskGetLowestStackLevel());
+            log_i("lowest stack  bleClient: %d", bleClient.taskGetLowestStackLevel());
+            log_i("lowest stack  bleServer: %d", bleServer.taskGetLowestStackLevel());
+            log_i("lowest stack    display: %d", display.taskGetLowestStackLevel());
+            log_i("lowest stack    battery: %d", battery.taskGetLowestStackLevel());
+            log_i("lowest stack   recorder: %d", recorder.taskGetLowestStackLevel());
+            log_i("lowest stack      touch: %d", touch.taskGetLowestStackLevel());
+            log_i("lowest stack        ota: %d", ota.taskGetLowestStackLevel());
+#ifdef FEATURE_SERIAL
+            log_i("lowest stack wifiSerial: %d", wifiSerial.taskGetLowestStackLevel());
+#endif
+            log_i("lowest stack      board: %d", taskGetLowestStackLevel());
+            log_i("touch: %d %d %d %d",
+                  t - touch.pads[0].last,
+                  t - touch.pads[1].last,
+                  t - touch.pads[2].last,
+                  t - touch.pads[3].last);
+            lastStatus = t;
+        }
 
         static ulong lastSync = 0;
         const uint syncFreq = 600000;  // every 10 minutes

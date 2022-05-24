@@ -104,9 +104,14 @@ class Webserver {
             request->send(500, "text/html", "fs error");
             return;
         }
+        if (!atollFs->aquireMutex()) {
+            log_e("could not aquire mutex");
+            return;
+        }
         if (nullptr == recorder) {
             log_e("recorder is null");
             request->send(500, "text/html", "rec error");
+            atollFs->releaseMutex();
             return;
         }
         char indexPath[strlen(recorder->basePath) + strlen(indexFileName) + 2] = "";
@@ -122,10 +127,12 @@ class Webserver {
             } else
                 log_i("fs task is running");
             genIndexResponse(request);
+            atollFs->releaseMutex();
             return;
         }
         log_i("sending %s", indexPath);
         request->send(*fs, indexPath, "text/html; charset=iso8859-1");
+        atollFs->releaseMutex();
     }
 
     void onGenIndex(Request *request) {
@@ -140,20 +147,27 @@ class Webserver {
             request->send(500, "text/html", "fs error");
             return;
         }
+        if (!atollFs->aquireMutex()) {
+            log_e("could not aquire mutex");
+            return;
+        }
         if (nullptr == recorder) {
             log_e("recorder is null");
             request->send(500, "text/html", "rec error");
+            atollFs->releaseMutex();
             return;
         }
         char path[strlen(recorder->basePath) + 14] = "";
         if (!pathFromRequest(request, path, sizeof(path), ".gpx")) {
             log_i("could not get path");
             request->send(404, "text/html", "not found");
+            atollFs->releaseMutex();
             return;
         }
         if (!fs->exists(path)) {
             log_i("%s does not extist", path);
             request->send(404, "text/html", "not found");
+            atollFs->releaseMutex();
             return;
         }
         log_i("path: %s", path);
@@ -167,18 +181,25 @@ class Webserver {
         if (!file) {
             log_i("could not get file");
             request->send(404, "text/html", "not found");
+            atollFs->releaseMutex();
             return;
         }
         size_t fileSize = file.size();
         char fileName[20] = "";
         strncpy(fileName, file.name(), 20);
         file.close();
+        atollFs->releaseMutex();
+        Atoll::Fs *atollFsp = atollFs;
         fs::FS *fsp = fs;
         char fixedPath[32] = "";
         strncpy(fixedPath, path, 32);
         Response *response = request->beginResponse(
             "application/gpx+xml", fileSize,
-            [fsp, fixedPath](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+            [atollFsp, fsp, fixedPath](uint8_t *buffer, size_t maxLen, size_t index) -> size_t {
+                if (!atollFsp->aquireMutex()) {
+                    log_e("could not aquire mutex");
+                    return 0;
+                }
                 if (!fsp || !fsp->exists(fixedPath)) {
                     log_e("cannot find %s", fixedPath);
                     return 0;
@@ -198,6 +219,7 @@ class Webserver {
                 if (bytes + index == file.size())
                     log_i("sent %s %d bytes", fixedPath, bytes + index);
                 file.close();
+                atollFsp->releaseMutex();
                 return bytes;
             });
         char buf[64];
@@ -214,15 +236,21 @@ class Webserver {
             request->send(500, "text/html", "fs error");
             return;
         }
+        if (!atollFs->aquireMutex()) {
+            log_e("could not aquire mutex");
+            return;
+        }
         if (nullptr == recorder) {
             log_e("recorder is null");
             request->send(500, "text/html", "rec error");
+            atollFs->releaseMutex();
             return;
         }
         char path[strlen(recorder->basePath) + 14] = "";
         if (!pathFromRequest(request, path, sizeof(path))) {
             log_i("could not get path");
             request->send(404, "text/html", "not found");
+            atollFs->releaseMutex();
             return;
         }
         if (fs->exists(path))
@@ -234,6 +262,7 @@ class Webserver {
         snprintf(extPath, sizeof(extPath), "%s.stx", path);
         if (fs->exists(extPath))
             log_i("%s %s", fs->remove(extPath) ? "removed" : "could not remove", extPath);
+        atollFs->releaseMutex();
         Response *response = request->beginResponse(302, "text/plain", "Moved");
         response->addHeader("Location", "/");
         request->send(response);
@@ -358,19 +387,26 @@ class Webserver {
             log_e("fs is null");
             return;
         }
+        if (!atollFs->aquireMutex()) {
+            log_e("could not aquire mutex");
+            return;
+        }
         if (nullptr == recorder) {
             log_e("recorder is null");
+            atollFs->releaseMutex();
             return;
         }
         File dir = fs->open(recorder->basePath);
         if (!dir) {
             log_e("could not open %s", recorder->basePath);
             dir.close();
+            atollFs->releaseMutex();
             return;
         }
         if (!dir.isDirectory()) {
             log_e("%s is not a directory", recorder->basePath);
             dir.close();
+            atollFs->releaseMutex();
             return;
         }
         char indexPath[strlen(recorder->basePath) + strlen(indexFileName) + 2] = "";
@@ -379,6 +415,7 @@ class Webserver {
         if (!index) {
             log_e("could not open %s for writing", indexPath);
             dir.close();
+            atollFs->releaseMutex();
             return;
         }
 
@@ -417,6 +454,7 @@ class Webserver {
             log_e("could not write header to %s", indexPath);
             index.close();
             dir.close();
+            atollFs->releaseMutex();
             return;
         }
         File file;
@@ -481,6 +519,7 @@ class Webserver {
         index = fs->open(indexPath);
         log_i("generated %s %d bytes", indexPath, index.size());
         index.close();
+        atollFs->releaseMutex();
     }
 
     static void removeAllTask(void *p) {
@@ -497,13 +536,19 @@ class Webserver {
             log_e("fs is null");
             return;
         }
+        if (!atollFs->aquireMutex()) {
+            log_e("could not aquire mutex");
+            return;
+        }
         if (nullptr == recorder) {
             log_e("recorder is null");
+            atollFs->releaseMutex();
             return;
         }
         File dir = fs->open(recorder->basePath);
         if (!dir) {
             log_e("cannot open %s", recorder->basePath);
+            atollFs->releaseMutex();
             return;
         }
         File file;
@@ -547,6 +592,7 @@ class Webserver {
             delay(100);  // for wifiserial
         }
         dir.close();
+        atollFs->releaseMutex();
     }
 
     bool pathFromRequest(Request *request, char *path, size_t len, const char *ext = "") {
@@ -568,10 +614,18 @@ class Webserver {
                  recorder->basePath,
                  f,
                  ext);
+        if (nullptr == fs) {
+            log_e("fs is null");
+            return false;
+        }
+        if (!atollFs->aquireMutex()) {
+            log_e("could not aquire mutex");
+            return false;
+        }
         if (!fs->exists(path)) {
             log_i("%s does not exist", path);
-            // return false;
         }
+        atollFs->releaseMutex();
         return true;
     }
 };

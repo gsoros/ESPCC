@@ -84,16 +84,23 @@ class Display : public Atoll::Task, public Print {
     Display(uint16_t width,
             uint16_t height,
             uint16_t feedbackWidth = 3,
-            uint16_t fieldHeight = 32) : width(width),
-                                         height(height),
-                                         feedbackWidth(feedbackWidth),
-                                         fieldHeight(fieldHeight) {
+            uint16_t fieldHeight = 32,
+            SemaphoreHandle_t *mutex = nullptr)
+        : width(width),
+          height(height),
+          feedbackWidth(feedbackWidth),
+          fieldHeight(fieldHeight) {
         fieldWidth = width - 2 * feedbackWidth;
         fieldVSeparation = (height - 3 * fieldHeight) / 4;
         for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
             field[i] = OutputField();
         for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
             feedback[i] = Area();
+
+        if (nullptr == mutex)
+            defaultMutex = xSemaphoreCreateMutex();
+        else
+            this->mutex = mutex;
     }
 
     virtual ~Display() {}
@@ -191,7 +198,7 @@ class Display : public Atoll::Task, public Print {
             clock(false, true, fieldIndex);  // clear clock area, update other fields
         // log_i("printing '%s' to field %d", out, fieldIndex);
 
-        printField(fieldIndex, out);
+        printField(fieldIndex, out, false);
         if (send) {
             sendBuffer();
             releaseMutex();
@@ -209,14 +216,14 @@ class Display : public Atoll::Task, public Print {
         }
         if (value < -10.0) {
             // -10.1 will be printed as "-10"
-            printfFieldChars(fieldIndex, send, "%3d", (int)value);
+            printfFieldDigits(fieldIndex, send, "%3d", (int)value);
             return;
         }
-        char dec[3];
-        snprintf(dec, sizeof(dec), "%2.0f", value);  // digits before the decimal point
-        char rem[2];
-        snprintf(rem, sizeof(rem), "%1d", abs((int)(value * 10)) % 10);  // first digit after the decimal point
-        printField2plus1(fieldIndex, dec, rem, send);
+        char inte[3];
+        snprintf(inte, sizeof(inte), "%2.0f", value);  // digits before the decimal point
+        char dec[2];
+        snprintf(dec, sizeof(dec), "%1d", abs((int)(value * 10)) % 10);  // first digit after the decimal point
+        printField2plus1(fieldIndex, inte, dec, send);
     }
 
     virtual void printField2plus1(const uint8_t fieldIndex,
@@ -682,11 +689,12 @@ class Display : public Atoll::Task, public Print {
     int8_t battHRM = -1;
     int8_t wifiState = -1;
 
-    SemaphoreHandle_t mutex = xSemaphoreCreateMutex();
+    SemaphoreHandle_t defaultMutex;
+    SemaphoreHandle_t *mutex = &defaultMutex;
 
     virtual bool aquireMutex(uint32_t timeout = 100) {
         // log_d("aquireMutex %d", (int)mutex);
-        if (xSemaphoreTake(mutex, (TickType_t)timeout) == pdTRUE)
+        if (xSemaphoreTake(*mutex, (TickType_t)timeout) == pdTRUE)
             return true;
         log_i("Could not aquire mutex");
         return false;
@@ -694,7 +702,7 @@ class Display : public Atoll::Task, public Print {
 
     virtual void releaseMutex() {
         // log_d("releaseMutex %d", (int)mutex);
-        xSemaphoreGive(mutex);
+        xSemaphoreGive(*mutex);
     }
 };
 
