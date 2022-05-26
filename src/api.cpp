@@ -21,27 +21,53 @@ void Api::setup(
 
 ApiResult *Api::systemProcessor(ApiMessage *msg) {
     char *arg = msg->arg;
-    const char *str = "hostname";
-    uint8_t sStr = strlen(str);
-    if (sStr == strspn(arg, str)) {
-        size_t sArg = strlen(arg);
-        if (sStr < sArg) {
-            // set hostname
-            if (':' != arg[sStr]) return result("argInvalid");
-            arg += sStr + 1;
-            sArg = strlen(arg);
-            if (sArg < 2) return result("argInvalid");
-            if (sizeof(board.hostName) - 1 < sArg) return result("argInvalid");
-            if (!isAlNumStr(arg)) return result("argInvalid");
-            strncpy(board.hostName, arg, sizeof(board.hostName));
-            board.saveSettings();
+    {
+        const char *str = "hostname";
+        uint8_t sStr = strlen(str);
+        if (sStr == strspn(arg, str)) {
+            size_t sArg = strlen(arg);
+            if (sStr < sArg) {
+                // set hostname
+                if (':' != arg[sStr]) return result("argInvalid");
+                arg += sStr + 1;
+                sArg = strlen(arg);
+                if (sArg < 2) return result("argInvalid");
+                if (sizeof(board.hostName) - 1 < sArg) return result("argInvalid");
+                if (!isAlNumStr(arg)) return result("argInvalid");
+                strncpy(board.hostName, arg, sizeof(board.hostName));
+                board.saveSettings();
+            }
+            // get hostname
+            strncpy(msg->reply, board.hostName, msgReplyLength);
+            return success();
         }
-        // get hostname
-        strncpy(msg->reply, board.hostName, msgReplyLength);
-        return success();
     }
-    msg->appendToValue("|", true);
-    msg->appendToValue("hostname");
+    {
+        if (0 == strcmp("ota", arg)) {
+            log_i("entering ota mode");
+            log_i("free heap before: %d", xPortGetFreeHeapSize());
+            log_i("stopping recorder");
+            board.recorder.stop();
+            board.recorder.taskStop();
+            log_i("stopping touch task");
+            board.touch.taskStop();
+            log_i("stopping gps task");
+            board.gps.taskStop();
+            log_i("stopping bleClient");
+            board.bleClient.stop();
+            log_i("stopping webserver");
+            board.webserver.end();
+            log_i("free heap after: %d", xPortGetFreeHeapSize());
+            log_i("enabling wifi");
+            board.otaMode = true;
+            board.wifi.autoStartWebserver = false;
+            board.wifi.setEnabled(true, false);
+            board.display.onOta("waiting");
+            return success();
+        }
+    }
+    msg->valueAppend("|", true);
+    msg->valueAppend("hostname|ota");
     return Atoll::Api::systemProcessor(msg);
 }
 

@@ -17,6 +17,11 @@ void Display::loop() {
     // }
 }
 
+size_t Display::print(const char *str) {
+    if (board.otaMode) return 0;
+    return printOta(str);
+}
+
 void Display::updateStatus() {
     // static const uint8_t statusIconSize = 14;  // status icon width and height
     //  status area

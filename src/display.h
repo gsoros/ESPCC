@@ -114,6 +114,7 @@ class Display : public Atoll::Task, public Print {
 
     virtual size_t write(uint8_t) = 0;
     virtual void fill(const Area *a, uint16_t color, bool send = true) = 0;
+    virtual void fillOta(const Area *a, uint16_t color, bool send = true) = 0;
     virtual void setCursor(int16_t x, int16_t y) = 0;
     virtual void sendBuffer() = 0;
     virtual void drawXBitmap(int16_t x,
@@ -137,6 +138,11 @@ class Display : public Atoll::Task, public Print {
         this->bg = bg;
     }
     virtual void setBgColor(int16_t color) { bg = color; }
+
+    virtual size_t print(const char *str);
+    virtual size_t printOta(const char *str) {
+        return Print::print(str);
+    }
 
     virtual void printField(const uint8_t fieldIndex,
                             const char *str,
@@ -611,6 +617,20 @@ class Display : public Atoll::Task, public Print {
         onBattHRM(-1);
     }
 
+    virtual void onOta(const char *str) {
+        if (!aquireMutex()) return;
+        Area a = Area(0, 0, width, height - statusArea.h);
+        fillOta(&a, bg, false);
+        setCursor(3, height / 2);
+        char out[16];
+        snprintf(out, sizeof(out), "OTA: %s", str);
+        setFont(labelFont);
+        setColor(fg);
+        printOta(out);
+        sendBuffer();
+        releaseMutex();
+    }
+
     virtual void updateStatus();
     virtual void onTouchEvent(Touch::Pad *pad, Touch::Event event);
     virtual void onWifiStateChange();
@@ -641,8 +661,8 @@ class Display : public Atoll::Task, public Print {
     uint16_t width = 0;   // display width
     uint16_t height = 0;  // display height
 
-    uint16_t fg = 0xffff;  // 16-bit RGB (5-6-5) color
-    uint16_t bg = 0x0000;  // 16-bit RGB (5-6-5) color
+    uint16_t fg = 0xffff;  // 16-bit RGB (5-6-5) foreground color
+    uint16_t bg = 0x0000;  // 16-bit RGB (5-6-5) background color
 
     uint8_t *fieldFont = nullptr;
     uint8_t *fieldDigitFont = nullptr;

@@ -33,7 +33,7 @@
 #include "api.h"
 #include "wifi.h"
 #include "atoll_mdns.h"
-#include "atoll_ota.h"
+#include "ota.h"
 #include "battery.h"
 #include "recorder.h"
 #include "atoll_uploader.h"
@@ -86,7 +86,8 @@ class Board : public Atoll::Task,
                         TOUCH_PAD_3_PIN);
     Api api;
     Wifi wifi;
-    Atoll::Ota ota;
+    bool otaMode = false;
+    Ota ota;
     Atoll::Mdns mdns;
     Battery battery;
     Recorder recorder;
@@ -108,8 +109,9 @@ class Board : public Atoll::Task,
         preferencesSetup(&arduinoPreferences, "BOARD");
         loadSettings();
         log_i("\n\n\n%s %s %s\n\n\n", hostName, __DATE__, __TIME__);
+        log_i("free heap: %d", xPortGetFreeHeapSize());
         // heap_caps_print_heap_info(MALLOC_CAP_DEFAULT | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
-        log_i("Setting timezone %s", timezone);
+        log_i("timezone %s", timezone);
         Atoll::setTimezone(timezone);
 
         bleServer.setup(hostName);
@@ -128,6 +130,7 @@ class Board : public Atoll::Task,
         recorder.setup(&gps, &sdcard, &api, &recorder);
         // uploader.setup(&recorder, &sdcard, &wifi);
         webserver.setup(&sdcard, &recorder, &ota);
+        ota.setup(hostName, &recorder);
         mdns.setup(hostName, 3232);
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder
 #ifdef FEATURE_SERIAL
@@ -138,18 +141,15 @@ class Board : public Atoll::Task,
 
         bleServer.start();
 
-        gps.taskStart(GPS_TASK_FREQ, 4096 - 2048);
+        gps.taskStart(GPS_TASK_FREQ, 4096 - 1024);
         bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 4096);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ, 2048);
-        display.taskStart(DISPLAY_TASK_FREQ, 4096 - 2048);
-        battery.taskStart(BATTERY_TASK_FREQ, 1024);
+        display.taskStart(DISPLAY_TASK_FREQ, 2048);
+        battery.taskStart(BATTERY_TASK_FREQ, 2048);
         recorder.taskStart(RECORDER_TASK_FREQ, 4096 - 1024);
         // uploader.taskStart(UPLOADER_TASK_FREQ);
         touch.taskStart(TOUCH_TASK_FREQ, 4096);
-        //#ifdef FEATURE_SERIAL
-        // wifiSerial.taskStart(WIFISERIAL_TASK_FREQ);
-        //#endif
-        taskStart(BOARD_TASK_FREQ, 4096 + 1024);
+        taskStart(BOARD_TASK_FREQ, 4096);
 
         recorder.start();
         wifi.start();
@@ -158,33 +158,35 @@ class Board : public Atoll::Task,
     void loop() {
         ulong t = millis();
 
+#ifdef FEATURE_SERIAL
         static ulong lastStatus = 0;
         const uint statusFreq = 5000;
         if ((lastStatus + statusFreq < t) || !lastStatus) {
-            log_i("              free heap: %d", xPortGetFreeHeapSize());
-            log_i("lowest stack        gps: %d", gps.taskGetLowestStackLevel());
-            log_i("lowest stack  bleClient: %d", bleClient.taskGetLowestStackLevel());
-            log_i("lowest stack  bleServer: %d", bleServer.taskGetLowestStackLevel());
-            log_i("lowest stack    display: %d", display.taskGetLowestStackLevel());
-            log_i("lowest stack    battery: %d", battery.taskGetLowestStackLevel());
-            log_i("lowest stack   recorder: %d", recorder.taskGetLowestStackLevel());
-            log_i("lowest stack      touch: %d", touch.taskGetLowestStackLevel());
-            log_i("lowest stack        ota: %d", ota.taskGetLowestStackLevel());
-#ifdef FEATURE_SERIAL
-            log_i("lowest stack wifiSerial: %d", wifiSerial.taskGetLowestStackLevel());
-#endif
-            log_i("lowest stack      board: %d", taskGetLowestStackLevel());
-            log_i("touch: %d %d %d %d",
-                  t - touch.pads[0].last,
-                  t - touch.pads[1].last,
-                  t - touch.pads[2].last,
-                  t - touch.pads[3].last);
+            Serial.printf(
+                "heap: %d stack: gps %d, bleC %d, bleS %d, disp %d, bat %d, rec %d, touch %d, ota %d, wifiS %d, board %d\n",
+                xPortGetFreeHeapSize(),
+                gps.taskGetLowestStackLevel(),
+                bleClient.taskGetLowestStackLevel(),
+                bleServer.taskGetLowestStackLevel(),
+                display.taskGetLowestStackLevel(),
+                battery.taskGetLowestStackLevel(),
+                recorder.taskGetLowestStackLevel(),
+                touch.taskGetLowestStackLevel(),
+                ota.taskGetLowestStackLevel(),
+                wifiSerial.taskGetLowestStackLevel(),
+                taskGetLowestStackLevel());
+            if (touch.taskRunning())
+                Serial.printf("touch: %d %d %d %d\n",
+                              touch.pads[0].last ? t - touch.pads[0].last : 0,
+                              touch.pads[1].last ? t - touch.pads[1].last : 0,
+                              touch.pads[2].last ? t - touch.pads[2].last : 0,
+                              touch.pads[3].last ? t - touch.pads[3].last : 0);
             lastStatus = t;
         }
-
+#endif
         static ulong lastSync = 0;
         const uint syncFreq = 600000;  // every 10 minutes
-        if ((lastSync + syncFreq < t) || !lastSync)
+        if (gps.taskRunning() && ((lastSync + syncFreq < t) || !lastSync))
             if (gps.syncSystemTime())
                 lastSync = t;
 

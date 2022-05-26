@@ -6,6 +6,7 @@
 
 class Wifi : public Atoll::Wifi {
    public:
+   bool autoStartWebserver = true;
     virtual void applySettings() override;
     virtual void onEvent(arduino_event_id_t event, arduino_event_info_t info) override;
 };
