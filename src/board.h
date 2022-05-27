@@ -142,14 +142,14 @@ class Board : public Atoll::Task,
         bleServer.start();
 
         gps.taskStart(GPS_TASK_FREQ, 4096 - 1024);
-        bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 4096);
+        bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 4096 - 1024);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ, 2048);
         display.taskStart(DISPLAY_TASK_FREQ, 2048);
         battery.taskStart(BATTERY_TASK_FREQ, 2048);
         recorder.taskStart(RECORDER_TASK_FREQ, 4096 - 1024);
         // uploader.taskStart(UPLOADER_TASK_FREQ);
         touch.taskStart(TOUCH_TASK_FREQ, 4096);
-        taskStart(BOARD_TASK_FREQ, 4096);
+        taskStart(BOARD_TASK_FREQ, 4096 + 1024);
 
         recorder.start();
         wifi.start();
