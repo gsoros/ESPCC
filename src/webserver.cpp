@@ -1,7 +1,7 @@
 #include "board.h"
 #include "webserver.h"
 
-void Webserver::begin() {
+void Webserver::start() {
     if (serving) {
         log_i("already serving");
         return;
@@ -19,7 +19,7 @@ void Webserver::begin() {
     log_i("serving on port %d", port);
 }
 
-void Webserver::end() {
+void Webserver::stop() {
     if (!serving) {
         log_i("not serving");
         return;

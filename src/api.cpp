@@ -56,7 +56,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             log_i("stopping bleClient");
             board.bleClient.stop();
             log_i("stopping webserver");
-            board.webserver.end();
+            board.webserver.stop();
             log_i("free heap after: %d", xPortGetFreeHeapSize());
             log_i("enabling wifi");
             board.otaMode = true;

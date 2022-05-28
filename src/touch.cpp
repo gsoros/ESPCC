@@ -13,6 +13,8 @@ void Touch::fireEvent(uint8_t index, Event event) {
         } break;
         case Event::doubleTouch: {
             if (board.recorder.end()) {
+                board.wifi.autoStartWebserver = true;
+                board.wifi.autoStartWifiSerial = false;
                 // enable wifi but don't save
                 board.wifi.setEnabled(true, false);
             }

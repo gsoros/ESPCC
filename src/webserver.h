@@ -90,11 +90,10 @@ class Webserver {
             request->send(response);
             log_i("302 %s", request->url().c_str());
         });
-        // begin();
     }
 
-    void begin();
-    void end();
+    void start();
+    void stop();
 
     void onIndex(Request *request) {
         log_i("request %s", request->url().c_str());
@@ -172,8 +171,8 @@ class Webserver {
         }
         log_i("path: %s", path);
         if (nullptr != ota) {
-            log_i("calling ota->off()");
-            ota->off();  // ota hangs esp networking on long download, TODO restart after done
+            log_i("calling ota->stop()");
+            ota->stop();  // ota hangs esp networking on long download, TODO restart after done
         }
         // request->send(*fs, path, "application/gpx+xml", true);
 

@@ -23,33 +23,36 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
         if (connected) {
             if (board.otaMode) {
                 log_i("restarting ota");
-                board.ota.off();
+                board.ota.stop();
                 board.ota.taskStop();
                 board.ota.start();
                 board.ota.taskStart();
             } else {
 #ifdef FEATURE_SERIAL
-                log_i("restarting wifiSerial");
-                board.wifiSerial.off();
-                board.wifiSerial.setup();
-                board.wifiSerial.taskStart();
+                if (autoStartWifiSerial) {
+                    log_i("restarting wifiSerial");
+                    board.wifiSerial.stop();
+                    board.wifiSerial.taskStop();
+                    board.wifiSerial.start();
+                    board.wifiSerial.taskStart();
+                }
 #endif
                 if (autoStartWebserver) {
                     log_i("starting webserver");
-                    board.webserver.begin();
+                    board.webserver.start();
                 }
             }
             log_i("starting mdns");
-            board.mdns.begin();
+            board.mdns.start();
         } else {
 #ifdef FEATURE_SERIAL
             log_i("stopping wifiSerial");
-            board.wifiSerial.off();
+            board.wifiSerial.stop();
 #endif
             log_i("stopping webserver");
-            board.webserver.end();
+            board.webserver.stop();
             log_i("stopping mdns");
-            board.mdns.end();
+            board.mdns.stop();
         }
     }
     prevConnected = connected;
