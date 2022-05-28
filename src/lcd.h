@@ -222,7 +222,7 @@ class Lcd : public Display, public Arduino_Canvas {
     }
 
     virtual void fill(const Area *a, uint16_t color, bool send = true) override;
-    virtual void fillOta(const Area *a, uint16_t color, bool send = true) {
+    virtual void fillUnrestricted(const Area *a, uint16_t color, bool send = true) {
         // log_i("%d %d %d %d %d", a->x, a->y, a->w, a->h, color);
         // logAreas((Area *)a, "fill");
         if (send && !aquireMutex()) return;

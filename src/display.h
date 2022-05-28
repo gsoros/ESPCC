@@ -114,7 +114,7 @@ class Display : public Atoll::Task, public Print {
 
     virtual size_t write(uint8_t) = 0;
     virtual void fill(const Area *a, uint16_t color, bool send = true) = 0;
-    virtual void fillOta(const Area *a, uint16_t color, bool send = true) = 0;
+    virtual void fillUnrestricted(const Area *a, uint16_t color, bool send = true) = 0;
     virtual void setCursor(int16_t x, int16_t y) = 0;
     virtual void sendBuffer() = 0;
     virtual void drawXBitmap(int16_t x,
@@ -140,7 +140,7 @@ class Display : public Atoll::Task, public Print {
     virtual void setBgColor(int16_t color) { bg = color; }
 
     virtual size_t print(const char *str);
-    virtual size_t printOta(const char *str) {
+    virtual size_t printUnrestricted(const char *str) {
         return Print::print(str);
     }
 
@@ -620,13 +620,13 @@ class Display : public Atoll::Task, public Print {
     virtual void onOta(const char *str) {
         if (!aquireMutex()) return;
         Area a = Area(0, 0, width, height - statusArea.h);
-        fillOta(&a, bg, false);
+        fillUnrestricted(&a, bg, false);
         setCursor(3, height / 2);
         char out[16];
         snprintf(out, sizeof(out), "OTA: %s", str);
         setFont(labelFont);
         setColor(fg);
-        printOta(out);
+        printUnrestricted(out);
         sendBuffer();
         releaseMutex();
     }
@@ -707,7 +707,7 @@ class Display : public Atoll::Task, public Print {
     int8_t battery = -1;
     int8_t battPM = -1;
     int8_t battHRM = -1;
-    int8_t wifiState = -1;
+    int8_t wifiState = -1;  // 0: disabled, 1: enabled, 2: connected
 
     SemaphoreHandle_t defaultMutex;
     SemaphoreHandle_t *mutex = &defaultMutex;

@@ -7,7 +7,7 @@ Oled::~Oled() {
 
 void Oled::fill(const Area *a, uint16_t color, bool send) {
     if (board.otaMode) return;
-    fillOta(a, color, send);
+    fillUnrestricted(a, color, send);
 }
 
 void Oled::clock(bool send, bool clear, int8_t skipFieldIndex) {

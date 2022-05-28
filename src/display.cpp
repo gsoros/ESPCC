@@ -19,7 +19,7 @@ void Display::loop() {
 
 size_t Display::print(const char *str) {
     if (board.otaMode) return 0;
-    return printOta(str);
+    return printUnrestricted(str);
 }
 
 void Display::updateStatus() {
@@ -71,7 +71,8 @@ void Display::updateStatus() {
 
     icon.x = a->x;
     if (recordingState != lastRecordingState) {
-        fill(&icon, bg, false);
+        log_i("%sing recording icon", recordingState ? "draw" : "clear");
+        fillUnrestricted(&icon, bg, false);
         if (recordingState) {
             drawXBitmap(icon.x, icon.y, icon.w, icon.h, recXbm, fg, false);
         }
@@ -79,7 +80,7 @@ void Display::updateStatus() {
 
     icon.x = a->x + a->w / 2 - statusIconSize / 2;
     if (wifiState != lastWifiState || 1 == wifiState) {
-        fill(&icon, bg, false);
+        fillUnrestricted(&icon, bg, false);
         static bool wifiBlinkState = false;
         if (2 == wifiState || (1 == wifiState && wifiBlinkState)) {
             drawXBitmap(icon.x, icon.y, icon.w, icon.h, wifiXbm, fg, false);
@@ -89,7 +90,7 @@ void Display::updateStatus() {
 
     icon.x = a->x + a->w - statusIconSize;
     if (motionState != lastMotionState) {
-        fill(&icon, bg, false);
+        fillUnrestricted(&icon, bg, false);
         drawXBitmap(icon.x, icon.y, icon.w, icon.h,
                     2 == motionState
                         ? rideXbm
