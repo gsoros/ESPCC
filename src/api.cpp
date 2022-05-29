@@ -66,8 +66,8 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             return success();
         }
     }
-    msg->valueAppend("|", true);
-    msg->valueAppend("hostname|ota");
+    msg->replyAppend("|", true);
+    msg->replyAppend("hostname|ota");
     return Atoll::Api::systemProcessor(msg);
 }
 
@@ -110,7 +110,7 @@ ApiResult *Api::touchThresProcessor(ApiMessage *msg) {
         int16_t remaining = msgReplyLength - strlen(thresholds) - 1;
         if (remaining < strlen(token)) {
             if (msg->log) log_e("no space left for adding %s to %s", token, thresholds);
-            return result("internalError");
+            return internalError();
         }
         strncat(thresholds, token, remaining);
     }
@@ -185,7 +185,7 @@ ApiResult *Api::peersProcessor(ApiMessage *msg) {
         remaining = msgReplyLength - strlen(value) - 1;
         if (remaining < strlen(token)) {
             if (msg->log) log_e("no space left for adding %s to %s", token, value);
-            return result("internalError");
+            return internalError();
         }
         strncat(value, token, remaining);
     }
