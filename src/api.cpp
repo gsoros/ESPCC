@@ -63,6 +63,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
             board.wifi.autoStartWebserver = false;
             board.wifi.setEnabled(true, false);
             board.display.onOta("waiting");
+            msg->replyAppend("ota");
             return success();
         }
     }
