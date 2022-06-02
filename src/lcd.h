@@ -9,50 +9,115 @@
 //#include "display/Arduino_SSD1283A.h"
 #include "canvas/Arduino_Canvas.h"
 
-#include "atoll_time.h"
 #include "display.h"
+#include "atoll_time.h"
+#include "touch.h"
 
 class Lcd : public Display, public Arduino_Canvas {
    public:
     Area clip = Area();
+    uint8_t fieldHSeparation = 2;
+    int8_t backlightPin = -1;
+    uint8_t backlightState = 1;
 
     Lcd(Arduino_GFX *device,
         uint8_t width = 130,
         uint8_t height = 130,
         uint8_t feedbackWidth = 3,
-        uint8_t fieldHeight = 32,
+        uint8_t fieldHeight = 36,
         SemaphoreHandle_t *mutex = nullptr)
         : Display(width, height, feedbackWidth, fieldHeight, mutex),
           Arduino_Canvas(width, height, device, 0, 0) {
-        // ┌──────┬────────────────────────┬──────┐
-        // │feedb0│ field0                 │feedb2│
-        // │      │            c           │      │
-        // │      ├────────────────────────┤      │
-        // │      ├────────────l───────────┤      │
-        // │      │ field1                 │      │
-        // │      │            o           │      │
-        // ├──────┼────────────────────────┼──────┤
-        // │feedb1├────────────c───────────┤feedb3│
-        // │      │ field2                 │      │
-        // │      │            k           │      │
-        // │      ├────────────────────────┤      │
-        // │      ├────────────────────────┤      │
-        // │      │ status                 │      │
-        // │      │                        │      │
-        // └──────┴────────────────────────┴──────┘
+        /*
+                // ┌─┬──────────────┬┬──────────────┬─┐
+                // │f│ field0       ││ field1       │f│
+                // │e│              ││              │e│
+                // │e│              ││              │e│
+                // │d│              ││              │d│
+                // │b│          c l o c k           │b│
+                // │0│              ││              │1│
+                // ├─┼──────────────┼┼──────────────┼─┤
+                // │f├──────────────┼┼──────────────┤f│
+                // │e│ field2       ││ field3       │e│
+                // │e│              ││              │e│
+                // │d│              ││              │d│
+                // │b│              ││              │b│
+                // │2│              ││              │3│
+                // │ ├──────────────┴┴──────────────┤ │
+                // │ │             status           │ │
+                // └─┴──────────────────────────────┴─┘
+
+                fieldWidth = (width - 2 * feedbackWidth - fieldHSeparation) / 2;
+                fieldVSeparation = (height - 2 * fieldHeight) / 4;
+
+                field[0].area.x = feedbackWidth;
+                field[0].area.y = 0;
+                field[0].area.w = fieldWidth;
+                field[0].area.h = fieldHeight;
+
+                field[1].area.x = feedbackWidth + fieldWidth + fieldHSeparation;
+                field[1].area.y = 0;
+                field[1].area.w = fieldWidth;
+                field[1].area.h = fieldHeight;
+
+                field[2].area.x = feedbackWidth;
+                field[2].area.y = fieldHeight + fieldVSeparation;
+                field[2].area.w = fieldWidth;
+                field[2].area.h = fieldHeight;
+
+                field[3].area.x = feedbackWidth + fieldWidth + fieldHSeparation;
+                field[3].area.y = fieldHeight + fieldVSeparation;
+                field[3].area.w = fieldWidth;
+                field[3].area.h = fieldHeight;
+
+                field[0].content[0] = FC_POWER;
+                field[1].content[0] = FC_HEARTRATE;
+                field[2].content[0] = FC_CADENCE;
+                field[3].content[0] = FC_HEARTRATE;
+
+                field[0].content[1] = FC_SPEED;
+                field[1].content[1] = FC_DISTANCE;
+                field[2].content[1] = FC_ALTGAIN;
+                field[3].content[1] = FC_ALTGAIN;
+
+                field[0].content[2] = FC_BATTERY;
+                field[1].content[2] = FC_BATTERY_POWER;
+                field[2].content[2] = FC_BATTERY_HEARTRATE;
+                field[3].content[2] = FC_BATTERY_HEARTRATE;
+        */
+
+        // ┌─┬──────────────────────────────┬─┐
+        // │f│ field0 / clock               │f│
+        // │e│                              │e│
+        // │e│                              │e│
+        // │d│                              │d│
+        // │b│                              │b│
+        // │0│                              │1│
+        // ├─┼──────────────────────────────┼─┤
+        // │f├──────────────┬┬──────────────┤f│
+        // │e│ field1       ││ field2       │e│
+        // │e│              ││              │e│
+        // │d│              ││              │d│
+        // │b├──────────────┴┴──────────────┤b│
+        // │2├──────────────────────────────┤3│
+        // │ │             status           │ │
+        // └─┴──────────────────────────────┴─┘
+
+        fieldWidth = (width - 2 * feedbackWidth - fieldHSeparation) / 2;
+        fieldVSeparation = 9;
 
         field[0].area.x = feedbackWidth;
         field[0].area.y = 0;
-        field[0].area.w = fieldWidth;
-        field[0].area.h = fieldHeight;
+        field[0].area.w = width - 2 * feedbackWidth;
+        field[0].area.h = 62;  // height - 2 * fieldVSeparation - fieldHeight - statusIconSize;
 
         field[1].area.x = feedbackWidth;
-        field[1].area.y = fieldHeight + fieldVSeparation;
+        field[1].area.y = field[0].area.h + fieldVSeparation;
         field[1].area.w = fieldWidth;
         field[1].area.h = fieldHeight;
 
-        field[2].area.x = feedbackWidth;
-        field[2].area.y = 2 * fieldHeight + 2 * fieldVSeparation;
+        field[2].area.x = feedbackWidth + fieldWidth + fieldHSeparation;
+        field[2].area.y = field[1].area.y;
         field[2].area.w = fieldWidth;
         field[2].area.h = fieldHeight;
 
@@ -68,22 +133,41 @@ class Lcd : public Display, public Arduino_Canvas {
         field[1].content[2] = FC_BATTERY_POWER;
         field[2].content[2] = FC_BATTERY_HEARTRATE;
 
+        fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
+        smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
+        timeFont = (uint8_t *)u8g2_font_logisoso42_tr;
+        timeFontHeight = 42;
+        dateFont = (uint8_t *)u8g2_font_fur14_tn;
+        dateFontHeight = dateFontHeight;
+        labelFont = (uint8_t *)u8g2_font_bytesize_tr;
+        labelFontHeight = 12;
+
+        field[0].font = (uint8_t *)u8g2_font_logisoso50_tr;
+        field[0].labelFont = labelFont;
+        field[0].smallFont = (uint8_t *)u8g2_font_logisoso32_tr;
+        field[0].smallFontWidth = 20;
+
+        for (uint8_t i = 1; i < numFields; i++) {
+            field[i].font = fieldFont;
+            field[i].labelFont = labelFont;
+            field[i].smallFont = smallFont;
+            field[i].smallFontWidth = 13;
+        }
+
         feedback[0].x = 0;
         feedback[0].y = 0;
         feedback[0].w = feedbackWidth;
         feedback[0].h = height / 2;
-        // feedback[0].invert = true;
 
-        feedback[1].x = 0;
-        feedback[1].y = height / 2;
+        feedback[1].x = width - feedbackWidth;
+        feedback[1].y = 0;
         feedback[1].w = feedbackWidth;
         feedback[1].h = height / 2;
 
-        feedback[2].x = width - feedbackWidth;
-        feedback[2].y = 0;
+        feedback[2].x = 0;
+        feedback[2].y = height / 2;
         feedback[2].w = feedbackWidth;
         feedback[2].h = height / 2;
-        // feedback[2].invert = true;
 
         feedback[3].x = width - feedbackWidth;
         feedback[3].y = height / 2;
@@ -92,49 +176,50 @@ class Lcd : public Display, public Arduino_Canvas {
 
         statusArea = Area(feedbackWidth,
                           height - statusIconSize,
-                          fieldWidth,
+                          width - feedbackWidth * 2,
                           statusIconSize);
 
-        clockArea.x = field[0].area.x;
-        clockArea.y = field[0].area.y;
-        clockArea.w = fieldWidth;
-        clockArea.h = numFields * fieldHeight + (numFields - 1) * fieldVSeparation;
-
-        fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
-        fieldDigitFont = (uint8_t *)u8g2_font_logisoso32_tn;
-        smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
-        timeFont = (uint8_t *)u8g2_font_logisoso32_tn;  // font for displaying the time
-        timeFontHeight = 32;                            //
-        dateFont = (uint8_t *)u8g2_font_fur14_tn;       // font for displaying the date
-        dateFontHeight = dateFontHeight;                //
-        labelFont = (uint8_t *)u8g2_font_bytesize_tr;   // font for displaying the field labels
-        labelFontHeight = 12;
+        clockArea = field[0].area;
     }
 
     virtual ~Lcd();
 
     virtual void setup(uint8_t backlightPin) {
+        if (INT8_MAX < backlightPin)
+            log_e("pin out of range");
+        else
+            this->backlightPin = (int8_t)backlightPin;
         pinMode(backlightPin, OUTPUT);
-        digitalWrite(backlightPin, HIGH);
+        backlight(backlightState);
         Arduino_Canvas::begin();
         // device->begin();
         Display::setup();
         setTextWrap(false);
         setTextColor(fg);
-        fillScreen(bg);
+        if (aquireMutex()) {
+            fillScreen(bg);
+            releaseMutex();
+        }
+        diag();
+        delay(5000);
+        if (aquireMutex()) {
+            fillScreen(bg);
+            releaseMutex();
+        }
         splash();
 
         for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
-            log_i("field %d:    %d %d %d %d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
+            log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
         for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
-            log_i("feedback %d: %d %d %d %d", i, feedback[i].x, feedback[i].y, feedback[i].w, feedback[i].h);
-        log_i("status:      %d %d %d %d", statusArea.x, statusArea.y, statusArea.w, statusArea.h);
-        log_i("clock:       %d %d %d %d", clockArea.x, clockArea.y, clockArea.w, clockArea.h);
+            log_i("feedback %d: %3d %3d %3d %3d", i, feedback[i].x, feedback[i].y, feedback[i].w, feedback[i].h);
+        log_i("status:     %3d %3d %3d %3d", statusArea.x, statusArea.y, statusArea.w, statusArea.h);
+        log_i("clock:      %3d %3d %3d %3d", clockArea.x, clockArea.y, clockArea.w, clockArea.h);
     }
 
     virtual void writePixelPreclipped(int16_t x, int16_t y, uint16_t color) override {
         // log_i("%d %d %d", x, y, color);
-        if (!clip.contains(x, y)) return;
+        if (!clip.contains(x, y))
+            return;
         Arduino_Canvas::writePixelPreclipped(x, y, color);
     }
 
@@ -262,6 +347,59 @@ class Lcd : public Display, public Arduino_Canvas {
     }
 
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
+
+    virtual void updateStatus() override {
+        // 4th of 5 evenly spaced, equally sized icons
+        static Area icon = Area(statusArea.x + ((statusArea.w - statusIconSize) / 4) * 3,
+                                statusArea.y, statusIconSize, statusIconSize);
+        static const uint8_t backlightXbm[] = {
+            0x00, 0x00, 0x40, 0x00, 0x44, 0x04, 0x08, 0x02, 0xe0, 0x00, 0xb0, 0x01,
+            0x16, 0x0d, 0xb0, 0x01, 0xe0, 0x00, 0x08, 0x02, 0x44, 0x04, 0x40, 0x00,
+            0x00, 0x00, 0x00, 0x00};
+        static int16_t lastBacklightState = -1;
+        if (lastBacklightState != backlightState && aquireMutex()) {
+            fill(&icon, bg, false);
+            if (backlightState) drawXBitmap(icon.x, icon.y, icon.w, icon.h, backlightXbm, fg, false);
+            sendBuffer();
+            releaseMutex();
+            lastBacklightState = (int16_t)backlightState;
+        }
+        Display::updateStatus();
+    }
+
+    virtual void onTouchEvent(Touch::Pad *pad, Touch::Event event) override {
+        if (3 == pad->index && event == Touch::Event::longTouch) {
+            backlight(!backlightState);
+            return;
+        }
+        Display::onTouchEvent(pad, event);
+    }
+
+    void backlight(uint8_t state) {
+        backlightState = state;
+        if (this->backlightPin < 0) {
+            log_e("pin not set");
+            return;
+        }
+        digitalWrite(this->backlightPin, backlightState);
+    }
+
+    void diag() {
+        if (!aquireMutex()) return;
+        fill(&field[0].area, rgb888to565(255, 0, 0), false);
+        fill(&field[1].area, rgb888to565(0, 255, 0), false);
+        fill(&field[2].area, rgb888to565(0, 0, 255), false);
+        fill(&feedback[0], rgb888to565(255, 255, 0), false);
+        fill(&feedback[1], rgb888to565(255, 0, 255), false);
+        fill(&feedback[2], rgb888to565(255, 255, 128), false);
+        fill(&feedback[3], rgb888to565(255, 128, 0), false);
+        fill(&statusArea, rgb888to565(128, 0, 128), false);
+        // printField(0, "1234");
+        // printField(1, "567");
+        // printField(2, "890");
+        sendBuffer();
+        releaseMutex();
+    }
 
    protected:
     Arduino_GFX *device;

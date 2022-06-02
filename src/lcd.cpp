@@ -34,7 +34,7 @@ void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
         releaseMutex();
         return;
     }
-    setCursor(a->x, a->y + a->h / 2);
+    setCursor(a->x, a->y + timeFontHeight + 2);
     setFont(timeFont);
     Arduino_Canvas::printf("%d:%02d", t.tm_hour, t.tm_min);
     setCursor(a->x, a->y + a->h);

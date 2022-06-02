@@ -32,8 +32,12 @@
 #define HOSTNAME "ESPCC"                                               // default host name
 #define TIMEZONE "CET-1CEST,M3.5.0,M10.5.0/3"                          //
 ;                                                                      //
+#define DISPLAY_OLED 0                                                 //
+#define DISPLAY_LCD 1                                                  //
+#define DISPLAY_DEVICE DISPLAY_LCD                                     //
 #define DISPLAY_NUM_PAGES 3                                            //
-#define DISPLAY_NUM_FIELDS 3                                           //
+#define DISPLAY_OLED_NUM_FIELDS 3                                      //
+#define DISPLAY_LCD_NUM_FIELDS 3                                       //
 #define DISPLAY_NUM_FEEDBACK 4                                         //
 ;                                                                      //
 #define LED_PIN 22                                                     // onboard LED pin

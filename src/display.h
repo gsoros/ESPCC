@@ -2,6 +2,15 @@
 #define __display_h
 
 #include "definitions.h"
+
+#if DISPLAY_DEVICE == DISPLAY_OLED
+#define DISPLAY_NUM_FIELDS DISPLAY_OLED_NUM_FIELDS
+#elif DISPLAY_DEVICE == DISPLAY_LCD
+#define DISPLAY_NUM_FIELDS DISPLAY_LCD_NUM_FIELDS
+#else
+#error Could not define DISPLAY_NUM_FIELDS
+#endif
+
 #include "atoll_task.h"
 #include "atoll_time.h"
 #include "atoll_log.h"
@@ -72,10 +81,18 @@ class Display : public Atoll::Task, public Print {
     struct OutputField {
         Area area;
         FieldContent content[DISPLAY_NUM_PAGES];
+        uint8_t *font;
+        uint8_t *labelFont;
+        uint8_t *smallFont;
+        uint8_t smallFontWidth;
 
         OutputField() : area() {
             for (uint8_t i = 0; i < DISPLAY_NUM_PAGES; i++)
                 content[i] = FC_EMPTY;
+            font = nullptr;
+            labelFont = nullptr;
+            smallFont = nullptr;
+            smallFontWidth = 0;
         };
     };
 
@@ -90,8 +107,6 @@ class Display : public Atoll::Task, public Print {
           height(height),
           feedbackWidth(feedbackWidth),
           fieldHeight(fieldHeight) {
-        fieldWidth = width - 2 * feedbackWidth;
-        fieldVSeparation = (height - 3 * fieldHeight) / 4;
         for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
             field[i] = OutputField();
         for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
@@ -154,9 +169,11 @@ class Display : public Atoll::Task, public Print {
         Area *a = &field[fieldIndex].area;
         setClip(a);
         fill(a, bg, false);
-        setCursor(a->x, a->y + a->h);
+        setCursor(a->x, a->y + a->h - 1);
         if (font)
             setFont(font);
+        else
+            setFont(field[fieldIndex].font);
         print(str);
         setMaxClip();
         if (!send) return;
@@ -179,7 +196,7 @@ class Display : public Atoll::Task, public Print {
             clock(false, true, fieldIndex);  // clear clock area, update other fields
         // log_i("printing '%s' to field %d", out, fieldIndex);
 
-        printField(fieldIndex, out, false, fieldDigitFont);
+        printField(fieldIndex, out, false);
         if (send) {
             sendBuffer();
             releaseMutex();
@@ -242,11 +259,11 @@ class Display : public Atoll::Task, public Print {
             clock(false, true, fieldIndex);  // clear clock area, update other fields
         setClip(a);
         fill(a, bg, false);
-        setFont(fieldFont);
-        setCursor(a->x, a->y + a->h);
+        setFont(field[fieldIndex].font);
+        setCursor(a->x, a->y + a->h - 1);
         print(two);
-        setFont(smallFont);
-        setCursor(a->x + a->w - 13, a->y + a->h);
+        setFont(field[fieldIndex].smallFont);
+        setCursor(a->x + a->w - field[fieldIndex].smallFontWidth, a->y + a->h);
         print(one);
         setMaxClip();
         if (!send) return;
@@ -361,10 +378,10 @@ class Display : public Atoll::Task, public Print {
 
     virtual void splash() {
         if (!aquireMutex()) return;
-        Area *a = &field[1].area;
+        Area *a = &field[0].area;
         setClip(a);
         setFont(smallFont);
-        setCursor(a->x, a->y + a->h);
+        setCursor(a->x + 10, a->y + a->h - 5);
         print("espcc");
         sendBuffer();
         setMaxClip();
@@ -657,6 +674,10 @@ class Display : public Atoll::Task, public Print {
         logArea((Area *)&statusArea, a, str, "status");
     }
 
+    static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
+        return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));
+    }
+
    protected:
     uint16_t width = 0;   // display width
     uint16_t height = 0;  // display height
@@ -664,9 +685,8 @@ class Display : public Atoll::Task, public Print {
     uint16_t fg = 0xffff;  // 16-bit RGB (5-6-5) foreground color
     uint16_t bg = 0x0000;  // 16-bit RGB (5-6-5) background color
 
-    uint8_t *fieldFont = nullptr;
-    uint8_t *fieldDigitFont = nullptr;
-    uint8_t *smallFont = nullptr;
+    uint8_t *fieldFont = nullptr;  // font for displaying field content
+    uint8_t *smallFont = nullptr;  // small characters for field content
     uint8_t *timeFont = nullptr;   // font for displaying the time
     uint8_t timeFontHeight = 0;    //
     uint8_t *dateFont = nullptr;   // font for displaying the date
@@ -686,7 +706,7 @@ class Display : public Atoll::Task, public Print {
 
     Area clockArea = Area();      //
     Area statusArea = Area();     //
-    uint8_t statusIconSize = 14;  //
+    uint8_t statusIconSize = 14;  // = 14
 
     uint8_t currentPage = 0;
     const uint8_t numPages = DISPLAY_NUM_PAGES;  // helper

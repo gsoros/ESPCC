@@ -23,7 +23,6 @@ size_t Display::print(const char *str) {
 }
 
 void Display::updateStatus() {
-    // static const uint8_t statusIconSize = 14;  // status icon width and height
     //  status area
     static const Area *a = &statusArea;
 
@@ -147,7 +146,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             clock(false, true);  // clear clock
             char label[10] = "";
             Area *b;
-            setFont(labelFont);
+
             for (uint8_t i = 0; i < numFields; i++) {
                 if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
                     continue;
@@ -155,6 +154,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 setClip(b);
                 fill(b, bg, false);
                 setCursor(b->x, b->y + b->h - 4);
+                setFont(field[i].labelFont);
                 print(label);
             }
             sendBuffer();

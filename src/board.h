@@ -1,7 +1,6 @@
 #ifndef __board_h
 #define __board_h
 
-//#define DISPLAY_OLED
 #include <Arduino.h>
 
 #include <SPI.h>
@@ -21,14 +20,18 @@
 #include "ble_client.h"
 #include "ble_server.h"
 #include "gps.h"
-#ifdef DISPLAY_OLED
+
+#if DISPLAY_DEVICE == DISPLAY_OLED
 #include "oled.h"
-#else
+#elif DISPLAY_DEVICE == DISPLAY_LCD
 #include "databus/Arduino_HWSPI.h"
 //#include "databus/Arduino_ESP32SPI.h"
 #include "display/Arduino_SSD1283A.h"
 #include "lcd.h"
+#else
+#error Unsupported DISPLAY_DEVICE
 #endif
+
 #include "atoll_sdcard.h"
 #include "api.h"
 #include "wifi.h"
@@ -53,14 +56,14 @@ class Board : public Atoll::Task,
     Atoll::WifiSerial wifiSerial;
 #endif
     GPS gps;
-#ifdef DISPLAY_OLED
+#if DISPLAY_DEVICE == DISPLAY_OLED
     Oled display = Oled(
         new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
             U8G2_R1,        // rotation 90˚
             U8X8_PIN_NONE,  // reset pin none
             OLED_SCK_PIN,
             OLED_SDA_PIN));
-#else
+#elif DISPLAY_DEVICE == DISPLAY_LCD
     Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
         // Arduino_ESP32SPI lcdDataBus = Arduino_ESP32SPI(
         LCD_A0_PIN,
@@ -75,7 +78,7 @@ class Board : public Atoll::Task,
         LCD_RST_PIN,
         2  // rotation: 180˚
     );
-    Lcd display = Lcd(&lcdDevice, 130, 130, 3, 32, &spiMutex);
+    Lcd display = Lcd(&lcdDevice, 130, 130, 3, 36, &spiMutex);
 #endif
     BleClient bleClient;
     BleServer bleServer;
@@ -119,9 +122,9 @@ class Board : public Atoll::Task,
         gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
         SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
         sdcard.setup();
-#ifdef DISPLAY_OLED
+#if DISPLAY_DEVICE == DISPLAY_OLED
         display.setup();  // oled
-#else
+#elif DISPLAY_DEVICE == DISPLAY_LCD
         display.setup(LCD_BACKLIGHT_PIN);
 #endif
         bleClient.setup(hostName, &arduinoPreferences);

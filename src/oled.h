@@ -34,6 +34,9 @@ class Oled : public Display {
         // │      │               │      │
         // └──────┴───────────────┴──────┘
 
+        fieldWidth = width - 2 * feedbackWidth;
+        fieldVSeparation = (height - 3 * fieldHeight) / 4;
+
         field[0].area.x = feedbackWidth;
         field[0].area.y = 0;
         field[0].area.w = fieldWidth;
@@ -61,11 +64,26 @@ class Oled : public Display {
         field[1].content[2] = FC_BATTERY_POWER;
         field[2].content[2] = FC_BATTERY_HEARTRATE;
 
+        fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
+        smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
+        timeFont = (uint8_t *)u8g2_font_logisoso32_tn;
+        timeFontHeight = 32;
+        dateFont = (uint8_t *)u8g2_font_fur14_tn;
+        dateFontHeight = dateFontHeight;
+        labelFont = (uint8_t *)u8g2_font_bytesize_tr;
+        labelFontHeight = 12;
+
+        for (uint8_t i = 0; i < numFields; i++) {
+            field[i].font = fieldFont;
+            field[i].labelFont = labelFont;
+            field[i].smallFont = smallFont;
+            field[i].smallFontWidth = 13;
+        }
+
         feedback[0].x = 0;
         feedback[0].y = 0;
         feedback[0].w = feedbackWidth;
         feedback[0].h = height / 2;
-        // feedback[0].invert = true;
 
         feedback[1].x = 0;
         feedback[1].y = height / 2;
@@ -76,7 +94,6 @@ class Oled : public Display {
         feedback[2].y = 0;
         feedback[2].w = feedbackWidth;
         feedback[2].h = height / 2;
-        // feedback[2].invert = true;
 
         feedback[3].x = width - feedbackWidth;
         feedback[3].y = height / 2;
@@ -92,16 +109,6 @@ class Oled : public Display {
         clockArea.y = field[0].area.y;
         clockArea.w = fieldWidth;
         clockArea.h = numFields * fieldHeight + (numFields - 1) * fieldVSeparation;
-
-        fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
-        fieldDigitFont = (uint8_t *)u8g2_font_logisoso32_tn;
-        smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
-        timeFont = (uint8_t *)u8g2_font_logisoso32_tn;  // font for displaying the time
-        timeFontHeight = 32;                            //
-        dateFont = (uint8_t *)u8g2_font_fur14_tn;       // font for displaying the date
-        dateFontHeight = dateFontHeight;                //
-        labelFont = (uint8_t *)u8g2_font_bytesize_tr;   // font for displaying the field labels
-        labelFontHeight = 12;
     }
 
     virtual ~Oled();
