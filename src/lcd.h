@@ -367,12 +367,13 @@ class Lcd : public Display, public Arduino_Canvas {
         Display::updateStatus();
     }
 
-    virtual void onTouchEvent(Touch::Pad *pad, Touch::Event event) override {
-        if (3 == pad->index && event == Touch::Event::longTouch) {
+    // the return value indicates whether the event should propagate
+    virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event) override {
+        if (3 == pad->index && Touch::Event::longTouch == event) {
             backlight(!backlightState);
-            return;
+            return false;  // do not propagate
         }
-        Display::onTouchEvent(pad, event);
+        return Display::onTouchEvent(pad, event);
     }
 
     void backlight(uint8_t state) {
@@ -381,6 +382,7 @@ class Lcd : public Display, public Arduino_Canvas {
             log_e("pin not set");
             return;
         }
+        log_i("setting backlight: %d", backlightState);
         digitalWrite(this->backlightPin, backlightState);
     }
 

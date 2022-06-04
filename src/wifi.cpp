@@ -1,6 +1,20 @@
 #include "board.h"
 #include "wifi.h"
 
+void Wifi::loadSettings() {
+    Atoll::Wifi::loadSettings();
+    if (!preferencesStartLoad()) return;
+    startOnRecordingEnd = preferences->getBool("sore", startOnRecordingEnd);
+    preferencesEnd();
+};
+
+void Wifi::saveSettings() {
+    Atoll::Wifi::saveSettings();
+    if (!preferencesStartSave()) return;
+    preferences->putBool("sore", startOnRecordingEnd);
+    preferencesEnd();
+};
+
 void Wifi::applySettings() {
     Atoll::Wifi::applySettings();
     board.display.onWifiStateChange();

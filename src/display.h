@@ -648,8 +648,9 @@ class Display : public Atoll::Task, public Print {
         releaseMutex();
     }
 
+    // the return value indicates whether the event should propagate
+    virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event);
     virtual void updateStatus();
-    virtual void onTouchEvent(Touch::Pad *pad, Touch::Event event);
     virtual void onWifiStateChange();
 
     virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const {

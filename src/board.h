@@ -178,22 +178,16 @@ class Board : public Atoll::Task,
                 ota.taskGetLowestStackLevel(),
                 wifiSerial.taskGetLowestStackLevel(),
                 taskGetLowestStackLevel());
-            if (touch.taskRunning())
-                Serial.printf("touch: %d %d %d %d\n",
-                              touch.pads[0].last ? t - touch.pads[0].last : 0,
-                              touch.pads[1].last ? t - touch.pads[1].last : 0,
-                              touch.pads[2].last ? t - touch.pads[2].last : 0,
-                              touch.pads[3].last ? t - touch.pads[3].last : 0);
+            if (!touch.enabled)
+                Serial.printf("touch disabled\n");
+            // if (touch.taskRunning())
+            Serial.printf("touch: %d %d %d %d\n",
+                          touch.pads[0].last ? t - touch.pads[0].last : 0,
+                          touch.pads[1].last ? t - touch.pads[1].last : 0,
+                          touch.pads[2].last ? t - touch.pads[2].last : 0,
+                          touch.pads[3].last ? t - touch.pads[3].last : 0);
             lastStatus = t;
         }
-#endif
-        static ulong lastSync = 0;
-        const uint syncFreq = 600000;  // every 10 minutes
-        if (gps.taskRunning() && ((lastSync + syncFreq < t) || !lastSync))
-            if (gps.syncSystemTime())
-                lastSync = t;
-
-#ifdef FEATURE_SERIAL
         while (Serial.available()) {
             int i = Serial.read();
             if (0 <= i && i < UINT8_MAX) {
@@ -202,6 +196,12 @@ class Board : public Atoll::Task,
             }
         }
 #endif
+
+        static ulong lastSync = 0;
+        const uint syncFreq = 600000;  // every 10 minutes
+        if (gps.taskRunning() && ((lastSync + syncFreq < t) || !lastSync))
+            if (gps.syncSystemTime())
+                lastSync = t;
     }
 
     bool loadSettings() {

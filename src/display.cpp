@@ -121,17 +121,17 @@ void Display::onSpeed(double value) {
                       : 0;
 }
 
-void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
+bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
     assert(pad->index < sizeof(feedback) / sizeof(feedback[0]));
     Area *a = &feedback[pad->index];
 
     switch (event) {
         case Touch::Event::start: {
-            return;
+            return true;
         }
 
         case Touch::Event::end: {
-            return;
+            return true;
         }
 
         case Touch::Event::singleTouch: {
@@ -142,7 +142,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             currentPage++;
             if (numPages <= currentPage) currentPage = 0;
             log_i("currentPage %d", currentPage);
-            if (!aquireMutex()) return;
+            if (!aquireMutex()) return true;
             clock(false, true);  // clear clock
             char label[10] = "";
             Area *b;
@@ -165,7 +165,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             releaseMutex();
             lastFieldUpdate = millis();
 
-            return;
+            return false;  // do not propagate
         }
 
         case Touch::Event::doubleTouch: {
@@ -184,7 +184,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             }
             // delay(Touch::touchTime * 3);  // TODO is delay() a good idea? maybe create a queue schedule?
             fill(a, bg, true);  // clear
-            return;
+            return true;
         }
 
         case Touch::Event::longTouch: {
@@ -192,7 +192,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             fill(a, fg);
             // delay(Touch::touchTime * 3);
             fill(a, bg, true);
-            return;
+            return true;
         }
 
         case Touch::Event::touching: {
@@ -201,7 +201,7 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 fill(a, fg);
                 // delay(Touch::touchTime * 3);
                 fill(a, bg, true);
-                return;
+                return true;
             }
             // log_i("pad %d animating", pad->index);
             Area b;
@@ -211,18 +211,19 @@ void Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 0,
                 Touch::longTouchTime,
                 0,
-                b.h);                 // scale down area height
-            if (a->h < b.h) return;   // overflow
-            b.y += (a->h - b.h) / 2;  // move area to vertical middle
+                b.h);                     // scale down area height
+            if (a->h < b.h) return true;  // overflow
+            b.y += (a->h - b.h) / 2;      // move area to vertical middle
             fill(a, bg, false);
             fill(&b, fg);
-            return;
+            return true;
         }
 
         default: {
             log_e("unhandled %d", event);
         }
     }
+    return true;
 }
 
 void Display::onWifiStateChange() {

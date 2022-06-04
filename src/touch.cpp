@@ -3,7 +3,9 @@
 
 void Touch::fireEvent(uint8_t index, Event event) {
     Atoll::Touch::fireEvent(index, event);
-    board.display.onTouchEvent(&pads[index], event);
+    if (!board.display.onTouchEvent(&pads[index], event)) {
+        return;
+    }
     switch (event) {
         case Event::longTouch: {
             if (board.recorder.start()) {
@@ -13,10 +15,13 @@ void Touch::fireEvent(uint8_t index, Event event) {
         } break;
         case Event::doubleTouch: {
             if (board.recorder.end()) {
-                board.wifi.autoStartWebserver = true;
-                board.wifi.autoStartWifiSerial = false;
-                // enable wifi but don't save
-                board.wifi.setEnabled(true, false);
+                if (board.wifi.startOnRecordingEnd) {
+                    log_i("starting wifi");
+                    board.wifi.autoStartWebserver = true;
+                    board.wifi.autoStartWifiSerial = false;
+                    // enable wifi but don't save
+                    board.wifi.setEnabled(true, false);
+                }
             }
         } break;
         default:

@@ -20,55 +20,62 @@ void Api::setup(
 }
 
 ApiResult *Api::systemProcessor(ApiMessage *msg) {
-    char *arg = msg->arg;
-    {
-        const char *str = "hostname";
-        uint8_t sStr = strlen(str);
-        if (sStr == strspn(arg, str)) {
-            size_t sArg = strlen(arg);
-            if (sStr < sArg) {
-                // set hostname
-                if (':' != arg[sStr]) return result("argInvalid");
-                arg += sStr + 1;
-                sArg = strlen(arg);
-                if (sArg < 2) return result("argInvalid");
-                if (sizeof(board.hostName) - 1 < sArg) return result("argInvalid");
-                if (!isAlNumStr(arg)) return result("argInvalid");
-                strncpy(board.hostName, arg, sizeof(board.hostName));
-                board.saveSettings();
-            }
-            // get hostname
-            strncpy(msg->reply, board.hostName, msgReplyLength);
-            return success();
+    if (msg->argStartsWith("hostname")) {
+        char buf[sizeof(board.hostName)] = "";
+        msg->argGetParam("hostname:", buf, sizeof(buf));
+        if (0 < strlen(buf)) {
+            // set hostname
+            if (strlen(buf) < 2) return result("argInvalid");
+            if (!isAlNumStr(buf)) return result("argInvalid");
+            strncpy(board.hostName, buf, sizeof(board.hostName));
+            board.saveSettings();
         }
+        // get hostname
+        strncpy(msg->reply, board.hostName, msgReplyLength);
+        return success();
     }
-    {
-        if (0 == strcmp("ota", arg)) {
-            log_i("entering ota mode");
-            log_i("free heap before: %d", xPortGetFreeHeapSize());
-            log_i("stopping recorder");
-            board.recorder.stop();
-            board.recorder.taskStop();
-            log_i("stopping touch task");
-            board.touch.taskStop();
-            log_i("stopping gps task");
-            board.gps.taskStop();
-            log_i("stopping bleClient");
-            board.bleClient.stop();
-            log_i("stopping webserver");
-            board.webserver.stop();
-            log_i("free heap after: %d", xPortGetFreeHeapSize());
-            log_i("enabling wifi");
-            board.otaMode = true;
-            board.wifi.autoStartWebserver = false;
-            board.wifi.setEnabled(true, false);
-            board.display.onOta("waiting");
-            msg->replyAppend("ota");
-            return success();
+
+    else if (msg->argIs("ota") || msg->argIs("OTA")) {
+        log_i("entering ota mode");
+        log_i("free heap before: %d", xPortGetFreeHeapSize());
+        log_i("stopping recorder");
+        board.recorder.stop();
+        board.recorder.taskStop();
+        log_i("stopping touch task");
+        board.touch.taskStop();
+        log_i("stopping gps task");
+        board.gps.taskStop();
+        log_i("stopping bleClient");
+        board.bleClient.stop();
+        log_i("stopping webserver");
+        board.webserver.stop();
+        log_i("free heap after: %d", xPortGetFreeHeapSize());
+        log_i("enabling wifi");
+        board.otaMode = true;
+        board.wifi.autoStartWebserver = false;
+        board.wifi.setEnabled(true, false);
+        board.display.onOta("waiting");
+        msg->replyAppend("ota");
+        return success();
+    } else if (msg->argStartsWith("startWifiOnRecordingEnd")) {
+        char buf[8] = "";
+        msg->argGetParam("startWifiOnRecordingEnd:", buf, sizeof(buf));
+        if (0 < strlen(buf)) {
+            // set
+            if (0 == strcmp(buf, "1") || 0 == strcmp(buf, "true"))
+                board.wifi.startOnRecordingEnd = true;
+            else if (0 == strcmp(buf, "0") || 0 == strcmp(buf, "false"))
+                board.wifi.startOnRecordingEnd = false;
+            else
+                return argInvalid();
+            board.wifi.saveSettings();
         }
+        // get
+        snprintf(msg->reply, sizeof(msg->reply), "%d", board.wifi.startOnRecordingEnd);
+        return success();
     }
     msg->replyAppend("|", true);
-    msg->replyAppend("hostname|ota");
+    msg->replyAppend("hostname[:str]|ota|startWifiOnRecordingEnd[:0|1]");
     return Atoll::Api::systemProcessor(msg);
 }
 
@@ -120,20 +127,19 @@ ApiResult *Api::touchThresProcessor(ApiMessage *msg) {
 }
 
 // get touchpad reading or disable touchpad
-// arg: [padIndex|disableFor:intNumSeconds]
+// arg: padIndex|disableFor:numSeconds
 // reply format: padIndex:currentValue[,padIndex:currentValue...]
 ApiResult *Api::touchReadProcessor(ApiMessage *msg) {
+    if (!strlen(msg->arg)) return result("argInvalid");
     char *disable = strstr(msg->arg, "disableFor:");
-    if (strlen(msg->arg) < 1 || nullptr != disable) {
-        if (nullptr != disable) {
-            if (disable + strlen("disableFor:") < msg->arg + strlen(msg->arg)) {
-                // log_i("disable: %s", disable + strlen("disableFor:"));
-                int secs = atoi(disable + strlen("disableFor:"));
-                if (0 < secs && secs < UINT8_MAX) {
-                    if (msg->log) log_i("touch disabled for %ds", secs);
-                    board.touch.enabled = false;
-                    board.touch.enableAfter = millis() + secs * 1000;
-                }
+    if (nullptr != disable) {
+        if (disable + strlen("disableFor:") < msg->arg + strlen(msg->arg)) {
+            log_i("disableFor: %s", disable + strlen("disableFor:"));
+            int secs = atoi(disable + strlen("disableFor:"));
+            if (0 < secs && secs < UINT8_MAX) {
+                if (msg->log) log_i("touch disabled for %ds", secs);
+                board.touch.enabled = false;
+                board.touch.enableAfter = millis() + secs * 1000;
             }
         }
         char buf[10] = "";
