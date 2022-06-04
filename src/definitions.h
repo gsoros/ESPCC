@@ -42,12 +42,12 @@
 ;                                                                      //
 #define LED_PIN 22                                                     // onboard LED pin
 #define BATTERY_PIN 35                                                 // pin for battery voltage measurement
-#define GPS_RX_PIN 17                                                  //
-#define GPS_TX_PIN 16                                                  //
+#define GPS_RX_PIN 17                                                  // -> T
+#define GPS_TX_PIN 16                                                  // -> R
 ;                                                                      //
 #define SPI_SCK_PIN 18                                                 // spi clock
 #define SPI_MISO_PIN 19                                                // spi miso
-#define SPI_MOSI_PIN 23                                                // spi mosi
+#define SPI_MOSI_PIN 23                                                // spi mosi, lcd sda
 ;                                                                      //
 #define OLED_SCK_PIN 14                                                //
 #define OLED_SDA_PIN 12                                                //
