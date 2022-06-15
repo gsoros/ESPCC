@@ -22,7 +22,7 @@ size_t Display::print(const char *str) {
     return printUnrestricted(str);
 }
 
-void Display::updateStatus() {
+void Display::updateStatus(bool forceRedraw) {
     //  status area
     static const Area *a = &statusArea;
 
@@ -61,7 +61,8 @@ void Display::updateStatus() {
     // 0: not recording, 1: recording but no gps fix yet, 2: recording
     int8_t recordingState = board.recorder.isRecording ? board.gps.locationIsValid() ? 2 : 1 : 0;
 
-    if (motionState == lastMotionState &&
+    if (!forceRedraw &&
+        motionState == lastMotionState &&
         wifiState == lastWifiState &&
         1 != wifiState &&
         recordingState == lastRecordingState &&
@@ -71,7 +72,7 @@ void Display::updateStatus() {
     if (!aquireMutex()) return;
 
     icon.x = a->x;
-    if (recordingState != lastRecordingState || 1 == recordingState) {
+    if (recordingState != lastRecordingState || 1 == recordingState || forceRedraw) {
         fillUnrestricted(&icon, bg, false);
         static bool recordingBlinkState = false;
         if (2 == recordingState || (1 == recordingState && recordingBlinkState))
@@ -80,7 +81,7 @@ void Display::updateStatus() {
     }
 
     icon.x = a->x + a->w / 2 - statusIconSize / 2;
-    if (wifiState != lastWifiState || 1 == wifiState) {
+    if (wifiState != lastWifiState || 1 == wifiState || forceRedraw) {
         fillUnrestricted(&icon, bg, false);
         static bool wifiBlinkState = false;
         if (2 == wifiState || (1 == wifiState && wifiBlinkState))
@@ -89,7 +90,7 @@ void Display::updateStatus() {
     }
 
     icon.x = a->x + a->w - statusIconSize;
-    if (motionState != lastMotionState) {
+    if (motionState != lastMotionState || forceRedraw) {
         fillUnrestricted(&icon, bg, false);
         drawXBitmap(icon.x, icon.y, icon.w, icon.h,
                     2 == motionState

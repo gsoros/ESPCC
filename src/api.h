@@ -28,14 +28,15 @@ class Api : public Atoll::Api {
                       const char *serviceUuid = nullptr);
 
    protected:
-    static ApiResult *systemProcessor(ApiMessage *reply);
-    static ApiResult *touchThresProcessor(ApiMessage *reply);
-    static ApiResult *touchReadProcessor(ApiMessage *reply);
-    static ApiResult *scanProcessor(ApiMessage *reply);
-    static ApiResult *scanResultProcessor(ApiMessage *reply);
-    static ApiResult *peersProcessor(ApiMessage *reply);
-    static ApiResult *addPeerProcessor(ApiMessage *reply);
-    static ApiResult *deletePeerProcessor(ApiMessage *reply);
+    static ApiResult *systemProcessor(ApiMessage *);
+    static ApiResult *touchProcessor(ApiMessage *);
+    static ApiResult *touchThresProcessor(ApiMessage *);
+    static ApiResult *touchReadProcessor(ApiMessage *);
+    static ApiResult *scanProcessor(ApiMessage *);
+    static ApiResult *scanResultProcessor(ApiMessage *);
+    static ApiResult *peersProcessor(ApiMessage *);
+    static ApiResult *addPeerProcessor(ApiMessage *);
+    static ApiResult *deletePeerProcessor(ApiMessage *);
 };
 
 #endif

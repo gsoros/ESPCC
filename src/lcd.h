@@ -18,7 +18,7 @@ class Lcd : public Display, public Arduino_Canvas {
     Area clip = Area();
     uint8_t fieldHSeparation = 2;
     int8_t backlightPin = -1;
-    uint8_t backlightState = 1;
+    uint8_t backlightState = UINT8_MAX;
 
     Lcd(Arduino_GFX *device,
         uint8_t width = 130,
@@ -348,7 +348,7 @@ class Lcd : public Display, public Arduino_Canvas {
 
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
 
-    virtual void updateStatus() override {
+    virtual void updateStatus(bool forceRedraw = false) override {
         // 4th of 5 evenly spaced, equally sized icons
         static Area icon = Area(statusArea.x + ((statusArea.w - statusIconSize) / 4) * 3,
                                 statusArea.y, statusIconSize, statusIconSize);
@@ -357,20 +357,34 @@ class Lcd : public Display, public Arduino_Canvas {
             0x16, 0x0d, 0xb0, 0x01, 0xe0, 0x00, 0x08, 0x02, 0x44, 0x04, 0x40, 0x00,
             0x00, 0x00, 0x00, 0x00};
         static int16_t lastBacklightState = -1;
-        if (lastBacklightState != backlightState && aquireMutex()) {
+        if ((lastBacklightState != backlightState || forceRedraw) && aquireMutex()) {
             fill(&icon, bg, false);
             if (backlightState) drawXBitmap(icon.x, icon.y, icon.w, icon.h, backlightXbm, fg, false);
             sendBuffer();
             releaseMutex();
             lastBacklightState = (int16_t)backlightState;
         }
-        Display::updateStatus();
+        Display::updateStatus(forceRedraw);
     }
 
     // the return value indicates whether the event should propagate
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event) override {
         if (3 == pad->index && Touch::Event::longTouch == event) {
-            backlight(!backlightState);
+            if (backlightState) {
+                backlight(0);
+                fg = BLACK;
+                bg = WHITE;
+                setTextColor(fg);
+                fillScreen(bg);
+                updateStatus(true);
+            } else {
+                backlight(UINT8_MAX);
+                fg = WHITE;
+                bg = BLACK;
+                setTextColor(fg);
+                fillScreen(bg);
+                updateStatus(true);
+            }
             return false;  // do not propagate
         }
         return Display::onTouchEvent(pad, event);
@@ -393,7 +407,7 @@ class Lcd : public Display, public Arduino_Canvas {
         fill(&field[2].area, rgb888to565(0, 0, 255), false);
         fill(&feedback[0], rgb888to565(255, 255, 0), false);
         fill(&feedback[1], rgb888to565(255, 0, 255), false);
-        fill(&feedback[2], rgb888to565(255, 255, 128), false);
+        fill(&feedback[2], rgb888to565(0, 128, 128), false);
         fill(&feedback[3], rgb888to565(255, 128, 0), false);
         fill(&statusArea, rgb888to565(128, 0, 128), false);
         // printField(0, "1234");

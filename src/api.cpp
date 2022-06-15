@@ -79,6 +79,47 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
     return Atoll::Api::systemProcessor(msg);
 }
 
+// TODO
+// get touchpad readings, get/set thresholds, en/disable touchpads or
+// disable touchpads for a number of seconds
+// arg: [read]|[thresholds[t0,t1,t2,t3]][enabled:0|1]|[disableFor:numSeconds]
+// reply format: [index:reading,...]|[index:threshold,...]
+ApiResult *Api::touchProcessor(ApiMessage *msg) {
+    if (msg->log) log_i("arg: %s", msg->arg);
+    if (0 < strlen(msg->arg)) {
+        // arg: [padIndex]
+        char str[2] = "";
+        for (uint8_t i = 0; i < board.touch.numPads; i++) {
+            snprintf(str, sizeof(str), "%d", i);
+            if (0 == strcmp(str, msg->arg)) {
+            }
+        }
+        if (msg->argHasParam("")) {
+        }
+    }
+
+    // get touchpad thresholds
+    // value format: padIndex1:threshold1,padIndex2:threshold2...
+    char thresholds[msgReplyLength] = "";
+    for (int i = 0; i < board.touch.numPads; i++) {
+        char token[9];
+        snprintf(
+            token,
+            sizeof(token),
+            0 == i ? "%d:%d" : ",%d:%d",
+            i,
+            board.touch.pads[i].threshold);
+        int16_t remaining = msgReplyLength - strlen(thresholds) - 1;
+        if (remaining < strlen(token)) {
+            if (msg->log) log_e("no space left for adding %s to %s", token, thresholds);
+            return internalError();
+        }
+        strncat(thresholds, token, remaining);
+    }
+    strncpy(msg->reply, thresholds, msgReplyLength);
+    return success();
+}
+
 ApiResult *Api::touchThresProcessor(ApiMessage *msg) {
     // arg format: padIndex:threshold
     // set touchpad threshold

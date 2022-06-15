@@ -650,7 +650,7 @@ class Display : public Atoll::Task, public Print {
 
     // the return value indicates whether the event should propagate
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event);
-    virtual void updateStatus();
+    virtual void updateStatus(bool forceRedraw = false);
     virtual void onWifiStateChange();
 
     virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const {
@@ -683,8 +683,8 @@ class Display : public Atoll::Task, public Print {
     uint16_t width = 0;   // display width
     uint16_t height = 0;  // display height
 
-    uint16_t fg = 0xffff;  // 16-bit RGB (5-6-5) foreground color
-    uint16_t bg = 0x0000;  // 16-bit RGB (5-6-5) background color
+    uint16_t fg = WHITE;  // 16-bit RGB (5-6-5) foreground color
+    uint16_t bg = BLACK;  // 16-bit RGB (5-6-5) background color
 
     uint8_t *fieldFont = nullptr;  // font for displaying field content
     uint8_t *smallFont = nullptr;  // small characters for field content
