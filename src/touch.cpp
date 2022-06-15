@@ -28,3 +28,11 @@ void Touch::fireEvent(uint8_t index, Event event) {
             break;
     }
 }
+
+void Touch::onEnabledChanged() {
+    Atoll::ApiCommand *command = Api::command("touch");
+    Atoll::ApiResult *result = Api::success();
+    char str[32] = "";
+    snprintf(str, sizeof(str), "%d;%d=enabled:%d", result->code, command->code, enabled ? 1 : 0);
+    board.bleServer.notifyApiTx(str);
+}

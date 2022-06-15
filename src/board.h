@@ -146,7 +146,7 @@ class Board : public Atoll::Task,
 
         gps.taskStart(GPS_TASK_FREQ, 4096 - 1024);
         bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 4096 - 1024);
-        bleServer.taskStart(BLE_SERVER_TASK_FREQ, 2048);
+        bleServer.taskStart(BLE_SERVER_TASK_FREQ, 4096);
         display.taskStart(DISPLAY_TASK_FREQ, 4096 - 1024);
         battery.taskStart(BATTERY_TASK_FREQ, 4096 - 1024);
         recorder.taskStart(RECORDER_TASK_FREQ, 4096 - 1024);

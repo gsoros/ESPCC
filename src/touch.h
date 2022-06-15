@@ -16,13 +16,16 @@ class Touch : public Atoll::Touch {
         int pin3 = -1)
         : Atoll::Touch(pin0, pin1, pin2, pin3){};
 
-   protected:
-    // virtual void loop() override {
-    //     Serial.println("loop");
-    //     Atoll::Touch::loop();
-    // }
+    virtual void onEnabledChanged() override;
 
-    virtual void fireEvent(uint8_t index, Event event) override;
+        protected :
+        // virtual void loop() override {
+        //     Serial.println("loop");
+        //     Atoll::Touch::loop();
+        // }
+
+        virtual void
+        fireEvent(uint8_t index, Event event) override;
 };
 
 #endif
