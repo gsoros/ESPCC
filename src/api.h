@@ -30,8 +30,6 @@ class Api : public Atoll::Api {
    protected:
     static ApiResult *systemProcessor(ApiMessage *);
     static ApiResult *touchProcessor(ApiMessage *);
-    static ApiResult *touchThresProcessor(ApiMessage *);
-    static ApiResult *touchReadProcessor(ApiMessage *);
     static ApiResult *scanProcessor(ApiMessage *);
     static ApiResult *scanResultProcessor(ApiMessage *);
     static ApiResult *peersProcessor(ApiMessage *);

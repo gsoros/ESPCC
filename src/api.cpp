@@ -11,8 +11,6 @@ void Api::setup(
 
     addCommand(ApiCommand("system", Api::systemProcessor));
     addCommand(ApiCommand("touch", Api::touchProcessor));
-    addCommand(ApiCommand("touchThres", Api::touchThresProcessor));
-    addCommand(ApiCommand("touchRead", Api::touchReadProcessor));
     addCommand(ApiCommand("scan", Api::scanProcessor));
     addCommand(ApiCommand("scanResult", Api::scanResultProcessor));
     addCommand(ApiCommand("peers", Api::peersProcessor));
@@ -183,89 +181,6 @@ ApiResult *Api::touchProcessor(ApiMessage *msg) {
 
     msg->replyAppend("read|thresholds[:t0,...]|enabled[:0|1]|disableFor:numSeconds");
     return argInvalid();
-}
-
-ApiResult *Api::touchThresProcessor(ApiMessage *msg) {
-    // arg format: padIndex:threshold
-    // set touchpad threshold
-    if (msg->log) log_i("arg: %s", msg->arg);
-    if (0 < strlen(msg->arg)) {
-        char *colon = strstr(msg->arg, ":");
-        if (!colon) return result("argInvalid");
-        int argLen = strlen(msg->arg);
-        if (argLen < 3) return result("argInvalid");
-        int indexEnd = colon ? colon - msg->arg : argLen;
-        if (indexEnd < 1) return result("argInvalid");
-        char indexStr[3] = "";
-        strncpy(indexStr, msg->arg, sizeof indexStr);
-        int index = atoi(indexStr);
-        if (index < 0 || board.touch.numPads - 1 < index) return result("argInvalid");
-        int thresLen = argLen - indexEnd - 1;
-        if (thresLen < 1) return result("argInvalid");
-        char thresStr[4] = "";
-        strncpy(thresStr, colon + 1, sizeof thresStr);
-        int thres = atoi(thresStr);
-        if (thres < 1 || 99 < thres) return result("argInvalid");
-        if (msg->log) log_i("touchPad %d new threshold %d", index, thres);
-        board.touch.setPadThreshold(index, thres);
-        board.touch.saveSettings();
-    }
-    // get touchpad thresholds
-    // value format: padIndex1:threshold1,padIndex2:threshold2...
-    char thresholds[msgReplyLength] = "";
-    for (int i = 0; i < board.touch.numPads; i++) {
-        char token[9];
-        snprintf(
-            token,
-            sizeof(token),
-            0 == i ? "%d:%d" : ",%d:%d",
-            i,
-            board.touch.pads[i].threshold);
-        int16_t remaining = msgReplyLength - strlen(thresholds) - 1;
-        if (remaining < strlen(token)) {
-            if (msg->log) log_e("no space left for adding %s to %s", token, thresholds);
-            return internalError();
-        }
-        strncat(thresholds, token, remaining);
-    }
-    strncpy(msg->reply, thresholds, msgReplyLength);
-    return success();
-}
-
-// get touchpad reading or disable touchpad
-// arg: padIndex|disableFor:numSeconds
-// reply format: padIndex:currentValue[,padIndex:currentValue...]
-ApiResult *Api::touchReadProcessor(ApiMessage *msg) {
-    if (!strlen(msg->arg)) return result("argInvalid");
-    char *disable = strstr(msg->arg, "disableFor:");
-    if (nullptr != disable) {
-        if (disable + strlen("disableFor:") < msg->arg + strlen(msg->arg)) {
-            log_i("disableFor: %s", disable + strlen("disableFor:"));
-            int secs = atoi(disable + strlen("disableFor:"));
-            if (0 < secs && secs < UINT8_MAX) {
-                if (msg->log) log_i("touch disabled for %ds", secs);
-                board.touch.enabled = false;
-                board.touch.enableAfter = millis() + secs * 1000;
-            }
-        }
-        char buf[10] = "";
-        for (uint8_t i = 0; i < board.touch.numPads; i++) {
-            snprintf(buf,
-                     sizeof(buf),
-                     0 < i ? ",%d:%d" : "%d:%d",
-                     i,
-                     board.touch.read(i));
-            // log_i("buf: %s", buf);
-            strncat(msg->reply, buf, msgReplyLength - strlen(msg->reply));
-        }
-        // log_i("val: %s", msg->value);
-        return success();
-    }
-    uint8_t padIndex = (uint8_t)atoi(msg->arg);
-    // if (msg->log) log_i("index %d numPads %d", padIndex, board.touch.numPads);
-    if (board.touch.numPads <= padIndex) return result("argInvalid");
-    snprintf(msg->reply, msgReplyLength, "%d:%d", padIndex, board.touch.read(padIndex));
-    return success();
 }
 
 ApiResult *Api::scanProcessor(ApiMessage *msg) {
