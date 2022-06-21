@@ -4,6 +4,8 @@
 void Ota::onStart() {
     Atoll::Ota::onStart();
     board.display.onOta("start");
+    log_i("pausing recorder");
+    board.recorder.pause();
 }
 
 void Ota::onEnd() {

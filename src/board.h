@@ -133,14 +133,9 @@ class Board : public Atoll::Task,
         recorder.setup(&gps, &sdcard, &api, &recorder);
         // uploader.setup(&recorder, &sdcard, &wifi);
         webserver.setup(&sdcard, &recorder, &ota);
-        ota.setup(hostName, &recorder);
+        ota.setup(hostName);
         mdns.setup(hostName, 3232);
-        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota, &recorder
-#ifdef FEATURE_SERIAL
-                   ,
-                   &wifiSerial
-#endif
-        );
+        wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
 
         bleServer.start();
 
