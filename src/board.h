@@ -157,6 +157,7 @@ class Board : public Atoll::Task,
         ulong t = millis();
 
 #ifdef FEATURE_SERIAL
+        /*
         static ulong lastStatus = 0;
         const uint statusFreq = 5000;
         if ((lastStatus + statusFreq < t) || !lastStatus) {
@@ -183,6 +184,7 @@ class Board : public Atoll::Task,
                           touch.pads[3].last ? t - touch.pads[3].last : 0);
             lastStatus = t;
         }
+        */
         while (Serial.available()) {
             int i = Serial.read();
             if (0 <= i && i < UINT8_MAX) {
