@@ -100,42 +100,41 @@ ApiResult *Api::touchProcessor(ApiMessage *msg) {
         if (msg->argStartsWith("thresholds:")) {
             char buf[32];
             msg->argGetParam("thresholds:", buf, sizeof(buf));
-            char str[4] = "";
-            char *p = buf;
-            uint8_t index = 0;
+            char *bufEnd = buf + strlen(buf);
             uint8_t updated = 0;
-            while (p < buf + strlen(buf)) {
-                if ('0' <= *p && *p <= '9') {
-                    if (sizeof(str) - 1 < strlen(str)) {
+            char search[5];
+            char *p;
+            char valueS[4];
+            for (uint8_t i = 0; i < board.touch.numPads; i++) {
+                snprintf(search, sizeof(search), "%d:", i);
+                p = strstr(buf, search);
+                if (!p) continue;
+                p += strlen(search);
+                strncpy(valueS, "", sizeof(valueS));
+                while (p < bufEnd) {
+                    if (*p < '0' || '9' < *p)
+                        break;
+                    if (sizeof(valueS) - 1 < strlen(valueS)) {
                         log_e("param too long");
                         return argInvalid();
                     }
-                    strncat(str, p, 1);
-                } else if (',' == *p || '\0' == *p) {
-                    if (board.touch.numPads < index + 1) {
-                        log_e("index: %d, numPads: %d", index, board.touch.numPads);
-                        return argInvalid();
-                    }
-                    int thres = atoi(str);
-                    char check[sizeof(int) * 8 + 1];
-                    itoa(thres, check, 10);
-                    snprintf(check, sizeof(check), "%d", thres);
-                    if (0 != strcmp(str, check) || thres < 0 || UINT16_MAX < thres) {
-                        log_e("str: %s, check: %s, thres: %d", str, check, thres);
-                        return argInvalid();
-                    }
-                    if (board.touch.pads[index].threshold != thres) {
-                        if (msg->log) log_i("setting pad %d thres %d", index, thres);
-                        board.touch.pads[index].threshold = (uint16_t)thres;
-                        updated++;
-                    }
-                    strncpy(str, "", sizeof(str));
-                    index++;
-                } else {
-                    log_e("invalid char %c", *p);
+                    strncat(valueS, p, 1);
+                    p++;
+                }
+                if (!strlen(valueS)) continue;
+                int thres = atoi(valueS);
+                char check[sizeof(int) * 8 + 1];
+                itoa(thres, check, 10);
+                snprintf(check, sizeof(check), "%d", thres);
+                if (0 != strcmp(valueS, check) || thres < 0 || UINT16_MAX < thres) {
+                    log_e("valueS: %s, check: %s, thres: %d", valueS, check, thres);
                     return argInvalid();
                 }
-                p++;
+                if (board.touch.pads[i].threshold != thres) {
+                    if (msg->log) log_i("setting pad %d thres %d", i, thres);
+                    board.touch.pads[i].threshold = (uint16_t)thres;
+                    updated++;
+                }
             }
             if (0 < updated) board.touch.saveSettings();
         } else if (0 != strlen(msg->arg) && !msg->argIs("thresholds"))
