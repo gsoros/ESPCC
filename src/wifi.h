@@ -6,7 +6,9 @@
 
 class Wifi : public Atoll::Wifi {
    public:
+#ifdef FEATURE_WEBSERVER
     bool autoStartWebserver = true;
+#endif
 #ifdef FEATURE_SERIAL
     bool autoStartWifiSerial = true;
 #endif

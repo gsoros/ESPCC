@@ -1,6 +1,8 @@
 #ifndef __display_h
 #define __display_h
 
+#include <CircularBuffer.h>
+
 #include "definitions.h"
 
 #if DISPLAY_DEVICE == DISPLAY_OLED
@@ -96,29 +98,22 @@ class Display : public Atoll::Task, public Print {
         };
     };
 
+    typedef std::function<void()> QueueItemCallback;
+    // typedef void (*QueueItemCallback)();
+
+    struct QueueItem {
+        ulong after = 0;
+        QueueItemCallback callback = nullptr;
+    };
+
     const char *taskName() { return "Display"; }
 
     Display(uint16_t width,
             uint16_t height,
             uint16_t feedbackWidth = 3,
             uint16_t fieldHeight = 32,
-            SemaphoreHandle_t *mutex = nullptr)
-        : width(width),
-          height(height),
-          feedbackWidth(feedbackWidth),
-          fieldHeight(fieldHeight) {
-        for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
-            field[i] = OutputField();
-        for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
-            feedback[i] = Area();
-
-        if (nullptr == mutex)
-            defaultMutex = xSemaphoreCreateMutex();
-        else
-            this->mutex = mutex;
-    }
-
-    virtual ~Display() {}
+            SemaphoreHandle_t *mutex = nullptr);
+    virtual ~Display();
 
     virtual void setup() {
         // log_i("setMaxClip()");
@@ -374,6 +369,10 @@ class Display : public Atoll::Task, public Print {
                 log_e("unhandled %d", content);
                 return -1;
         }
+    }
+
+    virtual uint8_t fieldLabelVPos(uint8_t fieldHeight) {
+        return fieldHeight / 2;
     }
 
     virtual void splash() {
@@ -675,6 +674,34 @@ class Display : public Atoll::Task, public Print {
         logArea((Area *)&statusArea, a, str, "status");
     }
 
+    // returns false if an item was overwritten (queue was full)
+    virtual bool queue(QueueItemCallback callback, uint16_t delayMs) {
+        if (0 == delayMs) {
+            log_w("delay is zero, executing callback");
+            callback();
+            return true;
+        }
+        ulong t = millis();
+
+        if (_queue.isFull()) log_w("queue is full");
+        QueueItem item;
+        item.after = t + delayMs;
+        item.callback = callback;
+        bool result = _queue.push(item);
+        if (t + delayMs < taskGetNextWakeTimeMs())
+            taskSetDelay(delayMs);
+        return result;
+    }
+
+    virtual void taskStart(float freq = -1,
+                           uint32_t stack = 0,
+                           int8_t priority = -1,
+                           int8_t core = -1) override {
+        Atoll::Task::taskStart(freq, stack, priority, core);
+        defaultTaskFreq = _taskFreq;
+        defaultTaskDelay = _taskDelay;
+    }
+
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));
     }
@@ -721,7 +748,7 @@ class Display : public Atoll::Task, public Print {
     ulong lastWeightUpdate = 0;
     int16_t cadence = -1;
     int16_t heartrate = 0;
-    double speed = 0;
+    double speed = 0.0;
     int8_t motionState = 0;
     uint distance = 0;
     uint16_t altGain = 0;
@@ -730,6 +757,9 @@ class Display : public Atoll::Task, public Print {
     int8_t battHRM = -1;
     int8_t wifiState = -1;  // 0: disabled, 1: enabled, 2: connected
 
+    float defaultTaskFreq = 0;
+    TickType_t defaultTaskDelay = 0;
+    CircularBuffer<QueueItem, 5> _queue;
     SemaphoreHandle_t defaultMutex;
     SemaphoreHandle_t *mutex = &defaultMutex;
 

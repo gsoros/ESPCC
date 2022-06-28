@@ -1,3 +1,5 @@
+#ifdef FEATURE_WEBSERVER
+
 #include "board.h"
 #include "webserver.h"
 
@@ -32,3 +34,5 @@ void Webserver::stop() {
     serving = false;
     log_i("stopped serving");
 }
+
+#endif

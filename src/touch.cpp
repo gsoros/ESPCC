@@ -17,7 +17,9 @@ void Touch::fireEvent(uint8_t index, Event event) {
             if (board.recorder.end()) {
                 if (board.wifi.startOnRecordingEnd) {
                     log_i("starting wifi");
+#ifdef FEATURE_WEBSERVER
                     board.wifi.autoStartWebserver = true;
+#endif
                     board.wifi.autoStartWifiSerial = false;
                     // enable wifi but don't save
                     board.wifi.setEnabled(true, false);

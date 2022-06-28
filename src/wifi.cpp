@@ -51,10 +51,12 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
                     board.wifiSerial.taskStart();
                 }
 #endif
+#ifdef FEATURE_WEBSERVER
                 if (autoStartWebserver) {
                     log_i("starting webserver");
                     board.webserver.start();
                 }
+#endif
             }
             log_i("starting mdns");
             board.mdns.start();
@@ -63,8 +65,10 @@ void Wifi::onEvent(arduino_event_id_t event, arduino_event_info_t info) {
             log_i("stopping wifiSerial");
             board.wifiSerial.stop();
 #endif
+#ifdef FEATURE_WEBSERVER
             log_i("stopping webserver");
             board.webserver.stop();
+#endif
             log_i("stopping mdns");
             board.mdns.stop();
         }

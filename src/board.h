@@ -40,7 +40,9 @@
 #include "battery.h"
 #include "recorder.h"
 #include "atoll_uploader.h"
+#ifdef FEATURE_WEBSERVER
 #include "webserver.h"
+#endif
 #include "atoll_log.h"
 
 class Board : public Atoll::Task,
@@ -50,43 +52,23 @@ class Board : public Atoll::Task,
     char hostName[SETTINGS_STR_LENGTH] = HOSTNAME;
     char timezone[SETTINGS_STR_LENGTH] = TIMEZONE;
     SemaphoreHandle_t spiMutex = xSemaphoreCreateMutex();
-    ::Preferences arduinoPreferences = ::Preferences();
+    ::Preferences arduinoPreferences;
 #ifdef FEATURE_SERIAL
-    HardwareSerial hwSerial = HardwareSerial(0);
+    HardwareSerial hwSerial;
     Atoll::WifiSerial wifiSerial;
 #endif
     GPS gps;
-#if DISPLAY_DEVICE == DISPLAY_OLED
-    Oled display = Oled(
-        new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
-            U8G2_R1,        // rotation 90˚
-            U8X8_PIN_NONE,  // reset pin none
-            OLED_SCK_PIN,
-            OLED_SDA_PIN));
-#elif DISPLAY_DEVICE == DISPLAY_LCD
-    Arduino_HWSPI lcdDataBus = Arduino_HWSPI(
-        // Arduino_ESP32SPI lcdDataBus = Arduino_ESP32SPI(
-        LCD_A0_PIN,
-        LCD_CS_PIN,
-        SPI_SCK_PIN,
-        SPI_MOSI_PIN,
-        SPI_MISO_PIN,
-        &SPI,
-        true);  // shared interface
-    Arduino_SSD1283A lcdDevice = Arduino_SSD1283A(
-        &lcdDataBus,
-        LCD_RST_PIN,
-        2  // rotation: 180˚
-    );
-    Lcd display = Lcd(&lcdDevice, 130, 130, 3, 36, &spiMutex);
+#if (DISPLAY_DEVICE == DISPLAY_OLED)
+    Oled display;
+#elif (DISPLAY_DEVICE == DISPLAY_LCD)
+    Lcd display;
+#else
+#error unknown DISPLAY_DEVICE
 #endif
     BleClient bleClient;
     BleServer bleServer;
-    Atoll::SdCard sdcard = Atoll::SdCard(SD_CS_PIN, &spiMutex);
-    Touch touch = Touch(TOUCH_PAD_0_PIN,
-                        TOUCH_PAD_1_PIN,
-                        TOUCH_PAD_2_PIN,
-                        TOUCH_PAD_3_PIN);
+    Atoll::SdCard sdcard;
+    Touch touch;
     Api api;
     Wifi wifi;
     bool otaMode = false;
@@ -95,9 +77,41 @@ class Board : public Atoll::Task,
     Battery battery;
     Recorder recorder;
     // Atoll::Uploader uploader;
+#ifdef FEATURE_WEBSERVER
     Webserver webserver;
+#endif
 
-    Board() {}
+    Board() : arduinoPreferences(),
+#ifdef FEATURE_SERIAL
+              hwSerial(0),
+#endif
+              sdcard(SD_CS_PIN, &spiMutex),
+              touch(TOUCH_PAD_0_PIN,
+                    TOUCH_PAD_1_PIN,
+                    TOUCH_PAD_2_PIN,
+                    TOUCH_PAD_3_PIN),
+#if (DISPLAY_DEVICE == DISPLAY_OLED)
+              display(new U8G2_SH1106_128X64_NONAME_F_HW_I2C(
+                  U8G2_R1,        // rotation 90˚
+                  U8X8_PIN_NONE,  // reset pin none
+                  OLED_SCK_PIN,
+                  OLED_SDA_PIN))
+#elif (DISPLAY_DEVICE == DISPLAY_LCD)
+              display(new Arduino_SSD1283A(
+                          new Arduino_HWSPI(
+                              LCD_A0_PIN,
+                              LCD_CS_PIN,
+                              SPI_SCK_PIN,
+                              SPI_MOSI_PIN,
+                              SPI_MISO_PIN,
+                              &SPI,
+                              true),  // shared interface
+                          LCD_RST_PIN,
+                          2),  // rotation: 180˚
+                      130, 130, 3, 36, &spiMutex)
+#endif
+    {
+    }
     virtual ~Board() {}
 
     void setup() {
@@ -131,8 +145,10 @@ class Board : public Atoll::Task,
         touch.setup(&arduinoPreferences, "Touch");
         battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
         recorder.setup(&gps, &sdcard, &api, &recorder);
-        // uploader.setup(&recorder, &sdcard, &wifi);
+// uploader.setup(&recorder, &sdcard, &wifi);
+#ifdef FEATURE_WEBSERVER
         webserver.setup(&sdcard, &recorder, &ota);
+#endif
         ota.setup(hostName);
         mdns.setup(hostName, 3232);
         wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);

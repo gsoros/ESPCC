@@ -196,6 +196,11 @@ class Oled : public Display {
 
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
 
+    virtual uint8_t fieldLabelVPos(uint8_t fieldHeight) override {
+        return fieldHeight - 4;
+    }
+
+
    protected:
     U8G2 *device;
 };

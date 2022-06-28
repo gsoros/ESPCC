@@ -16,7 +16,8 @@ bool Recorder::rec2gpx(const char *in,
                        bool overwrite) {
     bool res = Atoll::Recorder::rec2gpx(in, out, overwrite);
     log_i("rec2gpx returned %d", res);
-    if (res)
-        board.webserver.generateIndex();
+    #ifdef FEATURE_WEBSERVER
+    if (res) board.webserver.generateIndex();
+    #endif
     return res;
 }

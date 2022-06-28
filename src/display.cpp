@@ -2,10 +2,75 @@
 #include "display.h"
 #include "atoll_time.h"
 
+Display::Display(uint16_t width,
+                 uint16_t height,
+                 uint16_t feedbackWidth,
+                 uint16_t fieldHeight,
+                 SemaphoreHandle_t *mutex)
+    : width(width),
+      height(height),
+      feedbackWidth(feedbackWidth),
+      fieldHeight(fieldHeight) {
+    for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
+        field[i] = OutputField();
+    for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
+        feedback[i] = Area();
+    _queue.clear();
+    if (nullptr == mutex)
+        defaultMutex = xSemaphoreCreateMutex();
+    else
+        this->mutex = mutex;
+}
+
+Display::~Display() {}
+
 void Display::loop() {
+    ulong t = millis();
+
+    // static ulong lastLoopTime = 0;
+    // log_i("loop %dms", lastLoopTime ? t - lastLoopTime : 0);
+    // lastLoopTime = t;
+
+    if (!_queue.isEmpty()) {
+        ulong nextCallTime = 0;
+        for (uint8_t i = 0; i < _queue.size(); i++) {
+            QueueItem item = _queue.shift();
+            if (item.after <= millis()) {
+                // log_i("executing queued item #%d", i);
+                item.callback();
+            } else {
+                // log_i("delaying queued item #%d", i);
+                _queue.push(item);
+                if (!nextCallTime || item.after < nextCallTime)
+                    nextCallTime = item.after;
+            }
+        }
+        if (_queue.isEmpty()) {
+            // log_i("queue empty, setting default delay %dms", defaultTaskDelay);
+            taskSetDelay(defaultTaskDelay);
+        } else {
+            // log_i("queue not empty");
+            nextCallTime = min(nextCallTime, millis() + pdTICKS_TO_MS(defaultTaskDelay));
+            // ulong nextWakeTime = taskGetNextWakeTimeMs();
+            // if (nextCallTime < nextWakeTime) {
+            if (nextCallTime) {
+                uint16_t delay = 0;
+                t = millis();
+                if (t < nextCallTime) delay = nextCallTime - t;
+                // log_i("setting delay %dms", delay);
+                taskSetDelay(delay);
+            }
+        }
+    }
+    // log_i("queue run done");
+
+    static ulong lastStatusUpdate = 0;
+    t = millis();
+    if (t - 1000 < lastStatusUpdate) return;
+    lastStatusUpdate = t;
     updateStatus();
 
-    if (lastFieldUpdate + 15000 < millis() && Atoll::systemTimeLastSet())
+    if (lastFieldUpdate < t - 15000 && Atoll::systemTimeLastSet())
         clock();
 
     // static ulong lastFake = 0;
@@ -138,7 +203,7 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
         case Touch::Event::singleTouch: {
             log_i("pad %d single", pad->index);
             fill(a, fg);
-            fill(a, bg, true);
+            queue([this, a]() { fill(a, bg); }, 300);
 
             currentPage++;
             if (numPages <= currentPage) currentPage = 0;
@@ -154,17 +219,15 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 b = &field[i].area;
                 setClip(b);
                 fill(b, bg, false);
-                setCursor(b->x, b->y + b->h - 4);
+                setCursor(b->x, b->y + fieldLabelVPos(b->h));
                 setFont(field[i].labelFont);
                 print(label);
             }
             sendBuffer();
             setMaxClip();
-            // delay(1000);
-            displayFieldValues(false);
-            sendBuffer();
             releaseMutex();
             lastFieldUpdate = millis();
+            queue([this]() { displayFieldValues(); }, 3000);
 
             return false;  // do not propagate
         }
@@ -182,17 +245,15 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 fill(&b, fg, false);  // area 3 white
                 sendBuffer();
                 releaseMutex();
+                queue([this, a]() { fill(a, bg, true); }, Touch::touchTime * 3);  // clear
             }
-            // delay(Touch::touchTime * 3);  // TODO is delay() a good idea? maybe create a queue schedule?
-            fill(a, bg, true);  // clear
             return true;
         }
 
         case Touch::Event::longTouch: {
             log_i("pad %d long", pad->index);
             fill(a, fg);
-            // delay(Touch::touchTime * 3);
-            fill(a, bg, true);
+            queue([this, a]() { fill(a, bg, true); }, Touch::touchTime * 3);  // clear
             return true;
         }
 
@@ -200,8 +261,7 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             // log_i("pad %d touching", pad->index);
             if (pad->start + Touch::longTouchTime < millis()) {  // animation completed, still touching
                 fill(a, fg);
-                // delay(Touch::touchTime * 3);
-                fill(a, bg, true);
+                queue([this, a]() { fill(a, bg, true); }, Touch::touchTime * 3);  // clear
                 return true;
             }
             // log_i("pad %d animating", pad->index);

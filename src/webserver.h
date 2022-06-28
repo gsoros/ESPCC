@@ -1,3 +1,4 @@
+#ifdef FEATURE_WEBSERVER
 #ifndef __webserver_h
 #define __webserver_h
 
@@ -629,4 +630,5 @@ class Webserver {
     }
 };
 
+#endif
 #endif

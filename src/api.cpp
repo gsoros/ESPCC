@@ -46,12 +46,16 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
         board.gps.taskStop();
         log_i("stopping bleClient");
         board.bleClient.stop();
+#ifdef FEATURE_WEBSERVER
         log_i("stopping webserver");
         board.webserver.stop();
+#endif
         log_i("free heap after: %d", xPortGetFreeHeapSize());
         log_i("enabling wifi");
         board.otaMode = true;
+#ifdef FEATURE_WEBSERVER
         board.wifi.autoStartWebserver = false;
+#endif
         board.wifi.setEnabled(true, false);
         board.display.onOta("waiting");
         msg->replyAppend("ota");
