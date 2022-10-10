@@ -18,14 +18,10 @@ class Touch : public Atoll::Touch {
 
     virtual void onEnabledChanged() override;
 
-        protected :
-        // virtual void loop() override {
-        //     Serial.println("loop");
-        //     Atoll::Touch::loop();
-        // }
+    bool locked = false;
 
-        virtual void
-        fireEvent(uint8_t index, Event event) override;
+   protected:
+    virtual void fireEvent(uint8_t index, Event event) override;
 };
 
 #endif

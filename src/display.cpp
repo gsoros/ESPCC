@@ -190,6 +190,26 @@ void Display::onSpeed(double value) {
 bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
     assert(pad->index < sizeof(feedback) / sizeof(feedback[0]));
     Area *a = &feedback[pad->index];
+    static const uint16_t feedbackDelay = 600;
+
+    if (board.touch.locked) {
+        if (event == Touch::Event::singleTouch || event == Touch::Event::doubleTouch || event == Touch::Event::longTouch) {
+            if (!aquireMutex()) return false;
+            setClip(a);
+            fill(a, bg, false);
+            uint8_t stripeHeight = 2;
+            for (int16_t y = a->y; y <= a->y + a->h - 2; y += stripeHeight * 2) {
+                Area stripe(a->x, y, a->w, stripeHeight);
+                fill(&stripe, fg, false);
+            }
+            sendBuffer();
+            setMaxClip();
+            releaseMutex();
+            queue([this, a]() { fill(a, bg); }, 300);
+            return false;
+        }
+        if (event == Touch::Event::quintupleTouch) return true;  // propagate to unlock
+    }
 
     switch (event) {
         case Touch::Event::start: {
@@ -245,15 +265,30 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 fill(&b, fg, false);  // area 3 white
                 sendBuffer();
                 releaseMutex();
-                queue([this, a]() { fill(a, bg, true); }, Touch::touchTime * 3);  // clear
+                queue([this, a]() { fill(a, bg, true); }, feedbackDelay);  // clear
             }
+            return true;
+        }
+
+        case Touch::Event::tripleTouch: {
+            log_i("pad %d triple", pad->index);
+            return true;
+        }
+
+        case Touch::Event::quadrupleTouch: {
+            log_i("pad %d quadruple", pad->index);
+            return true;
+        }
+
+        case Touch::Event::quintupleTouch: {
+            log_i("pad %d quintuple", pad->index);
             return true;
         }
 
         case Touch::Event::longTouch: {
             log_i("pad %d long", pad->index);
             fill(a, fg);
-            queue([this, a]() { fill(a, bg, true); }, Touch::touchTime * 3);  // clear
+            queue([this, a]() { fill(a, bg, true); }, feedbackDelay);  // clear
             return true;
         }
 
@@ -261,7 +296,7 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             // log_i("pad %d touching", pad->index);
             if (pad->start + Touch::longTouchTime < millis()) {  // animation completed, still touching
                 fill(a, fg);
-                queue([this, a]() { fill(a, bg, true); }, Touch::touchTime * 3);  // clear
+                queue([this, a]() { fill(a, bg, true); }, feedbackDelay);  // clear
                 return true;
             }
             // log_i("pad %d animating", pad->index);

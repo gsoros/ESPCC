@@ -702,6 +702,10 @@ class Display : public Atoll::Task, public Print {
         defaultTaskDelay = _taskDelay;
     }
 
+    virtual void onLockChanged(bool locked) {
+        log_i("TODO display padlock %s", locked ? "on" : "off");
+    }
+
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));
     }

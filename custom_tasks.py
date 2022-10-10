@@ -11,6 +11,26 @@ env.AddCustomTarget(
 )
 
 env.AddCustomTarget(
+    name="j2build",
+    dependencies=None,
+    actions=[
+        "platformio run -j 2",
+    ],
+    title="j2build",
+    description="Build (max 2 jobs)"
+)
+
+env.AddCustomTarget(
+    name="j2upload",
+    dependencies=None,
+    actions=[
+        "platformio run -j 2 --target upload",
+    ],
+    title="j2upload",
+    description="Upload (max 2 jobs)"
+)
+
+env.AddCustomTarget(
     name="j3upload",
     dependencies=None,
     actions=[

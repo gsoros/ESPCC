@@ -4,7 +4,11 @@
 void Touch::fireEvent(uint8_t index, Event event) {
     Atoll::Touch::fireEvent(index, event);
     if (!board.display.onTouchEvent(&pads[index], event)) {
-        return;
+        return;  // not propagated
+    }
+    if (locked && event != Event::quintupleTouch) {
+        log_i("locked, no action");
+        return;  // must unlock
     }
     switch (event) {
         case Event::longTouch: {
@@ -26,12 +30,23 @@ void Touch::fireEvent(uint8_t index, Event event) {
                 }
             }
         } break;
+        case Event::quintupleTouch: {
+            locked = !locked;
+            log_i("%slocked", locked ? "" : "un");
+            board.display.onLockChanged(locked);
+            Atoll::ApiCommand *command = Api::command("touch");
+            Atoll::ApiResult *result = Api::success();
+            char str[32] = "";
+            snprintf(str, sizeof(str), "%d;%d=locked:%d", result->code, command->code, locked ? 1 : 0);
+            board.bleServer.notifyApiTx(str);
+        } break;
         default:
             break;
     }
 }
 
 void Touch::onEnabledChanged() {
+    Atoll::Touch::onEnabledChanged();
     Atoll::ApiCommand *command = Api::command("touch");
     Atoll::ApiResult *result = Api::success();
     char str[32] = "";
