@@ -115,11 +115,7 @@ class Display : public Atoll::Task, public Print {
             SemaphoreHandle_t *mutex = nullptr);
     virtual ~Display();
 
-    virtual void setup() {
-        // log_i("setMaxClip()");
-        setMaxClip();
-    }
-
+    virtual void setup();
     virtual void loop();
 
     virtual size_t write(uint8_t) = 0;
@@ -136,575 +132,86 @@ class Display : public Atoll::Task, public Print {
                              bool send = true) = 0;
     virtual void setClip(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
     virtual void setFont(const uint8_t *font) = 0;
+    virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) = 0;
 
-    virtual void setClip(const Area *a) {
-        setClip(a->x, a->y, a->w, a->h);
-    }
-    virtual void setMaxClip() { setClip(0, 0, width, height); }
-
-    virtual void setColor(int16_t color) { fg = color; }
-    virtual void setColor(int16_t fg, int16_t bg) {
-        this->fg = fg;
-        this->bg = bg;
-    }
-    virtual void setBgColor(int16_t color) { bg = color; }
-
+    virtual void setClip(const Area *a);
+    virtual void setMaxClip();
+    virtual void setColor(int16_t color);
+    virtual void setColor(int16_t fg, int16_t bg);
+    virtual void setBgColor(int16_t color);
     virtual size_t print(const char *str);
-    virtual size_t printUnrestricted(const char *str) {
-        return Print::print(str);
-    }
 
+    virtual size_t printUnrestricted(const char *str);
     virtual void printField(const uint8_t fieldIndex,
                             const char *str,
                             const bool send = true,
-                            const uint8_t *font = nullptr) {
-        // log_i("field %d %s", fieldIndex, str);
-        assert(fieldIndex < sizeof(field) / sizeof(field[0]));
-        if (send && !aquireMutex()) return;
-        Area *a = &field[fieldIndex].area;
-        setClip(a);
-        fill(a, bg, false);
-        setCursor(a->x, a->y + a->h - 1);
-        if (font)
-            setFont(font);
-        else
-            setFont(field[fieldIndex].font);
-        print(str);
-        setMaxClip();
-        if (!send) return;
-        sendBuffer();
-        releaseMutex();
-    }
-
+                            const uint8_t *font = nullptr);
     virtual void printfFieldDigits(const uint8_t fieldIndex,
                                    const bool send,
                                    const char *format,
-                                   ...) {
-        if (send && !aquireMutex()) return;
-        char out[4];
-        va_list argp;
-        va_start(argp, format);
-        vsnprintf(out, 4, format, argp);
-        va_end(argp);
-
-        if (0 < lastMinute)
-            clock(false, true, fieldIndex);  // clear clock area, update other fields
-        // log_i("printing '%s' to field %d", out, fieldIndex);
-
-        printField(fieldIndex, out, false);
-        if (send) {
-            sendBuffer();
-            releaseMutex();
-        }
-
-        // if (0 == fieldIndex || 1 == fieldIndex)
-        //     lastMinute = -1;  // trigger time display
-    }
-
+                                   ...);
     virtual void printfFieldChars(const uint8_t fieldIndex,
                                   const bool send,
                                   const char *format,
-                                  ...) {
-        if (send && !aquireMutex()) return;
-        char out[5];
-        va_list argp;
-        va_start(argp, format);
-        vsnprintf(out, 5, format, argp);
-        va_end(argp);
-
-        if (0 < lastMinute)
-            clock(false, true, fieldIndex);  // clear clock area, update other fields
-        // log_i("printing '%s' to field %d", out, fieldIndex);
-
-        printField(fieldIndex, out, false);
-        if (send) {
-            sendBuffer();
-            releaseMutex();
-        }
-        // if (0 == fieldIndex || 1 == fieldIndex)
-        //     lastMinute = -1;  // trigger time display
-    }
-
+                                  ...);
     virtual void printFieldDouble(const uint8_t fieldIndex,
                                   double value,
-                                  const bool send = true) {
-        if (100.0 <= abs(value)) {
-            log_w("reducing %.2f", value);
-            while (100.0 <= abs(value)) value /= 10.0;  // reduce to 2 digits before the decimal point
-        }
-        if (value < -10.0) {
-            // -10.1 will be printed as "-10"
-            printfFieldDigits(fieldIndex, send, "%3d", (int)value);
-            return;
-        }
-        char inte[3];
-        snprintf(inte, sizeof(inte), "%2.0f", value);  // digits before the decimal point
-        char dec[2];
-        snprintf(dec, sizeof(dec), "%1d", abs((int)(value * 10)) % 10);  // first digit after the decimal point
-        printField2plus1(fieldIndex, inte, dec, send);
-    }
-
+                                  const bool send = true);
     virtual void printField2plus1(const uint8_t fieldIndex,
                                   const char *two,
                                   const char *one,
-                                  const bool send = true) {
-        Area *a = &field[fieldIndex].area;
-        if (send && !aquireMutex()) return;
-        if (0 < lastMinute)
-            clock(false, true, fieldIndex);  // clear clock area, update other fields
-        setClip(a);
-        fill(a, bg, false);
-        setFont(field[fieldIndex].font);
-        setCursor(a->x, a->y + a->h - 1);
-        print(two);
-        setFont(field[fieldIndex].smallFont);
-        setCursor(a->x + a->w - field[fieldIndex].smallFontWidth, a->y + a->h);
-        print(one);
-        setMaxClip();
-        if (!send) return;
-        sendBuffer();
-        releaseMutex();
-    }
-
+                                  const bool send = true);
     // get index of field for content or -1
-    virtual int8_t getFieldIndex(FieldContent content) {
-        for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
-            if (content == field[i].content[currentPage]) return i;
-        return -1;
-    }
-
-    virtual void displayFieldValues(bool send = true) {
-        for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
-            displayFieldContent(i, field[i].content[currentPage], send);
-    }
-
+    virtual int8_t getFieldIndex(FieldContent content);
+    virtual void displayFieldValues(bool send = true);
     virtual void displayFieldContent(uint8_t fieldIndex,
                                      FieldContent content,
-                                     bool send = true) {
-        switch (content) {
-            case FC_EMPTY:
-                return;
-            case FC_POWER:
-                displayPower(fieldIndex, send);
-                return;
-            case FC_CADENCE:
-                displayCadence(fieldIndex, send);
-                return;
-            case FC_HEARTRATE:
-                displayHeartrate(fieldIndex, send);
-                return;
-            case FC_SPEED:
-                displaySpeed(fieldIndex, send);
-                return;
-            case FC_DISTANCE:
-                displayDistance(fieldIndex, send);
-                return;
-            case FC_ALTGAIN:
-                displayAltGain(fieldIndex, send);
-                return;
-            case FC_MOVETIME:
-                log_e("unhandled %d", content);
-                return;
-            case FC_LAP_TIME:
-                log_e("unhandled %d", content);
-                return;
-            case FC_LAP_DISTANCE:
-                log_e("unhandled %d", content);
-                return;
-            case FC_LAP_POWER:
-                log_e("unhandled %d", content);
-                return;
-            case FC_SATELLITES:
-                log_e("unhandled %d", content);
-                return;
-            case FC_BATTERY:
-                displayBattery(fieldIndex, send);
-                return;
-            case FC_BATTERY_POWER:
-            case FC_BATTERY_CADENCE:
-                displayBattPM(fieldIndex, send);
-                return;
-            case FC_BATTERY_HEARTRATE:
-                displayBattHRM(fieldIndex, send);
-                return;
-            default:
-                log_e("unhandled %d", content);
-        }
-    }
+                                     bool send = true);
+    virtual int fieldLabel(FieldContent content, char *buf, size_t len);
+    virtual uint8_t fieldLabelVPos(uint8_t fieldHeight);
+    virtual void splash();
 
-    virtual int fieldLabel(FieldContent content, char *buf, size_t len) {
-        switch (content) {
-            case FC_EMPTY:
-                return snprintf(buf, len, "---");
-            case FC_POWER:
-                return snprintf(buf, len, "Power");
-            case FC_CADENCE:
-                return snprintf(buf, len, "Cadence");
-            case FC_HEARTRATE:
-                return snprintf(buf, len, "HR");
-            case FC_SPEED:
-                return snprintf(buf, len, "Speed");
-            case FC_DISTANCE:
-                return snprintf(buf, len, "Dist.");
-            case FC_ALTGAIN:
-                return snprintf(buf, len, "Alt. gain");
-            case FC_MOVETIME:
-                return snprintf(buf, len, "Move time");
-            case FC_LAP_TIME:
-                return snprintf(buf, len, "Lap time");
-            case FC_LAP_DISTANCE:
-                return snprintf(buf, len, "Lap dist.");
-            case FC_LAP_POWER:
-                return snprintf(buf, len, "Lap power");
-            case FC_SATELLITES:
-                return snprintf(buf, len, "Sat.");
-            case FC_BATTERY:
-                return snprintf(buf, len, "Battery");
-            case FC_BATTERY_POWER:
-            case FC_BATTERY_CADENCE:
-                return snprintf(buf, len, "PM Bat.");
-            case FC_BATTERY_HEARTRATE:
-                return snprintf(buf, len, "HRM Bat.");
-            default:
-                log_e("unhandled %d", content);
-                return -1;
-        }
-    }
-
-    virtual uint8_t fieldLabelVPos(uint8_t fieldHeight) {
-        return fieldHeight / 2;
-    }
-
-    virtual void splash() {
-        if (!aquireMutex()) return;
-        Area *a = &field[0].area;
-        setClip(a);
-        setFont(smallFont);
-        setCursor(a->x + 10, a->y + a->h - 5);
-        print("espcc");
-        sendBuffer();
-        setMaxClip();
-        releaseMutex();
-    }
-
-    virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) = 0;
-
-    virtual bool setContrast(uint8_t percent) {
-        log_e("501");
-        return false;
-    }
-
-    virtual void onPower(int16_t value) {
-        static int16_t lastPower = 0;
-        power = value;
-        if (lastPower == power) return;
-        if (lastWeightUpdate + 1000 < millis())
-            displayPower();
-        lastPower = power;
-    }
-
-    virtual void displayPower(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_POWER);
-        if (fieldIndex < 0) return;
-        if (0 <= power)
-            printfFieldDigits(fieldIndex, send, "%3d", power);
-        else
-            fill(&field[fieldIndex].area, bg, send);
-        lastFieldUpdate = millis();
-        lastPowerUpdate = lastFieldUpdate;
-    }
-
-    virtual void onWeight(double value) {
-        static double lastWeight = 0.0;
-        weight = value;
-        if (lastWeight == weight) return;
-        if (lastPowerUpdate + 1000 < millis())
-            displayWeight();
-        lastWeight = weight;
-    }
-
-    virtual void displayWeight(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_POWER);
-        if (fieldIndex < 0) return;
-        printFieldDouble(fieldIndex, weight, send);
-        lastFieldUpdate = millis();
-        lastWeightUpdate = lastFieldUpdate;
-    }
-
-    virtual void onCadence(int16_t value) {
-        static int16_t lastCadence = 0;
-        cadence = value;
-        if (lastCadence == cadence) return;
-        displayCadence();
-        lastCadence = cadence;
-    }
-
-    virtual void displayCadence(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_CADENCE);
-        if (fieldIndex < 0) return;
-        if (0 <= cadence)
-            printfFieldDigits(fieldIndex, send, "%3d", cadence);
-        else
-            fill(&field[fieldIndex].area, bg, send);
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onHeartrate(int16_t value) {
-        static int16_t lastHeartrate = 0;
-        heartrate = value;
-        if (lastHeartrate == heartrate) return;
-        displayHeartrate();
-        lastHeartrate = heartrate;
-    }
-
-    virtual void displayHeartrate(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_HEARTRATE);
-        if (fieldIndex < 0) return;
-        if (0 < heartrate)
-            printfFieldDigits(fieldIndex, send, "%3d", heartrate);
-        else
-            fill(&field[fieldIndex].area, bg, send);
-        lastFieldUpdate = millis();
-    }
-
+    virtual bool setContrast(uint8_t percent);
+    virtual void onPower(int16_t value);
+    virtual void displayPower(int8_t fieldIndex = -1, bool send = true);
+    virtual void onWeight(double value);
+    virtual void displayWeight(int8_t fieldIndex = -1, bool send = true);
+    virtual void onCadence(int16_t value);
+    virtual void displayCadence(int8_t fieldIndex = -1, bool send = true);
+    virtual void onHeartrate(int16_t value);
+    virtual void displayHeartrate(int8_t fieldIndex = -1, bool send = true);
     virtual void onSpeed(double value);
-
-    virtual void displaySpeed(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_SPEED);
-        if (fieldIndex < 0) return;
-        if (100.0 <= speed) {
-            while (1000.0 <= speed) speed /= 10.0;
-            printfFieldDigits(fieldIndex, send, "%3d", (int)speed);
-        } else
-            printFieldDouble(fieldIndex, speed, send);
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onDistance(uint value) {
-        // log_i("%d", value);
-        static uint lastDistance = 0;
-        distance = value;
-        if (lastDistance == distance) return;
-        displayDistance();
-        lastDistance = distance;
-    }
-
-    virtual void displayDistance(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_DISTANCE);
-        if (fieldIndex < 0) return;
-        if (distance < 1000)
-            printfFieldDigits(fieldIndex, send, "%3d", distance);  // < 1000 m
-        else if (distance < 100000)
-            printFieldDouble(fieldIndex, (double)distance / 1000.0, send);  // < 100 km
-        else {
-            while (1000 <= distance) distance /= 10;
-            printfFieldDigits(fieldIndex, send, "%3d", distance);  // >= 100 km
-        }
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onAltGain(uint16_t value) {
-        static uint16_t lastAltGain = 0;
-        altGain = value;
-        if (lastAltGain == altGain) return;
-        displayAltGain();
-        lastAltGain = altGain;
-    }
-
-    virtual void displayAltGain(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_ALTGAIN);
-        if (fieldIndex < 0) return;
-        if (altGain < 1000)
-            printfFieldDigits(fieldIndex, send, "%3d", altGain);
-        else
-            printfFieldChars(fieldIndex, send, "%.1fk", (double)altGain / 1000.0);
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onBattery(int8_t value) {
-        // log_i("%d", value);
-        static int8_t lastBattery = -1;
-        battery = value;
-        if (lastBattery == battery) return;
-        displayBattery();
-        lastBattery = battery;
-    }
-
-    virtual void printBattCharging(int8_t fieldIndex = -1,
-                                   bool send = true) {
-        static const uint8_t chgIconSize = 24;
-        static const uint8_t chgIcon[] = {
-            0x00, 0x00, 0x10, 0x00, 0x40, 0x18, 0x00, 0xe0, 0x0c, 0x00, 0xb0, 0xc7,
-            0x00, 0x18, 0xe7, 0x00, 0x08, 0x76, 0x00, 0x0c, 0x3c, 0x00, 0x0c, 0x18,
-            0x00, 0x0c, 0x10, 0x00, 0x08, 0x30, 0x00, 0x1c, 0x18, 0x00, 0x7f, 0x0e,
-            0x80, 0xc7, 0x07, 0x80, 0x03, 0x00, 0x80, 0x01, 0x00, 0x80, 0x01, 0x00,
-            0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00, 0x03, 0x00,
-            0x00, 0x03, 0x00, 0xfc, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x03, 0x00, 0x00};
-        if (fieldIndex < 0) return;
-        Area *a = &field[fieldIndex].area;
-        if (send && !aquireMutex()) return;
-        setClip(a);
-        fill(a, bg, false);
-        drawXBitmap(a->x + a->w - chgIconSize, a->y, chgIconSize, chgIconSize, chgIcon, fg, false);
-        setMaxClip();
-        if (!send) return;
-        sendBuffer();
-        releaseMutex();
-    }
-
-    virtual void displayBattery(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_BATTERY);
-        if (fieldIndex < 0) return;
-        if (99 <= battery) {
-            printBattCharging(fieldIndex, send);
-        } else if (0 <= battery) {
-            char level[3] = "";
-            snprintf(level, 3, "%2d", battery);
-            printField2plus1(fieldIndex, level, "%", send);
-        } else
-            fill(&field[fieldIndex].area, bg, send);
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onBattPM(int8_t value) {
-        // log_i("%d", value);
-        static int8_t lastBattPM = -1;
-        battPM = value;
-        if (lastBattPM == battPM) return;
-        displayBattPM();
-        lastBattPM = battPM;
-    }
-
-    virtual void displayBattPM(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_BATTERY_POWER);
-        if (fieldIndex < 0) return;
-        if (99 <= battPM) {
-            printBattCharging(fieldIndex, send);
-        } else if (0 <= battPM) {
-            char level[3] = "";
-            snprintf(level, 3, "%2d", battPM);
-            printField2plus1(fieldIndex, level, "%", send);
-        } else
-            fill(&field[fieldIndex].area, bg, send);
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onBattHRM(int8_t value) {
-        log_i("%d", value);
-        static int8_t lastBattHRM = -1;
-        battHRM = value;
-        if (lastBattHRM == battHRM) return;
-        displayBattHRM();
-        lastBattHRM = battHRM;
-    }
-
-    virtual void displayBattHRM(int8_t fieldIndex = -1, bool send = true) {
-        if (fieldIndex < 0)
-            fieldIndex = getFieldIndex(FC_BATTERY_HEARTRATE);
-        if (fieldIndex < 0) return;
-        if (99 <= battHRM) {
-            printBattCharging(fieldIndex, send);
-        } else if (0 <= battHRM) {
-            char level[3] = "";
-            snprintf(level, 3, "%2d", battHRM);
-            printField2plus1(fieldIndex, level, "%", send);
-        } else
-            fill(&field[fieldIndex].area, bg, send);
-        lastFieldUpdate = millis();
-    }
-
-    virtual void onPMDisconnected() {
-        onPower(-1);
-        onCadence(-1);
-        onBattPM(-1);
-    }
-
-    virtual void onHRMDisconnected() {
-        onHeartrate(-1);
-        onBattHRM(-1);
-    }
-
-    virtual void onOta(const char *str) {
-        if (!aquireMutex()) return;
-        Area a = Area(0, 0, width, height - statusArea.h);
-        fillUnrestricted(&a, bg, false);
-        setCursor(3, height / 2);
-        char out[16];
-        snprintf(out, sizeof(out), "OTA: %s", str);
-        setFont(labelFont);
-        setColor(fg);
-        printUnrestricted(out);
-        sendBuffer();
-        releaseMutex();
-    }
-
+    virtual void displaySpeed(int8_t fieldIndex = -1, bool send = true);
+    virtual void onDistance(uint value);
+    virtual void displayDistance(int8_t fieldIndex = -1, bool send = true);
+    virtual void onAltGain(uint16_t value);
+    virtual void displayAltGain(int8_t fieldIndex = -1, bool send = true);
+    virtual void onBattery(int8_t value);
+    virtual void printBattCharging(int8_t fieldIndex = -1, bool send = true);
+    virtual void displayBattery(int8_t fieldIndex = -1, bool send = true);
+    virtual void onBattPM(int8_t value);
+    virtual void displayBattPM(int8_t fieldIndex = -1, bool send = true);
+    virtual void onBattHRM(int8_t value);
+    virtual void displayBattHRM(int8_t fieldIndex = -1, bool send = true);
+    virtual void onPMDisconnected();
+    virtual void onHRMDisconnected();
+    virtual void onOta(const char *str);
     // the return value indicates whether the event should propagate
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event);
     virtual void updateStatus(bool forceRedraw = false);
     virtual void onWifiStateChange();
-
-    virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const {
-        if (b->equals(a))
-            log_i("%s %s", str, areaType);
-        else if (b->contains(a))
-            log_i("%s contains %s", str, areaType);
-        else if (b->touches(a))
-            log_i("%s touches %s", str, areaType);
-    }
-    virtual void logAreas(Area *a, const char *str) const {
-        char areaType[10] = "";
-        for (uint8_t i = 0; i < numFields; i++) {
-            snprintf(areaType, 10, "field%d", i);
-            logArea((Area *)&field[i].area, a, str, areaType);
-        }
-        for (uint8_t i = 0; i < numFeedback; i++) {
-            snprintf(areaType, 10, "feedback%d", i);
-            logArea((Area *)&feedback[i], a, str, areaType);
-        }
-        logArea((Area *)&clockArea, a, str, "clock");
-        logArea((Area *)&statusArea, a, str, "status");
-    }
-
+    virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const;
+    virtual void logAreas(Area *a, const char *str) const;
     // returns false if an item was overwritten (queue was full)
-    virtual bool queue(QueueItemCallback callback, uint16_t delayMs) {
-        if (0 == delayMs) {
-            log_w("delay is zero, executing callback");
-            callback();
-            return true;
-        }
-        ulong t = millis();
-
-        if (_queue.isFull()) log_w("queue is full");
-        QueueItem item;
-        item.after = t + delayMs;
-        item.callback = callback;
-        bool result = _queue.push(item);
-        if (t + delayMs < taskGetNextWakeTimeMs())
-            taskSetDelay(delayMs);
-        return result;
-    }
-
+    virtual bool queue(QueueItemCallback callback, uint16_t delayMs);
     virtual void taskStart(float freq = -1,
                            uint32_t stack = 0,
                            int8_t priority = -1,
-                           int8_t core = -1) override {
-        Atoll::Task::taskStart(freq, stack, priority, core);
-        defaultTaskFreq = _taskFreq;
-        defaultTaskDelay = _taskDelay;
-    }
-
-    virtual void onLockChanged(bool locked) {
-        log_i("TODO display padlock %s", locked ? "on" : "off");
-    }
+                           int8_t core = -1) override;
+    virtual void onLockChanged(bool locked);
+    virtual void lockedFeedback(uint8_t padIndex, uint16_t color, uint16_t delayMs = 300);
+    virtual uint16_t lockedColor();
+    virtual uint16_t unlockedColor();
 
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));
@@ -763,7 +270,7 @@ class Display : public Atoll::Task, public Print {
 
     float defaultTaskFreq = 0;
     TickType_t defaultTaskDelay = 0;
-    CircularBuffer<QueueItem, 5> _queue;
+    CircularBuffer<QueueItem, 8> _queue;
     SemaphoreHandle_t defaultMutex;
     SemaphoreHandle_t *mutex = &defaultMutex;
 

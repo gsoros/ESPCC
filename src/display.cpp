@@ -24,6 +24,11 @@ Display::Display(uint16_t width,
 
 Display::~Display() {}
 
+void Display::setup() {
+    // log_i("setMaxClip()");
+    setMaxClip();
+}
+
 void Display::loop() {
     ulong t = millis();
 
@@ -82,95 +87,349 @@ void Display::loop() {
     // }
 }
 
+void Display::setClip(const Area *a) {
+    setClip(a->x, a->y, a->w, a->h);
+}
+
+void Display::setMaxClip() {
+    setClip(0, 0, width, height);
+}
+
+void Display::setColor(int16_t color) {
+    fg = color;
+}
+
+void Display::setColor(int16_t fg, int16_t bg) {
+    this->fg = fg;
+    this->bg = bg;
+}
+
+void Display::setBgColor(int16_t color) {
+    bg = color;
+}
+
 size_t Display::print(const char *str) {
     if (board.otaMode) return 0;
     return printUnrestricted(str);
 }
 
-void Display::updateStatus(bool forceRedraw) {
-    //  status area
-    static const Area *a = &statusArea;
+size_t Display::printUnrestricted(const char *str) {
+    return Print::print(str);
+}
 
-    static const uint8_t rideXbm[] = {
-        0x00, 0x04, 0x80, 0x0a, 0x40, 0x05, 0xa0, 0x02, 0x50, 0x04, 0xa0, 0x08,
-        0x50, 0x15, 0x80, 0x00, 0x5e, 0x1e, 0xb3, 0x33, 0x61, 0x21, 0x21, 0x21,
-        0x33, 0x33, 0x1e, 0x1e};
-
-    static const uint8_t walkXbm[] = {
-        0x00, 0x00, 0x40, 0x00, 0xe0, 0x00, 0x60, 0x00, 0x70, 0x00, 0xa0, 0x00,
-        0x50, 0x00, 0xa8, 0x01, 0x48, 0x01, 0x68, 0x02, 0x70, 0x00, 0xd8, 0x00,
-        0x8c, 0x00, 0x84, 0x01};
-
-    static const uint8_t standXbm[] = {
-        0x00, 0x00, 0xe0, 0x00, 0xa0, 0x00, 0x00, 0x00, 0x50, 0x01, 0xb0, 0x01,
-        0x50, 0x01, 0xb0, 0x01, 0x50, 0x01, 0xa0, 0x00, 0xa0, 0x00, 0xa0, 0x00,
-        0xa0, 0x00, 0xb0, 0x01};
-
-    static const uint8_t recXbm[] = {
-        0xe0, 0x01, 0xf8, 0x07, 0xfc, 0x0f, 0xfe, 0x1f, 0x3e, 0x1b, 0x1f, 0x32,
-        0xcf, 0x34, 0xcf, 0x34, 0x1f, 0x36, 0x3e, 0x17, 0xfe, 0x17, 0xfc, 0x07,
-        0xf8, 0x07, 0xe0, 0x01};
-
-    static const uint8_t wifiXbm[] = {
-        0x00, 0x00, 0xe0, 0x01, 0x38, 0x07, 0x0c, 0x0c, 0xc6, 0x18, 0xf3, 0x33,
-        0x19, 0x26, 0xcc, 0x0c, 0xe4, 0x09, 0x30, 0x03, 0xc0, 0x00, 0xe0, 0x01,
-        0xe0, 0x01, 0xc0, 0x00};
-
-    static Area icon = Area(a->x, a->y, statusIconSize, statusIconSize);
-
-    static int8_t lastMotionState = -1;
-
-    static int8_t lastWifiState = -1;
-
-    static int8_t lastRecordingState = -1;
-    // 0: not recording, 1: recording but no gps fix yet, 2: recording
-    int8_t recordingState = board.recorder.isRecording ? board.gps.locationIsValid() ? 2 : 1 : 0;
-
-    if (!forceRedraw &&
-        motionState == lastMotionState &&
-        wifiState == lastWifiState &&
-        1 != wifiState &&
-        recordingState == lastRecordingState &&
-        1 != recordingState)
-        return;
-
-    if (!aquireMutex()) return;
-
-    icon.x = a->x;
-    if (recordingState != lastRecordingState || 1 == recordingState || forceRedraw) {
-        fillUnrestricted(&icon, bg, false);
-        static bool recordingBlinkState = false;
-        if (2 == recordingState || (1 == recordingState && recordingBlinkState))
-            drawXBitmap(icon.x, icon.y, icon.w, icon.h, recXbm, fg, false);
-        if (1 == recordingState) recordingBlinkState = !recordingBlinkState;
-    }
-
-    icon.x = a->x + a->w / 2 - statusIconSize / 2;
-    if (wifiState != lastWifiState || 1 == wifiState || forceRedraw) {
-        fillUnrestricted(&icon, bg, false);
-        static bool wifiBlinkState = false;
-        if (2 == wifiState || (1 == wifiState && wifiBlinkState))
-            drawXBitmap(icon.x, icon.y, icon.w, icon.h, wifiXbm, fg, false);
-        if (1 == wifiState) wifiBlinkState = !wifiBlinkState;
-    }
-
-    icon.x = a->x + a->w - statusIconSize;
-    if (motionState != lastMotionState || forceRedraw) {
-        fillUnrestricted(&icon, bg, false);
-        drawXBitmap(icon.x, icon.y, icon.w, icon.h,
-                    2 == motionState
-                        ? rideXbm
-                    : 1 == motionState
-                        ? walkXbm
-                        : standXbm,
-                    fg, false);
-    }
+void Display::printField(const uint8_t fieldIndex,
+                         const char *str,
+                         const bool send,
+                         const uint8_t *font) {
+    // log_i("field %d %s", fieldIndex, str);
+    assert(fieldIndex < sizeof(field) / sizeof(field[0]));
+    if (send && !aquireMutex()) return;
+    Area *a = &field[fieldIndex].area;
+    setClip(a);
+    fill(a, bg, false);
+    setCursor(a->x, a->y + a->h - 1);
+    if (font)
+        setFont(font);
+    else
+        setFont(field[fieldIndex].font);
+    print(str);
+    setMaxClip();
+    if (!send) return;
     sendBuffer();
     releaseMutex();
+}
 
-    lastMotionState = motionState;
-    lastWifiState = wifiState;
-    lastRecordingState = recordingState;
+void Display::printfFieldDigits(const uint8_t fieldIndex,
+                                const bool send,
+                                const char *format,
+                                ...) {
+    if (send && !aquireMutex()) return;
+    char out[4];
+    va_list argp;
+    va_start(argp, format);
+    vsnprintf(out, 4, format, argp);
+    va_end(argp);
+
+    if (0 < lastMinute)
+        clock(false, true, fieldIndex);  // clear clock area, update other fields
+    // log_i("printing '%s' to field %d", out, fieldIndex);
+
+    printField(fieldIndex, out, false);
+    if (send) {
+        sendBuffer();
+        releaseMutex();
+    }
+
+    // if (0 == fieldIndex || 1 == fieldIndex)
+    //     lastMinute = -1;  // trigger time display
+}
+
+void Display::printfFieldChars(const uint8_t fieldIndex,
+                               const bool send,
+                               const char *format,
+                               ...) {
+    if (send && !aquireMutex()) return;
+    char out[5];
+    va_list argp;
+    va_start(argp, format);
+    vsnprintf(out, 5, format, argp);
+    va_end(argp);
+
+    if (0 < lastMinute)
+        clock(false, true, fieldIndex);  // clear clock area, update other fields
+    // log_i("printing '%s' to field %d", out, fieldIndex);
+
+    printField(fieldIndex, out, false);
+    if (send) {
+        sendBuffer();
+        releaseMutex();
+    }
+    // if (0 == fieldIndex || 1 == fieldIndex)
+    //     lastMinute = -1;  // trigger time display
+}
+
+void Display::printFieldDouble(const uint8_t fieldIndex,
+                               double value,
+                               const bool send) {
+    if (100.0 <= abs(value)) {
+        log_w("reducing %.2f", value);
+        while (100.0 <= abs(value)) value /= 10.0;  // reduce to 2 digits before the decimal point
+    }
+    if (value < -10.0) {
+        // -10.1 will be printed as "-10"
+        printfFieldDigits(fieldIndex, send, "%3d", (int)value);
+        return;
+    }
+    char inte[3];
+    snprintf(inte, sizeof(inte), "%2.0f", value);  // digits before the decimal point
+    char dec[2];
+    snprintf(dec, sizeof(dec), "%1d", abs((int)(value * 10)) % 10);  // first digit after the decimal point
+    printField2plus1(fieldIndex, inte, dec, send);
+}
+
+void Display::printField2plus1(const uint8_t fieldIndex,
+                               const char *two,
+                               const char *one,
+                               const bool send) {
+    Area *a = &field[fieldIndex].area;
+    if (send && !aquireMutex()) return;
+    if (0 < lastMinute)
+        clock(false, true, fieldIndex);  // clear clock area, update other fields
+    setClip(a);
+    fill(a, bg, false);
+    setFont(field[fieldIndex].font);
+    setCursor(a->x, a->y + a->h - 1);
+    print(two);
+    setFont(field[fieldIndex].smallFont);
+    setCursor(a->x + a->w - field[fieldIndex].smallFontWidth, a->y + a->h);
+    print(one);
+    setMaxClip();
+    if (!send) return;
+    sendBuffer();
+    releaseMutex();
+}
+
+// get index of field for content or -1
+int8_t Display::getFieldIndex(FieldContent content) {
+    for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
+        if (content == field[i].content[currentPage]) return i;
+    return -1;
+}
+
+void Display::displayFieldValues(bool send) {
+    for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
+        displayFieldContent(i, field[i].content[currentPage], send);
+}
+
+void Display::displayFieldContent(uint8_t fieldIndex,
+                                  FieldContent content,
+                                  bool send) {
+    switch (content) {
+        case FC_EMPTY:
+            return;
+        case FC_POWER:
+            displayPower(fieldIndex, send);
+            return;
+        case FC_CADENCE:
+            displayCadence(fieldIndex, send);
+            return;
+        case FC_HEARTRATE:
+            displayHeartrate(fieldIndex, send);
+            return;
+        case FC_SPEED:
+            displaySpeed(fieldIndex, send);
+            return;
+        case FC_DISTANCE:
+            displayDistance(fieldIndex, send);
+            return;
+        case FC_ALTGAIN:
+            displayAltGain(fieldIndex, send);
+            return;
+        case FC_MOVETIME:
+            log_e("unhandled %d", content);
+            return;
+        case FC_LAP_TIME:
+            log_e("unhandled %d", content);
+            return;
+        case FC_LAP_DISTANCE:
+            log_e("unhandled %d", content);
+            return;
+        case FC_LAP_POWER:
+            log_e("unhandled %d", content);
+            return;
+        case FC_SATELLITES:
+            log_e("unhandled %d", content);
+            return;
+        case FC_BATTERY:
+            displayBattery(fieldIndex, send);
+            return;
+        case FC_BATTERY_POWER:
+        case FC_BATTERY_CADENCE:
+            displayBattPM(fieldIndex, send);
+            return;
+        case FC_BATTERY_HEARTRATE:
+            displayBattHRM(fieldIndex, send);
+            return;
+        default:
+            log_e("unhandled %d", content);
+    }
+}
+
+int Display::fieldLabel(FieldContent content, char *buf, size_t len) {
+    switch (content) {
+        case FC_EMPTY:
+            return snprintf(buf, len, "---");
+        case FC_POWER:
+            return snprintf(buf, len, "Power");
+        case FC_CADENCE:
+            return snprintf(buf, len, "Cadence");
+        case FC_HEARTRATE:
+            return snprintf(buf, len, "HR");
+        case FC_SPEED:
+            return snprintf(buf, len, "Speed");
+        case FC_DISTANCE:
+            return snprintf(buf, len, "Dist.");
+        case FC_ALTGAIN:
+            return snprintf(buf, len, "Alt. gain");
+        case FC_MOVETIME:
+            return snprintf(buf, len, "Move time");
+        case FC_LAP_TIME:
+            return snprintf(buf, len, "Lap time");
+        case FC_LAP_DISTANCE:
+            return snprintf(buf, len, "Lap dist.");
+        case FC_LAP_POWER:
+            return snprintf(buf, len, "Lap power");
+        case FC_SATELLITES:
+            return snprintf(buf, len, "Sat.");
+        case FC_BATTERY:
+            return snprintf(buf, len, "Battery");
+        case FC_BATTERY_POWER:
+        case FC_BATTERY_CADENCE:
+            return snprintf(buf, len, "PM Bat.");
+        case FC_BATTERY_HEARTRATE:
+            return snprintf(buf, len, "HRM Bat.");
+        default:
+            log_e("unhandled %d", content);
+            return -1;
+    }
+}
+
+uint8_t Display::fieldLabelVPos(uint8_t fieldHeight) {
+    return fieldHeight / 2;
+}
+
+void Display::splash() {
+    if (!aquireMutex()) return;
+    Area *a = &field[0].area;
+    setClip(a);
+    setFont(smallFont);
+    setCursor(a->x + 10, a->y + a->h - 5);
+    print("espcc");
+    sendBuffer();
+    setMaxClip();
+    releaseMutex();
+}
+
+bool Display::setContrast(uint8_t percent) {
+    log_e("501");
+    return false;
+}
+
+void Display::onPower(int16_t value) {
+    static int16_t lastPower = 0;
+    power = value;
+    if (lastPower == power) return;
+    if (lastWeightUpdate + 1000 < millis())
+        displayPower();
+    lastPower = power;
+}
+
+void Display::displayPower(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_POWER);
+    if (fieldIndex < 0) return;
+    if (0 <= power)
+        printfFieldDigits(fieldIndex, send, "%3d", power);
+    else
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
+    lastPowerUpdate = lastFieldUpdate;
+}
+
+void Display::onWeight(double value) {
+    static double lastWeight = 0.0;
+    weight = value;
+    if (lastWeight == weight) return;
+    if (lastPowerUpdate + 1000 < millis())
+        displayWeight();
+    lastWeight = weight;
+}
+
+void Display::displayWeight(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_POWER);
+    if (fieldIndex < 0) return;
+    printFieldDouble(fieldIndex, weight, send);
+    lastFieldUpdate = millis();
+    lastWeightUpdate = lastFieldUpdate;
+}
+
+void Display::onCadence(int16_t value) {
+    static int16_t lastCadence = 0;
+    cadence = value;
+    if (lastCadence == cadence) return;
+    displayCadence();
+    lastCadence = cadence;
+}
+
+void Display::displayCadence(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_CADENCE);
+    if (fieldIndex < 0) return;
+    if (0 <= cadence)
+        printfFieldDigits(fieldIndex, send, "%3d", cadence);
+    else
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
+}
+
+void Display::onHeartrate(int16_t value) {
+    static int16_t lastHeartrate = 0;
+    heartrate = value;
+    if (lastHeartrate == heartrate) return;
+    displayHeartrate();
+    lastHeartrate = heartrate;
+}
+
+void Display::displayHeartrate(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_HEARTRATE);
+    if (fieldIndex < 0) return;
+    if (0 < heartrate)
+        printfFieldDigits(fieldIndex, send, "%3d", heartrate);
+    else
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
 }
 
 void Display::onSpeed(double value) {
@@ -187,29 +446,196 @@ void Display::onSpeed(double value) {
                       : 0;
 }
 
+void Display::displaySpeed(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_SPEED);
+    if (fieldIndex < 0) return;
+    if (100.0 <= speed) {
+        while (1000.0 <= speed) speed /= 10.0;
+        printfFieldDigits(fieldIndex, send, "%3d", (int)speed);
+    } else
+        printFieldDouble(fieldIndex, speed, send);
+    lastFieldUpdate = millis();
+}
+
+void Display::onDistance(uint value) {
+    // log_i("%d", value);
+    static uint lastDistance = 0;
+    distance = value;
+    if (lastDistance == distance) return;
+    displayDistance();
+    lastDistance = distance;
+}
+
+void Display::displayDistance(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_DISTANCE);
+    if (fieldIndex < 0) return;
+    if (distance < 1000)
+        printfFieldDigits(fieldIndex, send, "%3d", distance);  // < 1000 m
+    else if (distance < 100000)
+        printFieldDouble(fieldIndex, (double)distance / 1000.0, send);  // < 100 km
+    else {
+        while (1000 <= distance) distance /= 10;
+        printfFieldDigits(fieldIndex, send, "%3d", distance);  // >= 100 km
+    }
+    lastFieldUpdate = millis();
+}
+
+void Display::onAltGain(uint16_t value) {
+    static uint16_t lastAltGain = 0;
+    altGain = value;
+    if (lastAltGain == altGain) return;
+    displayAltGain();
+    lastAltGain = altGain;
+}
+
+void Display::displayAltGain(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_ALTGAIN);
+    if (fieldIndex < 0) return;
+    if (altGain < 1000)
+        printfFieldDigits(fieldIndex, send, "%3d", altGain);
+    else
+        printfFieldChars(fieldIndex, send, "%.1fk", (double)altGain / 1000.0);
+    lastFieldUpdate = millis();
+}
+
+void Display::onBattery(int8_t value) {
+    // log_i("%d", value);
+    static int8_t lastBattery = -1;
+    battery = value;
+    if (lastBattery == battery) return;
+    displayBattery();
+    lastBattery = battery;
+}
+
+void Display::printBattCharging(int8_t fieldIndex, bool send) {
+    static const uint8_t chgIconSize = 24;
+    static const uint8_t chgIcon[] = {
+        0x00, 0x00, 0x10, 0x00, 0x40, 0x18, 0x00, 0xe0, 0x0c, 0x00, 0xb0, 0xc7,
+        0x00, 0x18, 0xe7, 0x00, 0x08, 0x76, 0x00, 0x0c, 0x3c, 0x00, 0x0c, 0x18,
+        0x00, 0x0c, 0x10, 0x00, 0x08, 0x30, 0x00, 0x1c, 0x18, 0x00, 0x7f, 0x0e,
+        0x80, 0xc7, 0x07, 0x80, 0x03, 0x00, 0x80, 0x01, 0x00, 0x80, 0x01, 0x00,
+        0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00, 0x03, 0x00,
+        0x00, 0x03, 0x00, 0xfc, 0x01, 0x00, 0x7e, 0x00, 0x00, 0x03, 0x00, 0x00};
+    if (fieldIndex < 0) return;
+    Area *a = &field[fieldIndex].area;
+    if (send && !aquireMutex()) return;
+    setClip(a);
+    fill(a, bg, false);
+    drawXBitmap(a->x + a->w - chgIconSize, a->y, chgIconSize, chgIconSize, chgIcon, fg, false);
+    setMaxClip();
+    if (!send) return;
+    sendBuffer();
+    releaseMutex();
+}
+
+void Display::displayBattery(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_BATTERY);
+    if (fieldIndex < 0) return;
+    if (99 <= battery) {
+        printBattCharging(fieldIndex, send);
+    } else if (0 <= battery) {
+        char level[3] = "";
+        snprintf(level, 3, "%2d", battery);
+        printField2plus1(fieldIndex, level, "%", send);
+    } else
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
+}
+
+void Display::onBattPM(int8_t value) {
+    // log_i("%d", value);
+    static int8_t lastBattPM = -1;
+    battPM = value;
+    if (lastBattPM == battPM) return;
+    displayBattPM();
+    lastBattPM = battPM;
+}
+
+void Display::displayBattPM(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_BATTERY_POWER);
+    if (fieldIndex < 0) return;
+    if (99 <= battPM) {
+        printBattCharging(fieldIndex, send);
+    } else if (0 <= battPM) {
+        char level[3] = "";
+        snprintf(level, 3, "%2d", battPM);
+        printField2plus1(fieldIndex, level, "%", send);
+    } else
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
+}
+
+void Display::onBattHRM(int8_t value) {
+    log_i("%d", value);
+    static int8_t lastBattHRM = -1;
+    battHRM = value;
+    if (lastBattHRM == battHRM) return;
+    displayBattHRM();
+    lastBattHRM = battHRM;
+}
+
+void Display::displayBattHRM(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_BATTERY_HEARTRATE);
+    if (fieldIndex < 0) return;
+    if (99 <= battHRM) {
+        printBattCharging(fieldIndex, send);
+    } else if (0 <= battHRM) {
+        char level[3] = "";
+        snprintf(level, 3, "%2d", battHRM);
+        printField2plus1(fieldIndex, level, "%", send);
+    } else
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
+}
+
+void Display::onPMDisconnected() {
+    onPower(-1);
+    onCadence(-1);
+    onBattPM(-1);
+}
+
+void Display::onHRMDisconnected() {
+    onHeartrate(-1);
+    onBattHRM(-1);
+}
+
+void Display::onOta(const char *str) {
+    if (!aquireMutex()) return;
+    Area a = Area(0, 0, width, height - statusArea.h);
+    fillUnrestricted(&a, bg, false);
+    setCursor(3, height / 2);
+    char out[16];
+    snprintf(out, sizeof(out), "OTA: %s", str);
+    setFont(labelFont);
+    setColor(fg);
+    printUnrestricted(out);
+    sendBuffer();
+    releaseMutex();
+}
+
 bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
+    if (nullptr == pad) return false;
+
+    if (board.touch.locked) {
+        if (event == Touch::Event::start) {
+            lockedFeedback(pad->index, lockedColor());
+            return false;
+        }
+        if (event == Touch::Event::quintupleTouch) {
+            return true;  // propagate to unlock
+        }
+        return false;
+    }
+
     assert(pad->index < sizeof(feedback) / sizeof(feedback[0]));
     Area *a = &feedback[pad->index];
     static const uint16_t feedbackDelay = 600;
-
-    if (board.touch.locked) {
-        if (event == Touch::Event::singleTouch || event == Touch::Event::doubleTouch || event == Touch::Event::longTouch) {
-            if (!aquireMutex()) return false;
-            setClip(a);
-            fill(a, bg, false);
-            uint8_t stripeHeight = 2;
-            for (int16_t y = a->y; y <= a->y + a->h - 2; y += stripeHeight * 2) {
-                Area stripe(a->x, y, a->w, stripeHeight);
-                fill(&stripe, fg, false);
-            }
-            sendBuffer();
-            setMaxClip();
-            releaseMutex();
-            queue([this, a]() { fill(a, bg); }, 300);
-            return false;
-        }
-        if (event == Touch::Event::quintupleTouch) return true;  // propagate to unlock
-    }
 
     switch (event) {
         case Touch::Event::start: {
@@ -322,6 +748,92 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
     return true;
 }
 
+void Display::updateStatus(bool forceRedraw) {
+    //  status area
+    static const Area *a = &statusArea;
+
+    static const uint8_t rideXbm[] = {
+        0x00, 0x04, 0x80, 0x0a, 0x40, 0x05, 0xa0, 0x02, 0x50, 0x04, 0xa0, 0x08,
+        0x50, 0x15, 0x80, 0x00, 0x5e, 0x1e, 0xb3, 0x33, 0x61, 0x21, 0x21, 0x21,
+        0x33, 0x33, 0x1e, 0x1e};
+
+    static const uint8_t walkXbm[] = {
+        0x00, 0x00, 0x40, 0x00, 0xe0, 0x00, 0x60, 0x00, 0x70, 0x00, 0xa0, 0x00,
+        0x50, 0x00, 0xa8, 0x01, 0x48, 0x01, 0x68, 0x02, 0x70, 0x00, 0xd8, 0x00,
+        0x8c, 0x00, 0x84, 0x01};
+
+    static const uint8_t standXbm[] = {
+        0x00, 0x00, 0xe0, 0x00, 0xa0, 0x00, 0x00, 0x00, 0x50, 0x01, 0xb0, 0x01,
+        0x50, 0x01, 0xb0, 0x01, 0x50, 0x01, 0xa0, 0x00, 0xa0, 0x00, 0xa0, 0x00,
+        0xa0, 0x00, 0xb0, 0x01};
+
+    static const uint8_t recXbm[] = {
+        0xe0, 0x01, 0xf8, 0x07, 0xfc, 0x0f, 0xfe, 0x1f, 0x3e, 0x1b, 0x1f, 0x32,
+        0xcf, 0x34, 0xcf, 0x34, 0x1f, 0x36, 0x3e, 0x17, 0xfe, 0x17, 0xfc, 0x07,
+        0xf8, 0x07, 0xe0, 0x01};
+
+    static const uint8_t wifiXbm[] = {
+        0x00, 0x00, 0xe0, 0x01, 0x38, 0x07, 0x0c, 0x0c, 0xc6, 0x18, 0xf3, 0x33,
+        0x19, 0x26, 0xcc, 0x0c, 0xe4, 0x09, 0x30, 0x03, 0xc0, 0x00, 0xe0, 0x01,
+        0xe0, 0x01, 0xc0, 0x00};
+
+    static Area icon = Area(a->x, a->y, statusIconSize, statusIconSize);
+
+    static int8_t lastMotionState = -1;
+
+    static int8_t lastWifiState = -1;
+
+    static int8_t lastRecordingState = -1;
+    // 0: not recording, 1: recording but no gps fix yet, 2: recording
+    int8_t recordingState = board.recorder.isRecording ? board.gps.locationIsValid() ? 2 : 1 : 0;
+
+    if (!forceRedraw &&
+        motionState == lastMotionState &&
+        wifiState == lastWifiState &&
+        1 != wifiState &&
+        recordingState == lastRecordingState &&
+        1 != recordingState)
+        return;
+
+    if (!aquireMutex()) return;
+
+    icon.x = a->x;
+    if (recordingState != lastRecordingState || 1 == recordingState || forceRedraw) {
+        fillUnrestricted(&icon, bg, false);
+        static bool recordingBlinkState = false;
+        if (2 == recordingState || (1 == recordingState && recordingBlinkState))
+            drawXBitmap(icon.x, icon.y, icon.w, icon.h, recXbm, fg, false);
+        if (1 == recordingState) recordingBlinkState = !recordingBlinkState;
+    }
+
+    icon.x = a->x + a->w / 2 - statusIconSize / 2;
+    if (wifiState != lastWifiState || 1 == wifiState || forceRedraw) {
+        fillUnrestricted(&icon, bg, false);
+        static bool wifiBlinkState = false;
+        if (2 == wifiState || (1 == wifiState && wifiBlinkState))
+            drawXBitmap(icon.x, icon.y, icon.w, icon.h, wifiXbm, fg, false);
+        if (1 == wifiState) wifiBlinkState = !wifiBlinkState;
+    }
+
+    icon.x = a->x + a->w - statusIconSize;
+    if (motionState != lastMotionState || forceRedraw) {
+        fillUnrestricted(&icon, bg, false);
+        drawXBitmap(icon.x, icon.y, icon.w, icon.h,
+                    2 == motionState
+                        ? rideXbm
+                    : 1 == motionState
+                        ? walkXbm
+                        : standXbm,
+                    fg, false);
+    }
+    sendBuffer();
+    releaseMutex();
+
+    lastMotionState = motionState;
+    lastWifiState = wifiState;
+    lastRecordingState = recordingState;
+}
+
 void Display::onWifiStateChange() {
     wifiState = board.wifi.isEnabled()
                     ? board.wifi.isConnected()
@@ -329,3 +841,87 @@ void Display::onWifiStateChange() {
                           : 1
                     : 0;
 }
+
+void Display::logArea(Area *a, Area *b, const char *str, const char *areaType) const {
+    if (b->equals(a))
+        log_i("%s %s", str, areaType);
+    else if (b->contains(a))
+        log_i("%s contains %s", str, areaType);
+    else if (b->touches(a))
+        log_i("%s touches %s", str, areaType);
+}
+
+void Display::logAreas(Area *a, const char *str) const {
+    char areaType[10] = "";
+    for (uint8_t i = 0; i < numFields; i++) {
+        snprintf(areaType, 10, "field%d", i);
+        logArea((Area *)&field[i].area, a, str, areaType);
+    }
+    for (uint8_t i = 0; i < numFeedback; i++) {
+        snprintf(areaType, 10, "feedback%d", i);
+        logArea((Area *)&feedback[i], a, str, areaType);
+    }
+    logArea((Area *)&clockArea, a, str, "clock");
+    logArea((Area *)&statusArea, a, str, "status");
+}
+
+// returns false if an item was overwritten (queue was full)
+bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
+    if (0 == delayMs) {
+        log_w("delay is zero, executing callback");
+        callback();
+        return true;
+    }
+    ulong t = millis();
+
+    if (_queue.isFull()) log_w("queue is full");
+    QueueItem item;
+    item.after = t + delayMs;
+    item.callback = callback;
+    bool result = _queue.push(item);
+    if (t + delayMs < taskGetNextWakeTimeMs())
+        taskSetDelay(delayMs);
+    return result;
+}
+
+void Display::taskStart(float freq,
+                        uint32_t stack,
+                        int8_t priority,
+                        int8_t core) {
+    Atoll::Task::taskStart(freq, stack, priority, core);
+    defaultTaskFreq = _taskFreq;
+    defaultTaskDelay = _taskDelay;
+}
+
+void Display::onLockChanged(bool locked) {
+    for (uint8_t i = 0; i < numFeedback; i++) {
+        if (locked) {
+            lockedFeedback(i, unlockedColor(), 200);
+            queue([this, i]() { lockedFeedback(i, lockedColor(), 500); }, 300);
+        } else {
+            lockedFeedback(i, lockedColor(), 200);
+            queue([this, i]() { lockedFeedback(i, unlockedColor(), 500); }, 300);
+        }
+    }
+}
+
+void Display::lockedFeedback(uint8_t padIndex, uint16_t color, uint16_t delayMs) {
+    if (!aquireMutex()) return;
+    assert(padIndex < sizeof(feedback) / sizeof(feedback[0]));
+    Area *a = &feedback[padIndex];
+    setClip(a);
+    fill(a, bg, false);
+    uint8_t stripeHeight = 2;
+    for (int16_t y = a->y; y <= a->y + a->h - stripeHeight; y += stripeHeight * 2) {
+        Area stripe(a->x, y, a->w, stripeHeight);
+        fill(&stripe, color, false);
+    }
+    sendBuffer();
+    setMaxClip();
+    releaseMutex();
+    queue([this, a]() { fill(a, bg); }, delayMs);
+}
+
+uint16_t Display::lockedColor() { return fg; }
+
+uint16_t Display::unlockedColor() { return fg; }
