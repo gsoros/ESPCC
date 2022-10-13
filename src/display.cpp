@@ -15,7 +15,7 @@ Display::Display(uint16_t width,
         field[i] = OutputField();
     for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
         feedback[i] = Area();
-    _queue.clear();
+    //_queue.clear();
     if (nullptr == mutex)
         defaultMutex = xSemaphoreCreateMutex();
     else
@@ -25,6 +25,8 @@ Display::Display(uint16_t width,
 Display::~Display() {}
 
 void Display::setup() {
+    _queue = xQueueCreate(8, sizeof(QueueItem));
+    if (NULL == _queue) log_e("error creating _queue");
     // log_i("setMaxClip()");
     setMaxClip();
 }
@@ -36,22 +38,27 @@ void Display::loop() {
     // log_i("loop %dms", lastLoopTime ? t - lastLoopTime : 0);
     // lastLoopTime = t;
 
-    if (!_queue.isEmpty()) {
+    uint8_t queueNumItems = (uint8_t)uxQueueMessagesWaiting(_queue);
+    if (0 != queueNumItems) {
         ulong nextCallTime = 0;
-        for (uint8_t i = 0; i < _queue.size(); i++) {
-            QueueItem item = _queue.shift();
+        for (uint8_t i = 0; i < queueNumItems; i++) {
+            QueueItem item;
+            if (pdPASS != xQueueReceive(_queue, &(item), 0)) {
+                log_e("failed to get item from queue");
+                continue;
+            }
             if (item.after <= millis()) {
-                // log_i("executing queued item #%d", i);
+                log_i("executing queued item #%d", i);
                 item.callback();
             } else {
-                // log_i("delaying queued item #%d", i);
-                _queue.push(item);
+                log_i("delaying queued item #%d", i);
+                queue(item);
                 if (!nextCallTime || item.after < nextCallTime)
                     nextCallTime = item.after;
             }
         }
-        if (_queue.isEmpty()) {
-            // log_i("queue empty, setting default delay %dms", defaultTaskDelay);
+        if (0 == uxQueueMessagesWaiting(_queue)) {
+            log_i("queue empty, setting default delay %dms", defaultTaskDelay);
             taskSetDelay(defaultTaskDelay);
         } else {
             // log_i("queue not empty");
@@ -62,21 +69,28 @@ void Display::loop() {
                 uint16_t delay = 0;
                 t = millis();
                 if (t < nextCallTime) delay = nextCallTime - t;
-                // log_i("setting delay %dms", delay);
+                log_i("setting delay %dms", delay);
                 taskSetDelay(delay);
             }
         }
     }
     // log_i("queue run done");
 
+    if (!enabled) {
+        log_i("not enabled");
+        return;
+    }
     static ulong lastStatusUpdate = 0;
     t = millis();
     if (t - 1000 < lastStatusUpdate) return;
     lastStatusUpdate = t;
+    // log_i("updateStatus()");
     updateStatus();
 
-    if (lastFieldUpdate < t - 15000 && Atoll::systemTimeLastSet())
+    if (lastFieldUpdate < t - 15000 && Atoll::systemTimeLastSet()) {
+        // log_i("clock()");
         clock();
+    }
 
     // static ulong lastFake = 0;
     // static double fake = 0.0;
@@ -338,16 +352,18 @@ uint8_t Display::fieldLabelVPos(uint8_t fieldHeight) {
     return fieldHeight / 2;
 }
 
-void Display::splash() {
-    if (!aquireMutex()) return;
+void Display::splash(bool send) {
+    if (send && !aquireMutex()) return;
     Area *a = &field[0].area;
     setClip(a);
     setFont(smallFont);
     setCursor(a->x + 10, a->y + a->h - 5);
     print("espcc");
-    sendBuffer();
     setMaxClip();
-    releaseMutex();
+    if (send) {
+        sendBuffer();
+        releaseMutex();
+    }
 }
 
 bool Display::setContrast(uint8_t percent) {
@@ -865,7 +881,6 @@ void Display::logAreas(Area *a, const char *str) const {
     logArea((Area *)&statusArea, a, str, "status");
 }
 
-// returns false if an item was overwritten (queue was full)
 bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
     if (0 == delayMs) {
         log_w("delay is zero, executing callback");
@@ -874,14 +889,24 @@ bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
     }
     ulong t = millis();
 
-    if (_queue.isFull()) log_w("queue is full");
+    if (0 == uxQueueSpacesAvailable(_queue)) {
+        log_w("queue is full");
+        return false;
+    }
     QueueItem item;
     item.after = t + delayMs;
     item.callback = callback;
-    bool result = _queue.push(item);
+    if (pdPASS != xQueueSendToBack(_queue, (void *)&item, 0)) {
+        log_e("could not insert item into queue");
+        return false;
+    }
     if (t + delayMs < taskGetNextWakeTimeMs())
         taskSetDelay(delayMs);
-    return result;
+    return true;
+}
+
+bool Display::queue(QueueItem item) {
+    return queue(item.callback, item.after - millis());
 }
 
 void Display::taskStart(float freq,
@@ -925,3 +950,20 @@ void Display::lockedFeedback(uint8_t padIndex, uint16_t color, uint16_t delayMs)
 uint16_t Display::lockedColor() { return fg; }
 
 uint16_t Display::unlockedColor() { return fg; }
+
+bool Display::aquireMutex(uint32_t timeout) {
+    // log_d("aquireMutex %d", (int)mutex);
+    if (!enabled) {
+        log_i("not enabled");
+        return false;
+    }
+    if (xSemaphoreTake(*mutex, (TickType_t)timeout) == pdTRUE)
+        return true;
+    log_i("could not aquire mutex");
+    return false;
+}
+
+void Display::releaseMutex() {
+    // log_d("releaseMutex %d", (int)mutex);
+    xSemaphoreGive(*mutex);
+}

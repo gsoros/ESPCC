@@ -181,16 +181,20 @@ void Lcd::setup(uint8_t backlightPin) {
     setTextColor(fg);
     if (aquireMutex()) {
         fillScreen(bg);
+        log_i("diag()");
+        diag(false);
+        sendBuffer();
         releaseMutex();
+        enabled = false;
+        queue([this]() {
+            enabled = true;
+            fillScreen(bg);
+            splash();
+            enabled = false;
+            queue([this]() { enabled = true; }, 2000);
+        },
+              2000);
     }
-    diag();
-    delay(5000);
-    if (aquireMutex()) {
-        fillScreen(bg);
-        releaseMutex();
-    }
-    splash();
-
     for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
         log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
     for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
@@ -420,8 +424,8 @@ void Lcd::backlight(uint8_t state) {
     digitalWrite(this->backlightPin, backlightState);
 }
 
-void Lcd::diag() {
-    if (!aquireMutex()) return;
+void Lcd::diag(bool send) {
+    if (send && !aquireMutex()) return;
     fill(&field[0].area, rgb888to565(255, 0, 0), false);
     fill(&field[1].area, rgb888to565(0, 255, 0), false);
     fill(&field[2].area, rgb888to565(0, 0, 255), false);
@@ -433,8 +437,10 @@ void Lcd::diag() {
     // printField(0, "1234");
     // printField(1, "567");
     // printField(2, "890");
-    sendBuffer();
-    releaseMutex();
+    if (send) {
+        sendBuffer();
+        releaseMutex();
+    }
 }
 
 uint16_t Lcd::lockedColor() { return RED; }

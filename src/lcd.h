@@ -60,7 +60,7 @@ class Lcd : public Display, public Arduino_Canvas {
     virtual uint16_t unlockedColor() override;
 
     void backlight(uint8_t state);
-    void diag();
+    void diag(bool send = true);
 
    protected:
     Arduino_GFX *device;

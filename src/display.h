@@ -169,7 +169,7 @@ class Display : public Atoll::Task, public Print {
                                      bool send = true);
     virtual int fieldLabel(FieldContent content, char *buf, size_t len);
     virtual uint8_t fieldLabelVPos(uint8_t fieldHeight);
-    virtual void splash();
+    virtual void splash(bool send = true);
 
     virtual bool setContrast(uint8_t percent);
     virtual void onPower(int16_t value);
@@ -202,8 +202,10 @@ class Display : public Atoll::Task, public Print {
     virtual void onWifiStateChange();
     virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const;
     virtual void logAreas(Area *a, const char *str) const;
-    // returns false if an item was overwritten (queue was full)
+    // returns false if queue is full or item cannot be inserted
     virtual bool queue(QueueItemCallback callback, uint16_t delayMs);
+    // returns false if queue is full or item cannot be inserted
+    virtual bool queue(QueueItem item);
     virtual void taskStart(float freq = -1,
                            uint32_t stack = 0,
                            int8_t priority = -1,
@@ -270,22 +272,13 @@ class Display : public Atoll::Task, public Print {
 
     float defaultTaskFreq = 0;
     TickType_t defaultTaskDelay = 0;
-    CircularBuffer<QueueItem, 8> _queue;
+    QueueHandle_t _queue;
     SemaphoreHandle_t defaultMutex;
     SemaphoreHandle_t *mutex = &defaultMutex;
+    bool enabled = true;
 
-    virtual bool aquireMutex(uint32_t timeout = 100) {
-        // log_d("aquireMutex %d", (int)mutex);
-        if (xSemaphoreTake(*mutex, (TickType_t)timeout) == pdTRUE)
-            return true;
-        log_i("Could not aquire mutex");
-        return false;
-    }
-
-    virtual void releaseMutex() {
-        // log_d("releaseMutex %d", (int)mutex);
-        xSemaphoreGive(*mutex);
-    }
+    virtual bool aquireMutex(uint32_t timeout = 100);
+    virtual void releaseMutex() ;
 };
 
 #endif
