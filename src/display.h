@@ -136,9 +136,10 @@ class Display : public Atoll::Task, public Print {
 
     virtual void setClip(const Area *a);
     virtual void setMaxClip();
-    virtual void setColor(int16_t color);
-    virtual void setColor(int16_t fg, int16_t bg);
-    virtual void setBgColor(int16_t color);
+    virtual void setColor(uint16_t color);
+    virtual uint16_t getColor();
+    virtual void setColor(uint16_t fg, uint16_t bg);
+    virtual void setBgColor(uint16_t color);
     virtual size_t print(const char *str);
 
     virtual size_t printUnrestricted(const char *str);
@@ -170,6 +171,7 @@ class Display : public Atoll::Task, public Print {
     virtual int fieldLabel(FieldContent content, char *buf, size_t len);
     virtual uint8_t fieldLabelVPos(uint8_t fieldHeight);
     virtual void splash(bool send = true);
+    virtual void message(const char *m, bool send = true);
 
     virtual bool setContrast(uint8_t percent);
     virtual void onPower(int16_t value);
@@ -212,8 +214,10 @@ class Display : public Atoll::Task, public Print {
                            int8_t core = -1) override;
     virtual void onLockChanged(bool locked);
     virtual void lockedFeedback(uint8_t padIndex, uint16_t color, uint16_t delayMs = 300);
-    virtual uint16_t lockedColor();
-    virtual uint16_t unlockedColor();
+    virtual uint16_t lockedFg();
+        virtual uint16_t lockedBg();
+    virtual uint16_t unlockedFg();
+    virtual uint16_t unlockedBg();
 
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));
@@ -278,7 +282,7 @@ class Display : public Atoll::Task, public Print {
     bool enabled = true;
 
     virtual bool aquireMutex(uint32_t timeout = 100);
-    virtual void releaseMutex() ;
+    virtual void releaseMutex();
 };
 
 #endif

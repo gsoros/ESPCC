@@ -34,9 +34,9 @@ void Display::setup() {
 void Display::loop() {
     ulong t = millis();
 
-    // static ulong lastLoopTime = 0;
-    // log_i("loop %dms", lastLoopTime ? t - lastLoopTime : 0);
-    // lastLoopTime = t;
+    static ulong lastLoopTime = t;
+    log_i("loop %dms", lastLoopTime ? t - lastLoopTime : 0);
+    lastLoopTime = t;
 
     uint8_t queueNumItems = (uint8_t)uxQueueMessagesWaiting(_queue);
     if (0 != queueNumItems) {
@@ -48,10 +48,10 @@ void Display::loop() {
                 continue;
             }
             if (item.after <= millis()) {
-                log_i("executing queued item #%d", i);
+                // log_i("executing queued item #%d", i);
                 item.callback();
             } else {
-                log_i("delaying queued item #%d", i);
+                // log_i("delaying queued item #%d", i);
                 queue(item);
                 if (!nextCallTime || item.after < nextCallTime)
                     nextCallTime = item.after;
@@ -63,9 +63,8 @@ void Display::loop() {
         } else {
             // log_i("queue not empty");
             nextCallTime = min(nextCallTime, millis() + pdTICKS_TO_MS(defaultTaskDelay));
-            // ulong nextWakeTime = taskGetNextWakeTimeMs();
-            // if (nextCallTime < nextWakeTime) {
-            if (nextCallTime) {
+            ulong nextWakeTime = taskGetNextWakeTimeMs();
+            if (nextCallTime < nextWakeTime) {
                 uint16_t delay = 0;
                 t = millis();
                 if (t < nextCallTime) delay = nextCallTime - t;
@@ -109,16 +108,20 @@ void Display::setMaxClip() {
     setClip(0, 0, width, height);
 }
 
-void Display::setColor(int16_t color) {
+void Display::setColor(uint16_t color) {
     fg = color;
 }
 
-void Display::setColor(int16_t fg, int16_t bg) {
+uint16_t Display::getColor() {
+    return fg;
+}
+
+void Display::setColor(uint16_t fg, uint16_t bg) {
     this->fg = fg;
     this->bg = bg;
 }
 
-void Display::setBgColor(int16_t color) {
+void Display::setBgColor(uint16_t color) {
     bg = color;
 }
 
@@ -135,6 +138,10 @@ void Display::printField(const uint8_t fieldIndex,
                          const char *str,
                          const bool send,
                          const uint8_t *font) {
+    if (!enabled) {
+        log_i("not enabled");
+        return;
+    }
     // log_i("field %d %s", fieldIndex, str);
     assert(fieldIndex < sizeof(field) / sizeof(field[0]));
     if (send && !aquireMutex()) return;
@@ -225,6 +232,10 @@ void Display::printField2plus1(const uint8_t fieldIndex,
                                const char *two,
                                const char *one,
                                const bool send) {
+    if (!enabled) {
+        log_i("not enabled");
+        return;
+    }
     Area *a = &field[fieldIndex].area;
     if (send && !aquireMutex()) return;
     if (0 < lastMinute)
@@ -353,12 +364,16 @@ uint8_t Display::fieldLabelVPos(uint8_t fieldHeight) {
 }
 
 void Display::splash(bool send) {
+    message("espcc", send);
+}
+
+void Display::message(const char *m, bool send) {
     if (send && !aquireMutex()) return;
     Area *a = &field[0].area;
     setClip(a);
     setFont(smallFont);
     setCursor(a->x + 10, a->y + a->h - 5);
-    print("espcc");
+    print(m);
     setMaxClip();
     if (send) {
         sendBuffer();
@@ -640,7 +655,7 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
 
     if (board.touch.locked) {
         if (event == Touch::Event::start) {
-            lockedFeedback(pad->index, lockedColor());
+            lockedFeedback(pad->index, lockedFg());
             return false;
         }
         if (event == Touch::Event::quintupleTouch) {
@@ -665,8 +680,9 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
         case Touch::Event::singleTouch: {
             log_i("pad %d single", pad->index);
             fill(a, fg);
-            queue([this, a]() { fill(a, bg); }, 300);
-
+            if (queue([this, a]() { fill(a, bg); }, 300)) {
+                // log_i("queued pad #%d clear in 300ms", pad->index);
+            }
             currentPage++;
             if (numPages <= currentPage) currentPage = 0;
             log_i("currentPage %d", currentPage);
@@ -689,8 +705,16 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             setMaxClip();
             releaseMutex();
             lastFieldUpdate = millis();
-            queue([this]() { displayFieldValues(); }, 3000);
-
+            enabled = false;
+            if (queue([this]() {
+                    enabled = true;
+                    displayFieldValues();
+                },
+                      3000)) {
+                // log_i("queued enable; displayFieldValues() in 3000ms");
+            } else {
+                enabled = true;
+            }
             return false;  // do not propagate
         }
 
@@ -707,7 +731,9 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 fill(&b, fg, false);  // area 3 white
                 sendBuffer();
                 releaseMutex();
-                queue([this, a]() { fill(a, bg, true); }, feedbackDelay);  // clear
+                if (queue([this, a]() { fill(a, bg, true); }, feedbackDelay)) {
+                    // log_i("queued pad #%d clear in %dms", pad->index, feedbackDelay);
+                }
             }
             return true;
         }
@@ -730,7 +756,9 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
         case Touch::Event::longTouch: {
             log_i("pad %d long", pad->index);
             fill(a, fg);
-            queue([this, a]() { fill(a, bg, true); }, feedbackDelay);  // clear
+            if (queue([this, a]() { fill(a, bg, true); }, feedbackDelay)) {
+                // log_i("queued pad #%d clear in %dms", pad->index, feedbackDelay);
+            }
             return true;
         }
 
@@ -738,7 +766,9 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             // log_i("pad %d touching", pad->index);
             if (pad->start + Touch::longTouchTime < millis()) {  // animation completed, still touching
                 fill(a, fg);
-                queue([this, a]() { fill(a, bg, true); }, feedbackDelay);  // clear
+                if (queue([this, a]() { fill(a, bg, true); }, feedbackDelay)) {
+                    // log_i("queued pad #%d clear in %dms", pad->index, feedbackDelay);
+                }
                 return true;
             }
             // log_i("pad %d animating", pad->index);
@@ -883,7 +913,7 @@ void Display::logAreas(Area *a, const char *str) const {
 
 bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
     if (0 == delayMs) {
-        log_w("delay is zero, executing callback");
+        // log_w("delay is zero, executing callback");
         callback();
         return true;
     }
@@ -900,8 +930,12 @@ bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
         log_e("could not insert item into queue");
         return false;
     }
-    if (t + delayMs < taskGetNextWakeTimeMs())
+    // log_i("queued item %dms", delayMs);
+    if (t + delayMs < taskGetNextWakeTimeMs()) {
+        // log_i("next task wake is in %dms, setting task delay to %dms",
+        //       taskGetNextWakeTimeMs() - t, delayMs);
         taskSetDelay(delayMs);
+    }
     return true;
 }
 
@@ -919,14 +953,43 @@ void Display::taskStart(float freq,
 }
 
 void Display::onLockChanged(bool locked) {
-    for (uint8_t i = 0; i < numFeedback; i++) {
-        if (locked) {
-            lockedFeedback(i, unlockedColor(), 200);
-            queue([this, i]() { lockedFeedback(i, lockedColor(), 500); }, 300);
-        } else {
-            lockedFeedback(i, lockedColor(), 200);
-            queue([this, i]() { lockedFeedback(i, unlockedColor(), 500); }, 300);
-        }
+    uint8_t i;
+    /*
+    uint16_t oldColor = locked ? unlockedFg() : lockedFg();
+    uint16_t newColor = locked ? lockedFg() : unlockedFg();
+    for (i = 0; i < numFeedback; i++) {
+        lockedFeedback(i, oldColor, 0);
+    }
+    if (queue([this, newColor]() {
+            for (uint8_t i = 0; i < numFeedback; i++) {
+                lockedFeedback(i, newColor, 0);
+            }
+        },
+              200)) {
+        // log_i("queued lockedFeedback all in %dms", 200);
+    }
+    if (queue([this]() {
+            for (uint8_t i = 0; i < numFeedback; i++) {
+                fill(&feedback[i], bg);
+            }
+        },
+              500)) {
+        // log_i("queued lockedFeedback all clear in %dms", 500);
+    }
+    */
+    fill(&field[0].area, locked ? lockedBg() : unlockedBg());
+    uint16_t savedFg = getColor();
+    setColor(locked ? lockedFg() : unlockedFg());
+    message(locked ? "locked" : "unlocked");
+    setColor(savedFg);
+    enabled = false;
+    if (!queue([this]() {
+            enabled = true;
+            displayFieldContent(0, field[0].content[currentPage]);
+        },
+               3000)) {
+        log_w("could not queue displayFieldContent");
+        enabled = true;
     }
 }
 
@@ -944,19 +1007,24 @@ void Display::lockedFeedback(uint8_t padIndex, uint16_t color, uint16_t delayMs)
     sendBuffer();
     setMaxClip();
     releaseMutex();
-    queue([this, a]() { fill(a, bg); }, delayMs);
+    if (0 < delayMs) {
+        if (queue([this, a]() { fill(a, bg); }, delayMs)) {
+            // log_i("queued pad #%d clear in %dms", padIndex, delayMs);
+        }
+    }
 }
 
-uint16_t Display::lockedColor() { return fg; }
-
-uint16_t Display::unlockedColor() { return fg; }
+uint16_t Display::lockedFg() { return fg; }
+uint16_t Display::lockedBg() { return bg; }
+uint16_t Display::unlockedFg() { return fg; }
+uint16_t Display::unlockedBg() { return bg; }
 
 bool Display::aquireMutex(uint32_t timeout) {
     // log_d("aquireMutex %d", (int)mutex);
-    if (!enabled) {
-        log_i("not enabled");
-        return false;
-    }
+    // if (!enabled) {
+    //     log_i("not enabled");
+    //     return false;
+    // }
     if (xSemaphoreTake(*mutex, (TickType_t)timeout) == pdTRUE)
         return true;
     log_i("could not aquire mutex");

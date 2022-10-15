@@ -181,19 +181,23 @@ void Lcd::setup(uint8_t backlightPin) {
     setTextColor(fg);
     if (aquireMutex()) {
         fillScreen(bg);
-        log_i("diag()");
+        // log_i("diag(), disabled");
         diag(false);
         sendBuffer();
         releaseMutex();
         enabled = false;
-        queue([this]() {
-            enabled = true;
-            fillScreen(bg);
-            splash();
-            enabled = false;
-            queue([this]() { enabled = true; }, 2000);
-        },
-              2000);
+        if (queue([this]() {
+                enabled = true;
+                fillScreen(bg);
+                splash();
+                enabled = false;
+                if (queue([this]() { enabled = true; }, 2000)) {
+                    // log_i("queued enable after 2000ms");
+                }
+            },
+                  2000)) {
+            // log_i("queued splash after 2000ms");
+        }
     }
     for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
         log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
@@ -291,6 +295,11 @@ void Lcd::setFont(const uint8_t *font) {
         return;
     }
     Arduino_Canvas::setFont(font);
+}
+
+void Lcd::setColor(uint16_t color) {
+    Display::setColor(color);
+    setTextColor(color);
 }
 
 void Lcd::fill(const Area *a, uint16_t color, bool send) {
@@ -443,6 +452,7 @@ void Lcd::diag(bool send) {
     }
 }
 
-uint16_t Lcd::lockedColor() { return RED; }
-
-uint16_t Lcd::unlockedColor() { return GREEN; }
+uint16_t Lcd::lockedFg() { return WHITE; }
+uint16_t Lcd::lockedBg() { return RED; }
+uint16_t Lcd::unlockedFg() { return WHITE; }
+uint16_t Lcd::unlockedBg() { return DARKGREEN; }

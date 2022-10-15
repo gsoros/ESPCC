@@ -39,6 +39,7 @@ class Lcd : public Display, public Arduino_Canvas {
     virtual void setClip(int16_t x, int16_t y, int16_t w, int16_t h);
     virtual size_t write(uint8_t c);
     virtual void setFont(const uint8_t *font) override;
+    virtual void setColor(uint16_t color);
     virtual void fill(const Area *a, uint16_t color, bool send = true) override;
     virtual void fillUnrestricted(const Area *a, uint16_t color, bool send = true);
     virtual void setCursor(int16_t x, int16_t y) override;
@@ -56,8 +57,10 @@ class Lcd : public Display, public Arduino_Canvas {
     // the return value indicates whether the event should propagate
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event) override;
 
-    virtual uint16_t lockedColor() override;
-    virtual uint16_t unlockedColor() override;
+    virtual uint16_t lockedFg() override;
+    virtual uint16_t lockedBg() override;
+    virtual uint16_t unlockedFg() override;
+    virtual uint16_t unlockedBg() override;
 
     void backlight(uint8_t state);
     void diag(bool send = true);
