@@ -181,23 +181,11 @@ void Lcd::setup(uint8_t backlightPin) {
     setTextColor(fg);
     if (aquireMutex()) {
         fillScreen(bg);
-        // log_i("diag(), disabled");
-        diag(false);
+        splash();
         sendBuffer();
-        releaseMutex();
         enabled = false;
-        if (queue([this]() {
-                enabled = true;
-                fillScreen(bg);
-                splash();
-                enabled = false;
-                if (queue([this]() { enabled = true; }, 2000)) {
-                    // log_i("queued enable after 2000ms");
-                }
-            },
-                  2000)) {
-            // log_i("queued splash after 2000ms");
-        }
+        releaseMutex();
+        if (!queue([this]() { enabled = true; }, 500)) enabled = true;
     }
     for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
         log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);

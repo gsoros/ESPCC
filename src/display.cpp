@@ -221,11 +221,17 @@ void Display::printFieldDouble(const uint8_t fieldIndex,
         printfFieldDigits(fieldIndex, send, "%3d", (int)value);
         return;
     }
+    char n[5];
+    snprintf(n, sizeof(n), "%4.1f", value);
     char inte[3];
-    snprintf(inte, sizeof(inte), "%2.0f", value);  // digits before the decimal point
+    inte[0] = n[0];
+    inte[1] = n[1];
+    inte[2] = 0;
     char dec[2];
-    snprintf(dec, sizeof(dec), "%1d", abs((int)(value * 10)) % 10);  // first digit after the decimal point
+    dec[0] = n[3];
+    dec[1] = 0;
     printField2plus1(fieldIndex, inte, dec, send);
+    // log_i("'%4.1f' -> '%s' -> '%s.%s'", value, n, inte, dec);
 }
 
 void Display::printField2plus1(const uint8_t fieldIndex,

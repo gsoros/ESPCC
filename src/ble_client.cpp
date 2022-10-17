@@ -146,11 +146,12 @@ bool BleClient::tarePowerMeter() {
             log_i("peer #%d api rx char is null 1", i);
             continue;
         };
-        if (nullptr == apiRX->characteristic) {
-            log_i("peer #%d char is null 2", i);
+        BLERemoteCharacteristic *rc = apiRX->getRemoteChar();
+        if (nullptr == rc) {
+            log_i("peer #%d remote char is null", i);
             continue;
         }
-        if (apiRX->characteristic->canWrite()) {
+        if (!rc->canWrite()) {
             log_i("peer #%d char is not writable", i);
             continue;
         }
