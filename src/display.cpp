@@ -34,9 +34,9 @@ void Display::setup() {
 void Display::loop() {
     ulong t = millis();
 
-    static ulong lastLoopTime = t;
-    log_i("loop %dms", lastLoopTime ? t - lastLoopTime : 0);
-    lastLoopTime = t;
+    // static ulong lastLoopTime = t;
+    // log_i("loop %dms", lastLoopTime ? t - lastLoopTime : 0);
+    // lastLoopTime = t;
 
     uint8_t queueNumItems = (uint8_t)uxQueueMessagesWaiting(_queue);
     if (0 != queueNumItems) {
@@ -76,7 +76,7 @@ void Display::loop() {
     // log_i("queue run done");
 
     if (!enabled) {
-        log_i("not enabled");
+        // log_i("not enabled");
         return;
     }
     static ulong lastStatusUpdate = 0;

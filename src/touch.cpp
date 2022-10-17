@@ -12,7 +12,9 @@ void Touch::fireEvent(uint8_t index, Event event) {
     }
     switch (event) {
         case Event::longTouch: {
-            if (board.recorder.start()) {
+            if (1 == index) {  // top right
+                board.bleClient.tarePowerMeter();
+            } else if (board.recorder.start()) {
                 // disable wifi but don't save
                 board.wifi.setEnabled(false, false);
             }

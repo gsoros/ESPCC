@@ -2,7 +2,7 @@
 #define __ble_server_h
 
 #include "definitions.h"
-#include "atoll_ble_constants.h"
+#include "atoll_api.h"
 
 #define BLE_APPEARANCE APPEARANCE_CYCLING_COMPUTER
 

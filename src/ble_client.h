@@ -19,9 +19,11 @@ class BleClient : public Atoll::BleClient {
 
     virtual uint32_t startScan(uint32_t duration);
     virtual bool callScanStart(uint32_t duration);
+    virtual bool tarePowerMeter();
 
    protected:
-    virtual void onResult(BLEAdvertisedDevice *advertisedDevice);
+    virtual void
+    onResult(BLEAdvertisedDevice *advertisedDevice);
     static void onScanComplete(BLEScanResults results);
 };
 
