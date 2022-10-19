@@ -129,37 +129,20 @@ bool BleClient::callScanStart(uint32_t duration) {
 bool BleClient::tarePowerMeter() {
     for (uint8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) {
-            log_i("peer #%d is null", i);
+            // log_i("peer #%d is null", i);
             continue;
         }
         if (!peers[i]->isConnected()) {
             log_i("peer #%d not connected", i);
             continue;
         }
-        if (nullptr == strchr(peers[i]->type, 'E')) {
+        if (!peers[i]->isESPM()) {
             log_i("peer #%d not ESPM", i);
             continue;
         }
         ESPM *espm = (ESPM *)peers[i];
-        Atoll::PeerCharacteristicApiRX *apiRX = (Atoll::PeerCharacteristicApiRX *)espm->getChar("ApiRX");
-        if (nullptr == apiRX) {
-            log_i("peer #%d api rx char is null 1", i);
-            continue;
-        };
-        BLERemoteCharacteristic *rc = apiRX->getRemoteChar();
-        if (nullptr == rc) {
-            log_i("peer #%d remote char is null", i);
-            continue;
-        }
-        if (!rc->canWrite()) {
-            log_i("peer #%d char is not writable", i);
-            continue;
-        }
-        if (!apiRX->write("tare=0", 7)) {
-            log_i("peer #%d could not write char", i);
-            continue;
-        } else {
-            log_i("tare command sent");
+        if (espm->sendApiCommand("tare=0")) {
+            log_i("peer #%d tare command sent");
             return true;
         }
     }

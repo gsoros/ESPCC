@@ -1,16 +1,6 @@
 Import("env")
 
 env.AddCustomTarget(
-    name="j3build",
-    dependencies=None,
-    actions=[
-        "platformio run -j 3",
-    ],
-    title="j3build",
-    description="Build (max 3 jobs)"
-)
-
-env.AddCustomTarget(
     name="j2build",
     dependencies=None,
     actions=[
@@ -28,6 +18,16 @@ env.AddCustomTarget(
     ],
     title="j2upload",
     description="Upload (max 2 jobs)"
+)
+
+env.AddCustomTarget(
+    name="j3build",
+    dependencies=None,
+    actions=[
+        "platformio run -j 3",
+    ],
+    title="j3build",
+    description="Build (max 3 jobs)"
 )
 
 env.AddCustomTarget(

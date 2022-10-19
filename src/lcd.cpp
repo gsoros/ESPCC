@@ -168,24 +168,24 @@ Lcd::~Lcd() {
 }
 
 void Lcd::setup(uint8_t backlightPin) {
+    Display::setup();
+    Arduino_Canvas::begin();
+    fillScreen(bg);
     if (INT8_MAX < backlightPin)
         log_e("pin out of range");
     else
         this->backlightPin = (int8_t)backlightPin;
     pinMode(backlightPin, OUTPUT);
     backlight(backlightState);
-    Arduino_Canvas::begin();
     // device->begin();
-    Display::setup();
     setTextWrap(false);
     setTextColor(fg);
     if (aquireMutex()) {
-        fillScreen(bg);
-        splash();
+        splash(false);
         sendBuffer();
         enabled = false;
         releaseMutex();
-        if (!queue([this]() { enabled = true; }, 500)) enabled = true;
+        if (!queue([this]() { enabled = true; }, 2000)) enabled = true;
     }
     for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
         log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
