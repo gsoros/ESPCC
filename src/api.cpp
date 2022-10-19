@@ -194,7 +194,7 @@ ApiResult *Api::scanProcessor(ApiMessage *msg) {
         snprintf(msg->reply, sizeof(msg->reply), "%s", "already scanning");
         return error();
     }
-    board.bleClient.startScan(duration);
+    board.bleClient.startScan(duration * 1000);  // convert duration from seconds to milliseconds
     snprintf(msg->reply, sizeof(msg->reply), "%d", duration);
     return success();
 }

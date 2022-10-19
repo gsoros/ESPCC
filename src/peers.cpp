@@ -1,18 +1,18 @@
 #include "board.h"
 #include "peers.h"
 
-void PowerMeter::onDisconnect(BLEClient* client) {
-    Atoll::PowerMeter::onDisconnect(client);
+void PowerMeter::onDisconnect(BLEClient* client, int reason) {
+    Atoll::PowerMeter::onDisconnect(client, reason);
     board.display.onPMDisconnected();
 }
 
-void ESPM::onDisconnect(BLEClient* client) {
-    Atoll::ESPM::onDisconnect(client);
+void ESPM::onDisconnect(BLEClient* client, int reason) {
+    Atoll::ESPM::onDisconnect(client, reason);
     board.display.onPMDisconnected();
 }
 
-void HeartrateMonitor::onDisconnect(BLEClient* client) {
-    Atoll::HeartrateMonitor::onDisconnect(client);
+void HeartrateMonitor::onDisconnect(BLEClient* client, int reason) {
+    Atoll::HeartrateMonitor::onDisconnect(client, reason);
     board.display.onHRMDisconnected();
 }
 

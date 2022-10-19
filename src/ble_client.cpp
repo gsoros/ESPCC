@@ -121,11 +121,6 @@ uint32_t BleClient::startScan(uint32_t duration) {
     return ret;
 }
 
-// overriden in order to call our version of static onScanComplete
-bool BleClient::callScanStart(uint32_t duration) {
-    return scan->start(duration, onScanComplete, false);
-}
-
 bool BleClient::tarePowerMeter() {
     for (uint8_t i = 0; i < peersMax; i++) {
         if (nullptr == peers[i]) {
@@ -189,8 +184,8 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
     delete peer;
 }
 
-void BleClient::onScanComplete(BLEScanResults results) {
-    Atoll::BleClient::onScanComplete(results);
+void BleClient::onScanEnd(BLEScanResults results) {
+    Atoll::BleClient::onScanEnd(results);
 
     char reply[ATOLL_API_MSG_REPLY_LENGTH];
     snprintf(reply, sizeof(reply), "%d;%d=%d",

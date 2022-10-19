@@ -27,7 +27,7 @@ class PowerMeter : public Atoll::PowerMeter {
               new PowerChar(),
               new BattPMChar()) {}
 
-    virtual void onDisconnect(BLEClient* client) override;
+    virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
 class WeightChar : public Atoll::PeerCharacteristicWeightscale {
@@ -51,7 +51,7 @@ class ESPM : public Atoll::ESPM {
               new Atoll::PeerCharacteristicApiRX(),
               new WeightChar()) {}
 
-    virtual void onDisconnect(BLEClient* client) override;
+    virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
 class BattHRMChar : public Atoll::PeerCharacteristicBattery {
@@ -76,7 +76,7 @@ class HeartrateMonitor : public Atoll::HeartrateMonitor {
               name,
               new HeartrateChar(),
               new BattHRMChar()) {}
-    virtual void onDisconnect(BLEClient* client) override;
+    virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
 #endif
