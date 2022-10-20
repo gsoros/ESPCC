@@ -37,6 +37,14 @@ void PowerChar::notify() {
     board.recorder.onCadence(lastCadence);
 }
 
+void ApiTxChar::notify() {
+    Atoll::PeerCharacteristicApiTX::notify();
+    if (lastValue == String("1;5=")) {
+        log_i("TODO process api replies");
+        board.display.onTare();
+    }
+}
+
 void WeightChar::notify() {
     Atoll::PeerCharacteristicWeightscale::notify();
     // log_i("WeightChar %2.2f", lastValue);

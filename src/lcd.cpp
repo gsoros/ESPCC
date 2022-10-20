@@ -444,3 +444,5 @@ uint16_t Lcd::lockedFg() { return WHITE; }
 uint16_t Lcd::lockedBg() { return RED; }
 uint16_t Lcd::unlockedFg() { return WHITE; }
 uint16_t Lcd::unlockedBg() { return DARKGREEN; }
+uint16_t Lcd::tareFg() { return YELLOW; }
+uint16_t Lcd::tareBg() { return color565(0, 0, 127); }  // dark blue

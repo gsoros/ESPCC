@@ -656,6 +656,23 @@ void Display::onOta(const char *str) {
     releaseMutex();
 }
 
+void Display::onTare() {
+    fill(&field[0].area, tareBg());
+    uint16_t savedFg = getColor();
+    setColor(tareFg());
+    message("TARE");
+    setColor(savedFg);
+    enabled = false;
+    if (!queue([this]() {
+            enabled = true;
+            displayFieldContent(0, field[0].content[currentPage]);
+        },
+               3000)) {
+        log_w("could not queue displayFieldContent");
+        enabled = true;
+    }
+}
+
 bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
     if (nullptr == pad) return false;
 
@@ -953,14 +970,15 @@ void Display::taskStart(float freq,
                         uint32_t stack,
                         int8_t priority,
                         int8_t core) {
-    Atoll::Task::taskStart(freq, stack, priority, core);
+    _taskSetFreqAndDelay(freq);
     defaultTaskFreq = _taskFreq;
     defaultTaskDelay = _taskDelay;
+    Atoll::Task::taskStart(freq, stack, priority, core);
 }
 
 void Display::onLockChanged(bool locked) {
-    uint8_t i;
     /*
+    uint8_t i;
     uint16_t oldColor = locked ? unlockedFg() : lockedFg();
     uint16_t newColor = locked ? lockedFg() : unlockedFg();
     for (i = 0; i < numFeedback; i++) {
@@ -1024,6 +1042,8 @@ uint16_t Display::lockedFg() { return fg; }
 uint16_t Display::lockedBg() { return bg; }
 uint16_t Display::unlockedFg() { return fg; }
 uint16_t Display::unlockedBg() { return bg; }
+uint16_t Display::tareFg() { return bg; }
+uint16_t Display::tareBg() { return fg; }
 
 bool Display::aquireMutex(uint32_t timeout) {
     // log_d("aquireMutex %d", (int)mutex);

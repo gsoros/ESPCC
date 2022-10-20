@@ -198,6 +198,7 @@ class Display : public Atoll::Task, public Print {
     virtual void onPMDisconnected();
     virtual void onHRMDisconnected();
     virtual void onOta(const char *str);
+    virtual void onTare();
     // the return value indicates whether the event should propagate
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event);
     virtual void updateStatus(bool forceRedraw = false);
@@ -215,9 +216,11 @@ class Display : public Atoll::Task, public Print {
     virtual void onLockChanged(bool locked);
     virtual void lockedFeedback(uint8_t padIndex, uint16_t color, uint16_t delayMs = 300);
     virtual uint16_t lockedFg();
-        virtual uint16_t lockedBg();
+    virtual uint16_t lockedBg();
     virtual uint16_t unlockedFg();
     virtual uint16_t unlockedBg();
+    virtual uint16_t tareFg();
+    virtual uint16_t tareBg();
 
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));

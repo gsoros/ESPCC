@@ -61,6 +61,8 @@ class Lcd : public Display, public Arduino_Canvas {
     virtual uint16_t lockedBg() override;
     virtual uint16_t unlockedFg() override;
     virtual uint16_t unlockedBg() override;
+        virtual uint16_t tareFg() override;
+    virtual uint16_t tareBg() override;
 
     void backlight(uint8_t state);
     void diag(bool send = true);
