@@ -393,6 +393,7 @@ bool Display::setContrast(uint8_t percent) {
 }
 
 void Display::onPower(int16_t value) {
+    log_i("");
     static int16_t lastPower = 0;
     power = value;
     if (lastPower == power) return;
@@ -632,6 +633,7 @@ void Display::displayBattHRM(int8_t fieldIndex, bool send) {
 }
 
 void Display::onPMDisconnected() {
+    log_i("");
     onPower(-1);
     onCadence(-1);
     onBattPM(-1);
@@ -657,6 +659,7 @@ void Display::onOta(const char *str) {
 }
 
 void Display::onTare() {
+    log_i("displaying tare, disabling...");
     fill(&field[0].area, tareBg());
     uint16_t savedFg = getColor();
     setColor(tareFg());
@@ -664,11 +667,12 @@ void Display::onTare() {
     setColor(savedFg);
     enabled = false;
     if (!queue([this]() {
+            log_i("...enabling");
             enabled = true;
             displayFieldContent(0, field[0].content[currentPage]);
         },
                3000)) {
-        log_w("could not queue displayFieldContent");
+        log_w("could not queue displayFieldContent, enabling");
         enabled = true;
     }
 }
