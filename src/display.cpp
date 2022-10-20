@@ -393,7 +393,6 @@ bool Display::setContrast(uint8_t percent) {
 }
 
 void Display::onPower(int16_t value) {
-    log_i("");
     static int16_t lastPower = 0;
     power = value;
     if (lastPower == power) return;
@@ -633,7 +632,6 @@ void Display::displayBattHRM(int8_t fieldIndex, bool send) {
 }
 
 void Display::onPMDisconnected() {
-    log_i("");
     onPower(-1);
     onCadence(-1);
     onBattPM(-1);
