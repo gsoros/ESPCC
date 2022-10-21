@@ -39,7 +39,7 @@ void PowerChar::notify() {
 
 void ApiTxChar::notify() {
     Atoll::PeerCharacteristicApiTX::notify();
-    if (lastValue == String("1;5=")) {
+    if (lastValue == String("1;5=")) {  // TODO command 5=tare
         log_i("TODO process api replies");
         board.display.onTare();
     }
