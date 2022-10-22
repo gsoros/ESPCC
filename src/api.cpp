@@ -188,13 +188,16 @@ ApiResult *Api::touchProcessor(ApiMessage *msg) {
 
 ApiResult *Api::scanProcessor(ApiMessage *msg) {
     if (!strlen(msg->arg)) return result("argInvalid");
-    uint32_t duration = atoi(msg->arg);
+    int duration = atoi(msg->arg);
     if (duration < 1 || 120 < duration) return result("argInvalid");
     if (board.bleClient.scan->isScanning()) {
         snprintf(msg->reply, sizeof(msg->reply), "%s", "already scanning");
         return error();
     }
-    board.bleClient.startScan(duration * 1000);  // convert duration from seconds to milliseconds
+    if (!board.bleClient.startScan(duration * 1000)) {  // convert duration from s to ms
+        snprintf(msg->reply, sizeof(msg->reply), "%s", "could not start");
+        return error();
+    }
     snprintf(msg->reply, sizeof(msg->reply), "%d", duration);
     return success();
 }

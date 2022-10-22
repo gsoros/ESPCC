@@ -18,7 +18,7 @@ class BleClient : public Atoll::BleClient {
     virtual void printSettings();
 
     // duration is in milliseconds
-    virtual uint32_t startScan(uint32_t duration) override;
+    virtual bool startScan(uint32_t duration) override;
 
     virtual bool tarePowerMeter();
 

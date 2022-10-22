@@ -103,14 +103,14 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     return peer;
 }
 
-uint32_t BleClient::startScan(uint32_t duration) {
-    uint32_t ret = Atoll::BleClient::startScan(duration);
+bool BleClient::startScan(uint32_t duration) {
+    bool ret = Atoll::BleClient::startScan(duration);
 
     char reply[ATOLL_API_MSG_REPLY_LENGTH];
     snprintf(reply, sizeof(reply), "%d;%d=%d",
-             board.api.success()->code,
+             ret ? board.api.success()->code : board.api.error()->code,
              board.api.command("scan")->code,
-             ret);
+             (uint8_t)ret);
 
     log_i("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
     board.bleServer.notify(
