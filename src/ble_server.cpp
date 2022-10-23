@@ -12,8 +12,7 @@ void BleServer::init() {
       0x03 BLE_HS_IO_NO_INPUT_OUTPUT  NoInputNoOutput IO capability
       0x04 BLE_HS_IO_KEYBOARD_DISPLAY KeyboardDisplay IO capability
     */
-    uint8_t iocap = BLE_HS_IO_KEYBOARD_ONLY;
-    // uint8_t iocap = BLE_HS_IO_KEYBOARD_DISPLAY;
+    uint8_t iocap = BLE_HS_IO_DISPLAY_ONLY;
 
     Atoll::Ble::init(deviceName, mtu, iocap);
 }
