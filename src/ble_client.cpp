@@ -13,17 +13,9 @@ void BleClient::loadSettings() {
                 sizeof(packed));
         if (strlen(packed) < 1) continue;
         log_i("loading %s: %s", key, packed);
-        char address[sizeof(Peer::address)] = "";
-        uint8_t addressType = 0;
-        char type[sizeof(Peer::type)] = "";
-        char name[sizeof(Peer::name)] = "";
-        if (Peer::unpack(
-                packed,
-                address, sizeof(address),
-                &addressType,
-                type, sizeof(type),
-                name, sizeof(name))) {
-            Peer *peer = createPeer(address, addressType, type, name);
+        Peer::Saved saved;
+        if (Peer::unpack(packed, &saved)) {
+            Peer *peer = createPeer(saved);
             if (nullptr == peer) continue;  // delete nullptr should be safe!
             if (!addPeer(peer)) delete peer;
         }
@@ -49,7 +41,7 @@ void BleClient::saveSettings() {
             }
         } else {
             if (!peers[i]->pack(packed, sizeof(packed))) {
-                log_e("could not pack %s: %s", key, peers[i]->address);
+                log_e("could not pack %s: %s", key, peers[i]->saved.address);
                 continue;
             }
             if (0 != strcmp(saved, packed)) {
@@ -69,37 +61,33 @@ void BleClient::printSettings() {
 }
 
 Peer *BleClient::createPeer(
-    const char *address,
-    uint8_t addressType,
-    const char *type,
-    const char *name) {
-    // log_i("creating %s,%d,%s,%s", address, addressType, type, name);
+    Peer::Saved saved) {
+    log_d("creating %s,%d,%s,%s,%d", saved.address, saved.addressType, saved.type, saved.name, saved.passkey);
     Peer *peer;
-    if (strstr(type, "E"))
-        peer = new ESPM(address, addressType, type, name);
-    else if (strstr(type, "P"))
-        peer = new PowerMeter(address, addressType, type, name);
-    else if (strstr(type, "H"))
-        peer = new HeartrateMonitor(address, addressType, type, name);
+    if (strstr(saved.type, "E"))
+        peer = new ESPM(saved);
+    else if (strstr(saved.type, "P"))
+        peer = new PowerMeter(saved);
+    else if (strstr(saved.type, "H"))
+        peer = new HeartrateMonitor(saved);
     else
         return nullptr;
     return peer;
 }
 
 Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
-    char address[sizeof(Peer::address)];
-    strncpy(address, device->getAddress().toString().c_str(), sizeof(address));
-    uint8_t addressType = device->getAddress().getType();
-    char name[sizeof(Peer::name)];
-    strncpy(name, device->getName().c_str(), sizeof(name));
+    Peer::Saved saved;
+    strncpy(saved.address, device->getAddress().toString().c_str(), sizeof(saved.address));
+    saved.addressType = device->getAddress().getType();
+    strncpy(saved.name, device->getName().c_str(), sizeof(saved.name));
 
     Peer *peer = nullptr;
     if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID)))
-        peer = new ESPM(address, addressType, "E", name);
+        peer = new ESPM(saved);
     else if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID)))
-        peer = new PowerMeter(address, addressType, "P", name);
+        peer = new PowerMeter(saved);
     else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID)))
-        peer = new HeartrateMonitor(address, addressType, "H", name);
+        peer = new HeartrateMonitor(saved);
     return peer;
 }
 
@@ -170,10 +158,10 @@ void BleClient::onResult(BLEAdvertisedDevice *device) {
     snprintf(reply, sizeof(reply), "%d;%d=%s,%d,%s,%s",
              board.api.success()->code,
              board.api.command("scanResult")->code,
-             peer->address,
-             peer->addressType,
-             peer->type,
-             peer->name);
+             peer->saved.address,
+             peer->saved.addressType,
+             peer->saved.type,
+             peer->saved.name);
 
     log_i("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
     board.bleServer.notify(

@@ -228,28 +228,22 @@ ApiResult *Api::peersProcessor(ApiMessage *msg) {
 }
 
 ApiResult *Api::addPeerProcessor(ApiMessage *msg) {
-    if (strlen(msg->arg) < sizeof(Peer::address) + 5) {
+    if (strlen(msg->arg) < sizeof(Peer::Saved::address) + 5) {
         if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
         return result("argInvalid");
     }
-    char address[sizeof(Peer::address)] = "";
-    uint8_t addressType = 0;
-    char type[sizeof(Peer::type)] = "";
-    char name[sizeof(Peer::name)] = "";
+    Peer::Saved saved;
     if (!Peer::unpack(
             msg->arg,
-            address, sizeof(address),
-            &addressType,
-            type, sizeof(type),
-            name, sizeof(name))) {
+            &saved)) {
         if (msg->log) log_e("could not unpack %s", msg->arg);
         return result("argInvalid");
     }
-    if (board.bleClient.peerExists(address)) {
+    if (board.bleClient.peerExists(saved.address)) {
         if (msg->log) log_e("peer already exists: %s", msg->arg);
         return result("argInvalid");
     }
-    Peer *peer = board.bleClient.createPeer(address, addressType, type, name);
+    Peer *peer = board.bleClient.createPeer(saved);
     if (nullptr == peer) {
         if (msg->log) log_e("could not create peer from %s", msg->arg);
         return error();
@@ -264,7 +258,7 @@ ApiResult *Api::addPeerProcessor(ApiMessage *msg) {
 }
 
 ApiResult *Api::deletePeerProcessor(ApiMessage *msg) {
-    if (strlen(msg->arg) < sizeof(Peer::address) - 1) {
+    if (strlen(msg->arg) < sizeof(Peer::Saved::address) - 1) {
         if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
         return result("argInvalid");
     }

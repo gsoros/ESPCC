@@ -14,18 +14,8 @@ class PowerChar : public Atoll::PeerCharacteristicPower {
 
 class PowerMeter : public Atoll::PowerMeter {
    public:
-    PowerMeter(
-        const char* address,
-        uint8_t addressType,
-        const char* type,
-        const char* name)
-        : Atoll::PowerMeter(
-              address,
-              addressType,
-              type,
-              name,
-              new PowerChar(),
-              new BattPMChar()) {}
+    PowerMeter(Saved saved)
+        : Atoll::PowerMeter(saved, new PowerChar(), new BattPMChar()) {}
 
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
@@ -42,20 +32,13 @@ class WeightChar : public Atoll::PeerCharacteristicWeightscale {
 
 class ESPM : public Atoll::ESPM {
    public:
-    ESPM(const char* address,
-         uint8_t addressType,
-         const char* type,
-         const char* name)
-        : Atoll::ESPM(
-              address,
-              addressType,
-              type,
-              name,
-              new PowerChar(),
-              new BattPMChar(),
-              new ApiTxChar,
-              new Atoll::PeerCharacteristicApiRX(),
-              new WeightChar()) {}
+    ESPM(Saved saved)
+        : Atoll::ESPM(saved,
+                      new PowerChar(),
+                      new BattPMChar(),
+                      new ApiTxChar,
+                      new Atoll::PeerCharacteristicApiRX(),
+                      new WeightChar()) {}
 
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
@@ -70,18 +53,8 @@ class HeartrateChar : public Atoll::PeerCharacteristicHeartrate {
 
 class HeartrateMonitor : public Atoll::HeartrateMonitor {
    public:
-    HeartrateMonitor(
-        const char* address,
-        uint8_t addressType,
-        const char* type,
-        const char* name)
-        : Atoll::HeartrateMonitor(
-              address,
-              addressType,
-              type,
-              name,
-              new HeartrateChar(),
-              new BattHRMChar()) {}
+    HeartrateMonitor(Saved saved)
+        : Atoll::HeartrateMonitor(saved, new HeartrateChar(), new BattHRMChar()) {}
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 

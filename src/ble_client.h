@@ -10,7 +10,7 @@ typedef Atoll::Peer Peer;
 
 class BleClient : public Atoll::BleClient {
    public:
-    virtual Peer *createPeer(const char *address, uint8_t addressType, const char *type, const char *name);
+    virtual Peer *createPeer(Peer::Saved saved);
     virtual Peer *createPeer(BLEAdvertisedDevice *advertisedDevice);
 
     virtual void loadSettings();
