@@ -82,12 +82,16 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     strncpy(saved.name, device->getName().c_str(), sizeof(saved.name));
 
     Peer *peer = nullptr;
-    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID)))
+    if (device->isAdvertisingService(BLEUUID(ESPM_API_SERVICE_UUID))) {
+        strncpy(saved.type, "E", sizeof(saved.type));
         peer = new ESPM(saved);
-    else if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID)))
+    } else if (device->isAdvertisingService(BLEUUID(CYCLING_POWER_SERVICE_UUID))) {
+        strncpy(saved.type, "P", sizeof(saved.type));
         peer = new PowerMeter(saved);
-    else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID)))
+    } else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID))) {
+        strncpy(saved.type, "H", sizeof(saved.type));
         peer = new HeartrateMonitor(saved);
+    }
     return peer;
 }
 
@@ -100,7 +104,7 @@ bool BleClient::startScan(uint32_t duration) {
              board.api.command("scan")->code,
              (uint8_t)ret);
 
-    log_i("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
+    log_d("calling bleServer.notify('api', 'tx', '%s', %d)", reply, strlen(reply));
     board.bleServer.notify(
         BLEUUID(ESPCC_API_SERVICE_UUID),
         BLEUUID(API_TX_CHAR_UUID),

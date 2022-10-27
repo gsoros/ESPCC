@@ -214,7 +214,7 @@ ApiResult *Api::peersProcessor(ApiMessage *msg) {
         if (nullptr == board.bleClient.peers[i]) continue;
         if (board.bleClient.peers[i]->markedForRemoval) continue;
         char token[Peer::packedMaxLength + 1];
-        board.bleClient.peers[i]->pack(token, sizeof(token) - 1);
+        board.bleClient.peers[i]->pack(token, sizeof(token) - 1, false);
         strcat(token, "|");
         remaining = msgReplyLength - strlen(value) - 1;
         if (remaining < strlen(token)) {

@@ -39,7 +39,6 @@ class ESPM : public Atoll::ESPM {
                       new ApiTxChar,
                       new Atoll::PeerCharacteristicApiRX(),
                       new WeightChar()) {}
-
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
