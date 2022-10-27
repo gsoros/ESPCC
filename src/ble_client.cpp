@@ -56,8 +56,8 @@ void BleClient::saveSettings() {
 void BleClient::printSettings() {
     for (uint8_t i = 0; i < peersMax; i++)
         if (nullptr != peers[i])
-            log_i("peer %d name: %s, type: %s, address: %s(%d)",
-                  i, peers[i]->name, peers[i]->type, peers[i]->address, peers[i]->addressType);
+            log_i("peer %d name: %s, type: %s, address: %s(%d), passkey: %d",
+                  i, peers[i]->saved.name, peers[i]->saved.type, peers[i]->saved.address, peers[i]->saved.addressType, peers[i]->saved.passkey);
 }
 
 Peer *BleClient::createPeer(
