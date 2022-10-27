@@ -36,7 +36,9 @@ Board::~Board() {}
 
 void Board::setup() {
     setCpuFrequencyMhz(80);
-    // esp_log_level_set("*", ESP_LOG_ERROR);
+
+    esp_log_level_set("*", ESP_LOG_ERROR);
+    Atoll::Log::setLevel(ESP_LOG_DEBUG);
 
 #ifdef FEATURE_SERIAL
     hwSerial.begin(115200);
