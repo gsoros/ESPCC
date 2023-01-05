@@ -57,4 +57,9 @@ class HeartrateMonitor : public Atoll::HeartrateMonitor {
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
+class Vesc : public Atoll::Vesc {
+   public:
+    Vesc(Saved saved) : Atoll::Vesc(saved) {}
+};
+
 #endif

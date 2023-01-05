@@ -60,8 +60,7 @@ void BleClient::printSettings() {
                   i, peers[i]->saved.name, peers[i]->saved.type, peers[i]->saved.address, peers[i]->saved.addressType, peers[i]->saved.passkey);
 }
 
-Peer *BleClient::createPeer(
-    Peer::Saved saved) {
+Peer *BleClient::createPeer(Peer::Saved saved) {
     log_d("creating %s,%d,%s,%s,%d", saved.address, saved.addressType, saved.type, saved.name, saved.passkey);
     Peer *peer;
     if (strstr(saved.type, "E"))
@@ -70,6 +69,8 @@ Peer *BleClient::createPeer(
         peer = new PowerMeter(saved);
     else if (strstr(saved.type, "H"))
         peer = new HeartrateMonitor(saved);
+    else if (strstr(saved.type, "V"))
+        peer = new Vesc(saved);
     else
         return nullptr;
     return peer;
@@ -91,6 +92,9 @@ Peer *BleClient::createPeer(BLEAdvertisedDevice *device) {
     } else if (device->isAdvertisingService(BLEUUID(HEART_RATE_SERVICE_UUID))) {
         strncpy(saved.type, "H", sizeof(saved.type));
         peer = new HeartrateMonitor(saved);
+    } else if (device->isAdvertisingService(BLEUUID(VESC_SERVICE_UUID))) {
+        strncpy(saved.type, "V", sizeof(saved.type));
+        peer = new Vesc(saved);
     }
     return peer;
 }
