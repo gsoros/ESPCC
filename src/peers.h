@@ -59,7 +59,9 @@ class HeartrateMonitor : public Atoll::HeartrateMonitor {
 
 class Vesc : public Atoll::Vesc {
    public:
-    Vesc(Saved saved) : Atoll::Vesc(saved) {}
+    Vesc(Atoll::Peer::Saved saved,
+         Atoll::PeerCharacteristicVescRX* customVescRX = nullptr,
+         Atoll::PeerCharacteristicVescTX* customVescTX = nullptr);
 };
 
 #endif

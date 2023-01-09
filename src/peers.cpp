@@ -35,6 +35,13 @@ void PowerChar::notify() {
     board.display.onCadence(lastCadence);
     board.recorder.onPower(lastValue);
     board.recorder.onCadence(lastCadence);
+    for (uint8_t i = 0; i < board.bleClient.peersMax; i++) {
+        Atoll::Peer* peer = board.bleClient.peers[i];
+        if (nullptr != peer && peer->isVesc() && peer->isConnected()) {
+            log_i("setting power to %d on Vesc", lastValue);
+            ((Vesc*)peer)->setPower(lastValue);  // TODO times factor
+        }
+    }
 }
 
 void ApiTxChar::notify() {
@@ -56,4 +63,11 @@ void HeartrateChar::notify() {
     // log_i("HeartrateChar %d", lastValue);
     board.display.onHeartrate(lastValue);
     board.recorder.onHeartrate(lastValue);
+}
+
+Vesc::Vesc(Atoll::Peer::Saved saved,
+           Atoll::PeerCharacteristicVescRX* customVescRX,
+           Atoll::PeerCharacteristicVescTX* customVescTX)
+    : Atoll::Vesc(saved, customVescRX, customVescTX) {
+    uart->setDebugPort(&board.hwSerial);
 }
