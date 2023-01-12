@@ -69,5 +69,7 @@ Vesc::Vesc(Atoll::Peer::Saved saved,
            Atoll::PeerCharacteristicVescRX* customVescRX,
            Atoll::PeerCharacteristicVescTX* customVescTX)
     : Atoll::Vesc(saved, customVescRX, customVescTX) {
-    uart->setDebugPort(&board.hwSerial);
+    if (4 <= ATOLL_LOG_LEVEL) {  // 0: none, 1: error, 2: warning, 3, info, 4+: debug
+        uart->setDebugPort(&board.hwSerial);
+    }
 }

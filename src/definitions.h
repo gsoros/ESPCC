@@ -10,7 +10,7 @@
 #else                                          //
 #define BOARD_TASK_FREQ 0.1f                   //
 #endif                                         //
-#define BLE_CLIENT_TASK_FREQ 0.1f              //
+#define BLE_CLIENT_TASK_FREQ 0.2f              //
 #define BLE_SERVER_TASK_FREQ 1.0f              //
 #define GPS_TASK_FREQ 3.0f                     //
 #define TOUCH_TASK_FREQ 20.0f                  //
