@@ -668,7 +668,13 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
 void Display::onRange(int16_t value) {
     log_i("%d", value);
     static int16_t last = -1;
-    range = value;
+    if (-1 == value || -1 == last) {
+        range = value;
+    } else {
+        int32_t tmp = (last + value) / 2;
+        if (INT16_MAX < tmp) tmp = INT16_MAX;
+        range = (int16_t)tmp;
+    }
     if (last == range) return;
     displayRange();
     last = range;
@@ -821,15 +827,18 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 board.savePasLevel();
                 log_d("pasLevel: %d", board.pasLevel);
                 // display pas level
-                if (aquireMutex()) {
-                    fill(&field[0].area, pasBg());
-                    uint16_t savedFg = getColor();
-                    setColor(pasFg());
-                    printfFieldDigits(0, false, "%d", board.pasLevel * 10);
-                    setColor(savedFg);
-                    sendBuffer();
-                    releaseMutex();
+                if (!aquireMutex()) {
+                    log_d("could not aquire mutex");
+                    return false;  // do not propagate
                 }
+
+                fill(&field[0].area, pasBg(), false);
+                uint16_t savedFg = getColor();
+                setColor(pasFg());
+                printfFieldDigits(0, false, "%d", board.pasLevel * 10);
+                setColor(savedFg);
+                sendBuffer();
+                releaseMutex();
                 enabled = false;
                 unqueue("displayFieldContent 0");
                 if (!queue([this]() {
@@ -840,7 +849,6 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                     log_d("could not queue displayFieldContent 0");
                     enabled = true;
                 }
-
                 return false;  // do not propagate
             }
             return true;
