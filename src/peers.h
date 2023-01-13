@@ -62,6 +62,8 @@ class Vesc : public Atoll::Vesc {
     Vesc(Atoll::Peer::Saved saved,
          Atoll::PeerCharacteristicVescRX* customVescRX = nullptr,
          Atoll::PeerCharacteristicVescTX* customVescTX = nullptr);
+    virtual void loop() override;
+    virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
 #endif

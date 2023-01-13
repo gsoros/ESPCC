@@ -73,3 +73,36 @@ Vesc::Vesc(Atoll::Peer::Saved saved,
         uart->setDebugPort(&board.hwSerial);
     }
 }
+
+void Vesc::loop() {
+    Peer::loop();
+    if (!requestUpdate()) return;
+    uint8_t level = Atoll::Battery::calculateLevel(uart->data.inpVoltage, 13);  // TODO get # of cells in series from settings
+    if (INT8_MAX < level) level = INT8_MAX;
+    log_d("level: %d%");
+    board.display.onBattVesc((int8_t)level);
+    if (board.gps.device.speed.isValid() &&
+        0.0f < uart->data.avgInputCurrent &&
+        0.0f < uart->data.inpVoltage) {
+        const float battCapacityWh = 740.0f;  // 3.7V * 20Ah, TODO get from settings
+        float range = (float)board.gps.device.speed.kmph() * battCapacityWh * level / (uart->data.avgInputCurrent * uart->data.inpVoltage);
+        if (INT16_MAX < range)
+            range = INT16_MAX;
+        else if (range < 0.0f)
+            range = 0;
+        board.display.onRange((int16_t)range);
+        log_d("%.1fkm/h * %.0fWh * %d% / (%.2fA * %.2fV) = %.0fkm",
+              board.gps.device.speed.kmph(),
+              battCapacityWh,
+              level,
+              uart->data.avgInputCurrent,
+              uart->data.inpVoltage,
+              range);
+    } else
+        board.display.onRange(INT16_MAX);  // infinite range
+}
+
+void Vesc::onDisconnect(BLEClient* client, int reason) {
+    Atoll::Vesc::onDisconnect(client, reason);
+    board.display.onVescDisconnected();
+}

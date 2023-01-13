@@ -3,9 +3,9 @@
 
 #include <U8g2lib.h>
 
-//#include "touch.h"  // avoid "NUM_PADS redefined"
+// #include "touch.h"  // avoid "NUM_PADS redefined"
 #include "atoll_time.h"
-//#include "atoll_oled.h"
+// #include "atoll_oled.h"
 #include "display.h"
 
 class Oled : public Display {
@@ -56,13 +56,17 @@ class Oled : public Display {
         field[1].content[0] = FC_CADENCE;
         field[2].content[0] = FC_HEARTRATE;
 
-        field[0].content[1] = FC_SPEED;
-        field[1].content[1] = FC_DISTANCE;
-        field[2].content[1] = FC_ALTGAIN;
+        field[0].content[1] = FC_POWER;
+        field[1].content[1] = FC_RANGE;
+        field[2].content[1] = FC_BATTERY_VESC;
 
-        field[0].content[2] = FC_BATTERY;
-        field[1].content[2] = FC_BATTERY_POWER;
-        field[2].content[2] = FC_BATTERY_HEARTRATE;
+        field[0].content[2] = FC_SPEED;
+        field[1].content[2] = FC_DISTANCE;
+        field[2].content[2] = FC_ALTGAIN;
+
+        field[0].content[3] = FC_BATTERY;
+        field[1].content[3] = FC_BATTERY_POWER;
+        field[2].content[3] = FC_BATTERY_HEARTRATE;
 
         fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
         smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
@@ -199,7 +203,6 @@ class Oled : public Display {
     virtual uint8_t fieldLabelVPos(uint8_t fieldHeight) override {
         return fieldHeight - 4;
     }
-
 
    protected:
     U8G2 *device;

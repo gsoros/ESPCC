@@ -10,7 +10,7 @@
 #else                                          //
 #define BOARD_TASK_FREQ 0.1f                   //
 #endif                                         //
-#define BLE_CLIENT_TASK_FREQ 0.2f              //
+#define BLE_CLIENT_TASK_FREQ 0.5f              //
 #define BLE_SERVER_TASK_FREQ 1.0f              //
 #define GPS_TASK_FREQ 3.0f                     //
 #define TOUCH_TASK_FREQ 20.0f                  //
@@ -35,7 +35,7 @@
 #define DISPLAY_OLED 0                         //
 #define DISPLAY_LCD 1                          //
 #define DISPLAY_DEVICE DISPLAY_LCD             //
-#define DISPLAY_NUM_PAGES 3                    //
+#define DISPLAY_NUM_PAGES 4                    //
 #define DISPLAY_OLED_NUM_FIELDS 3              //
 #define DISPLAY_LCD_NUM_FIELDS 3               //
 #define DISPLAY_NUM_FEEDBACK 4                 //

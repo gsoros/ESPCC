@@ -321,6 +321,12 @@ void Display::displayFieldContent(uint8_t fieldIndex,
         case FC_BATTERY_HEARTRATE:
             displayBattHRM(fieldIndex, send);
             return;
+        case FC_BATTERY_VESC:
+            displayBattVesc(fieldIndex, send);
+            return;
+        case FC_RANGE:
+            displayRange(fieldIndex, send);
+            return;
         default:
             log_e("unhandled %d", content);
     }
@@ -359,6 +365,10 @@ int Display::fieldLabel(FieldContent content, char *buf, size_t len) {
             return snprintf(buf, len, "PM Bat.");
         case FC_BATTERY_HEARTRATE:
             return snprintf(buf, len, "HRM Bat.");
+        case FC_BATTERY_VESC:
+            return snprintf(buf, len, "Vesc Bat.");
+        case FC_RANGE:
+            return snprintf(buf, len, "Range");
         default:
             log_e("unhandled %d", content);
             return -1;
@@ -394,12 +404,12 @@ bool Display::setContrast(uint8_t percent) {
 
 void Display::onPower(int16_t value) {
     // log_d("value: %d", value);
-    static int16_t lastPower = 0;
+    static int16_t last = 0;
     power = value;
-    if (lastPower == power) return;
+    if (last == power) return;
     if (lastWeightUpdate + 1000 < millis() || -1 == power)
         displayPower();
-    lastPower = power;
+    last = power;
 }
 
 void Display::displayPower(int8_t fieldIndex, bool send) {
@@ -415,12 +425,12 @@ void Display::displayPower(int8_t fieldIndex, bool send) {
 }
 
 void Display::onWeight(double value) {
-    static double lastWeight = 0.0;
+    static double last = 0.0;
     weight = value;
-    if (lastWeight == weight) return;
+    if (last == weight) return;
     if (lastPowerUpdate + 1000 < millis())
         displayWeight();
-    lastWeight = weight;
+    last = weight;
 }
 
 void Display::displayWeight(int8_t fieldIndex, bool send) {
@@ -433,11 +443,11 @@ void Display::displayWeight(int8_t fieldIndex, bool send) {
 }
 
 void Display::onCadence(int16_t value) {
-    static int16_t lastCadence = 0;
+    static int16_t last = 0;
     cadence = value;
-    if (lastCadence == cadence) return;
+    if (last == cadence) return;
     displayCadence();
-    lastCadence = cadence;
+    last = cadence;
 }
 
 void Display::displayCadence(int8_t fieldIndex, bool send) {
@@ -452,11 +462,11 @@ void Display::displayCadence(int8_t fieldIndex, bool send) {
 }
 
 void Display::onHeartrate(int16_t value) {
-    static int16_t lastHeartrate = 0;
+    static int16_t last = 0;
     heartrate = value;
-    if (lastHeartrate == heartrate) return;
+    if (last == heartrate) return;
     displayHeartrate();
-    lastHeartrate = heartrate;
+    last = heartrate;
 }
 
 void Display::displayHeartrate(int8_t fieldIndex, bool send) {
@@ -472,11 +482,11 @@ void Display::displayHeartrate(int8_t fieldIndex, bool send) {
 
 void Display::onSpeed(double value) {
     // log_i("%.2f", value);
-    static double lastSpeed = 0;
+    static double last = 0;
     speed = value;
-    if (lastSpeed == speed) return;
+    if (last == speed) return;
     displaySpeed();
-    lastSpeed = speed;
+    last = speed;
     motionState = board.gps.minMovingSpeed <= speed
                       ? 10.0 < speed
                             ? 2
@@ -498,11 +508,11 @@ void Display::displaySpeed(int8_t fieldIndex, bool send) {
 
 void Display::onDistance(uint value) {
     // log_i("%d", value);
-    static uint lastDistance = 0;
+    static uint last = 0;
     distance = value;
-    if (lastDistance == distance) return;
+    if (last == distance) return;
     displayDistance();
-    lastDistance = distance;
+    last = distance;
 }
 
 void Display::displayDistance(int8_t fieldIndex, bool send) {
@@ -521,11 +531,11 @@ void Display::displayDistance(int8_t fieldIndex, bool send) {
 }
 
 void Display::onAltGain(uint16_t value) {
-    static uint16_t lastAltGain = 0;
+    static uint16_t last = 0;
     altGain = value;
-    if (lastAltGain == altGain) return;
+    if (last == altGain) return;
     displayAltGain();
-    lastAltGain = altGain;
+    last = altGain;
 }
 
 void Display::displayAltGain(int8_t fieldIndex, bool send) {
@@ -541,11 +551,11 @@ void Display::displayAltGain(int8_t fieldIndex, bool send) {
 
 void Display::onBattery(int8_t value) {
     // log_i("%d", value);
-    static int8_t lastBattery = -1;
+    static int8_t last = -1;
     battery = value;
-    if (lastBattery == battery) return;
+    if (last == battery) return;
     displayBattery();
-    lastBattery = battery;
+    last = battery;
 }
 
 void Display::printBattCharging(int8_t fieldIndex, bool send) {
@@ -586,11 +596,11 @@ void Display::displayBattery(int8_t fieldIndex, bool send) {
 
 void Display::onBattPM(int8_t value) {
     // log_i("%d", value);
-    static int8_t lastBattPM = -1;
+    static int8_t last = -1;
     battPM = value;
-    if (lastBattPM == battPM) return;
+    if (last == battPM) return;
     displayBattPM();
-    lastBattPM = battPM;
+    last = battPM;
 }
 
 void Display::displayBattPM(int8_t fieldIndex, bool send) {
@@ -610,11 +620,11 @@ void Display::displayBattPM(int8_t fieldIndex, bool send) {
 
 void Display::onBattHRM(int8_t value) {
     log_i("%d", value);
-    static int8_t lastBattHRM = -1;
+    static int8_t last = -1;
     battHRM = value;
-    if (lastBattHRM == battHRM) return;
+    if (last == battHRM) return;
     displayBattHRM();
-    lastBattHRM = battHRM;
+    last = battHRM;
 }
 
 void Display::displayBattHRM(int8_t fieldIndex, bool send) {
@@ -632,6 +642,55 @@ void Display::displayBattHRM(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
+void Display::onBattVesc(int8_t value) {
+    log_i("%d", value);
+    static int8_t last = -1;
+    battVesc = value;
+    if (last == battVesc) return;
+    displayBattVesc();
+    last = battVesc;
+}
+
+void Display::displayBattVesc(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_BATTERY_VESC);
+    if (fieldIndex < 0) return;
+    if (battVesc < 0) {
+        fill(&field[fieldIndex].area, bg, send);
+        return;
+    }
+    char level[3] = "";
+    snprintf(level, 3, "%2d", 99 < battVesc ? 99 : battVesc);
+    printField2plus1(fieldIndex, level, "%", send);
+    lastFieldUpdate = millis();
+}
+
+void Display::onRange(int16_t value) {
+    log_i("%d", value);
+    static int16_t last = -1;
+    range = value;
+    if (last == range) return;
+    displayRange();
+    last = range;
+}
+
+void Display::displayRange(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_RANGE);
+    if (fieldIndex < 0) return;
+    if (range < 0) {
+        fill(&field[fieldIndex].area, bg, send);
+        return;
+    }
+    char km[4] = "";
+    if (999 < range)
+        snprintf(km, 4, "inf");
+    else
+        snprintf(km, 4, "%3d", range);
+    printfFieldDigits(fieldIndex, send, km);
+    lastFieldUpdate = millis();
+}
+
 void Display::onPMDisconnected() {
     log_d("onPMDisconnected");
     onPower(-1);
@@ -642,6 +701,11 @@ void Display::onPMDisconnected() {
 void Display::onHRMDisconnected() {
     onHeartrate(-1);
     onBattHRM(-1);
+}
+
+void Display::onVescDisconnected() {
+    onRange(-1);
+    onBattVesc(-1);
 }
 
 void Display::onOta(const char *str) {

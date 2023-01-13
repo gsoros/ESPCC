@@ -37,7 +37,9 @@ class Display : public Atoll::Task, public Print {
         FC_BATTERY,
         FC_BATTERY_POWER,
         FC_BATTERY_CADENCE,
-        FC_BATTERY_HEARTRATE
+        FC_BATTERY_HEARTRATE,
+        FC_BATTERY_VESC,
+        FC_RANGE
     };
 
     struct Area {
@@ -195,8 +197,13 @@ class Display : public Atoll::Task, public Print {
     virtual void displayBattPM(int8_t fieldIndex = -1, bool send = true);
     virtual void onBattHRM(int8_t value);
     virtual void displayBattHRM(int8_t fieldIndex = -1, bool send = true);
+    virtual void onBattVesc(int8_t value);
+    virtual void displayBattVesc(int8_t fieldIndex = -1, bool send = true);
+    virtual void onRange(int16_t value);
+    virtual void displayRange(int8_t fieldIndex = -1, bool send = true);
     virtual void onPMDisconnected();
     virtual void onHRMDisconnected();
+    virtual void onVescDisconnected();
     virtual void onOta(const char *str);
     virtual void onTare();
     // the return value indicates whether the event should propagate
@@ -275,6 +282,8 @@ class Display : public Atoll::Task, public Print {
     int8_t battery = -1;
     int8_t battPM = -1;
     int8_t battHRM = -1;
+    int8_t battVesc = -1;
+    int16_t range = -1;
     int8_t wifiState = -1;  // 0: disabled, 1: enabled, 2: connected
 
     float defaultTaskFreq = 0;
