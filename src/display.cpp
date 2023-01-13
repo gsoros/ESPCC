@@ -821,17 +821,13 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
                 board.savePasLevel();
                 log_d("pasLevel: %d", board.pasLevel);
                 // display pas level
-
-                // enabled = true;
-                fill(&field[0].area, pasBg());
-                // char msg[12];
-                // snprintf(msg, 8, "PAS %d%%", board.pasLevel * 10);
-                // message(msg);
                 if (aquireMutex()) {
+                    fill(&field[0].area, pasBg());
                     uint16_t savedFg = getColor();
                     setColor(pasFg());
                     printfFieldDigits(0, false, "%d", board.pasLevel * 10);
                     setColor(savedFg);
+                    sendBuffer();
                     releaseMutex();
                 }
                 enabled = false;
