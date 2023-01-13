@@ -774,39 +774,80 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             if (queue([this, a]() { fill(a, bg); }, 300)) {
                 // log_i("queued pad #%d clear in 300ms", pad->index);
             }
-            currentPage++;
-            if (numPages <= currentPage) currentPage = 0;
-            log_i("currentPage %d", currentPage);
-            if (!aquireMutex()) return true;
-            clock(false, true);  // clear clock
-            char label[10] = "";
-            Area *b;
-
-            for (uint8_t i = 0; i < numFields; i++) {
-                if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
-                    continue;
-                b = &field[i].area;
-                setClip(b);
-                fill(b, bg, false);
-                setCursor(b->x, b->y + fieldLabelVPos(b->h));
-                setFont(field[i].labelFont);
-                print(label);
-            }
-            sendBuffer();
-            setMaxClip();
-            releaseMutex();
-            lastFieldUpdate = millis();
-            enabled = false;
-            if (queue([this]() {
+            if (1 == pad->index || 3 == pad->index) {     // top right and bottom right to switch pages
+                currentPage += 1 == pad->index ? 1 : -1;  // top right to switch up
+                if (currentPage < 0) currentPage = numPages - 1;
+                if (numPages <= currentPage) currentPage = 0;
+                log_i("currentPage %d", currentPage);
+                if (!aquireMutex()) return true;
+                clock(false, true);  // clear clock
+                char label[10] = "";
+                Area *b;
+                for (uint8_t i = 0; i < numFields; i++) {
+                    if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
+                        continue;
+                    b = &field[i].area;
+                    setClip(b);
+                    fill(b, bg, false);
+                    setCursor(b->x, b->y + fieldLabelVPos(b->h));
+                    setFont(field[i].labelFont);
+                    print(label);
+                }
+                sendBuffer();
+                setMaxClip();
+                releaseMutex();
+                lastFieldUpdate = millis();
+                enabled = false;
+                if (queue([this]() {
+                        enabled = true;
+                        displayFieldValues();
+                    },
+                          3000)) {
+                    // log_i("queued enable; displayFieldValues() in 3000ms");
+                } else {
                     enabled = true;
-                    displayFieldValues();
-                },
-                      3000)) {
-                // log_i("queued enable; displayFieldValues() in 3000ms");
-            } else {
-                enabled = true;
+                }
+                return false;                                 // do not propagate
+            } else if (0 == pad->index || 2 == pad->index) {  // top left and bottom left to adjust pas level
+                if (0 == pad->index && board.pasLevel < 50) {
+                    board.pasLevel += 2;
+                    if (50 < board.pasLevel) board.pasLevel = 50;
+                } else if (2 == pad->index) {
+                    if (1 < board.pasLevel)
+                        board.pasLevel -= 2;
+                    else
+                        board.pasLevel = 0;
+                }
+                board.savePasLevel();
+                log_d("pasLevel: %d", board.pasLevel);
+                // display pas level
+
+                // enabled = true;
+                fill(&field[0].area, pasBg());
+                // char msg[12];
+                // snprintf(msg, 8, "PAS %d%%", board.pasLevel * 10);
+                // message(msg);
+                if (aquireMutex()) {
+                    uint16_t savedFg = getColor();
+                    setColor(pasFg());
+                    printfFieldDigits(0, false, "%d", board.pasLevel * 10);
+                    setColor(savedFg);
+                    releaseMutex();
+                }
+                enabled = false;
+                unqueue("displayFieldContent 0");
+                if (!queue([this]() {
+                        enabled = true;
+                        displayFieldContent(0, field[0].content[currentPage]);
+                    },
+                           3000, "displayFieldContent 0")) {
+                    log_d("could not queue displayFieldContent 0");
+                    enabled = true;
+                }
+
+                return false;  // do not propagate
             }
-            return false;  // do not propagate
+            return true;
         }
 
         case Touch::Event::doubleTouch: {
@@ -1002,7 +1043,7 @@ void Display::logAreas(Area *a, const char *str) const {
     logArea((Area *)&statusArea, a, str, "status");
 }
 
-bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
+bool Display::queue(QueueItemCallback callback, uint16_t delayMs, const char *tag) {
     if (0 == delayMs) {
         // log_w("delay is zero, executing callback");
         callback();
@@ -1017,6 +1058,7 @@ bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
     QueueItem item;
     item.after = t + delayMs;
     item.callback = callback;
+    if (nullptr != tag) strncpy(item.tag, tag, sizeof(item.tag));
     if (pdPASS != xQueueSendToBack(_queue, (void *)&item, 0)) {
         log_e("could not insert item into queue");
         return false;
@@ -1032,6 +1074,26 @@ bool Display::queue(QueueItemCallback callback, uint16_t delayMs) {
 
 bool Display::queue(QueueItem item) {
     return queue(item.callback, item.after - millis());
+}
+
+int Display::unqueue(const char *tag) {
+    if (nullptr == tag) {
+        log_e("tag is null");
+        return -1;
+    }
+    int removed = 0;
+    for (UBaseType_t i = 0; i < uxQueueMessagesWaiting(_queue); i++) {
+        QueueItem item;
+        if (pdPASS != xQueueReceive(_queue, &(item), 0)) {
+            log_e("failed to get item from queue");
+            continue;
+        }
+        if (0 == strncmp(tag, item.tag, sizeof(item.tag) - 1)) {
+            removed++;
+        }
+        queue(item);
+    }
+    return removed;
 }
 
 void Display::taskStart(float freq,
@@ -1112,6 +1174,8 @@ uint16_t Display::unlockedFg() { return fg; }
 uint16_t Display::unlockedBg() { return bg; }
 uint16_t Display::tareFg() { return bg; }
 uint16_t Display::tareBg() { return fg; }
+uint16_t Display::pasFg() { return bg; }
+uint16_t Display::pasBg() { return fg; }
 
 bool Display::aquireMutex(uint32_t timeout) {
     // log_d("aquireMutex %d", (int)mutex);

@@ -156,6 +156,10 @@ bool Board::loadSettings() {
             sizeof(timezone));
     if (1 < strlen(tmpTz))
         strncpy(timezone, tmpTz, sizeof(timezone));
+    uint32_t tmpPasLevel = 0;
+    tmpPasLevel = preferences->getUInt("pasLevel", tmpPasLevel);
+    if (10 < tmpPasLevel) tmpPasLevel = 10;
+    pasLevel = tmpPasLevel;
     preferencesEnd();
     return true;
 }
@@ -164,5 +168,12 @@ void Board::saveSettings() {
     if (!preferencesStartSave()) return;
     preferences->putString("hostName", hostName);
     preferences->putString("tz", timezone);
+    preferences->putUInt("pasLevel", (uint32_t)pasLevel);
+    preferencesEnd();
+}
+
+void Board::savePasLevel() {
+    if (!preferencesStartSave()) return;
+    preferences->putUInt("pasLevel", (uint32_t)pasLevel);
     preferencesEnd();
 }

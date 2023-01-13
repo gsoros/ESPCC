@@ -3,10 +3,10 @@
 
 #include <U8g2lib.h>
 
-//#include <Arduino_GFX_Library.h>
-//#include "databus/Arduino_HWSPI.h"
-//#include "databus/Arduino_ESP32SPI.h"
-//#include "display/Arduino_SSD1283A.h"
+// #include <Arduino_GFX_Library.h>
+// #include "databus/Arduino_HWSPI.h"
+// #include "databus/Arduino_ESP32SPI.h"
+// #include "display/Arduino_SSD1283A.h"
 #include "canvas/Arduino_Canvas.h"
 
 #include "display.h"
@@ -61,8 +61,10 @@ class Lcd : public Display, public Arduino_Canvas {
     virtual uint16_t lockedBg() override;
     virtual uint16_t unlockedFg() override;
     virtual uint16_t unlockedBg() override;
-        virtual uint16_t tareFg() override;
+    virtual uint16_t tareFg() override;
     virtual uint16_t tareBg() override;
+    virtual uint16_t pasFg() override;
+    virtual uint16_t pasBg() override;
 
     void backlight(uint8_t state);
     void diag(bool send = true);

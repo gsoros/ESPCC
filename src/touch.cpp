@@ -14,13 +14,13 @@ void Touch::fireEvent(uint8_t index, Event event) {
         case Event::longTouch: {
             if (1 == index) {  // top right
                 board.bleClient.tarePowerMeter();
-            } else if (board.recorder.start()) {
+            } else if (3 == index && board.recorder.start()) {  // bottom right
                 // disable wifi but don't save
                 board.wifi.setEnabled(false, false);
             }
         } break;
         case Event::doubleTouch: {
-            if (board.recorder.end()) {
+            if (3 == index && board.recorder.end()) {  // bottom right
                 if (board.wifi.startOnRecordingEnd) {
                     log_i("starting wifi");
 #ifdef FEATURE_WEBSERVER

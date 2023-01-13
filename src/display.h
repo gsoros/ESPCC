@@ -106,6 +106,7 @@ class Display : public Atoll::Task, public Print {
     struct QueueItem {
         ulong after = 0;
         QueueItemCallback callback = nullptr;
+        char tag[32] = "";
     };
 
     const char *taskName() { return "Display"; }
@@ -213,9 +214,10 @@ class Display : public Atoll::Task, public Print {
     virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const;
     virtual void logAreas(Area *a, const char *str) const;
     // returns false if queue is full or item cannot be inserted
-    virtual bool queue(QueueItemCallback callback, uint16_t delayMs);
+    virtual bool queue(QueueItemCallback callback, uint16_t delayMs, const char *tag = nullptr);
     // returns false if queue is full or item cannot be inserted
     virtual bool queue(QueueItem item);
+    virtual int unqueue(const char *tag = nullptr);
     virtual void taskStart(float freq = -1,
                            uint32_t stack = 0,
                            int8_t priority = -1,
@@ -228,6 +230,8 @@ class Display : public Atoll::Task, public Print {
     virtual uint16_t unlockedBg();
     virtual uint16_t tareFg();
     virtual uint16_t tareBg();
+    virtual uint16_t pasFg();
+    virtual uint16_t pasBg();
 
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));

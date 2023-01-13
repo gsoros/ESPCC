@@ -396,7 +396,7 @@ void Lcd::updateStatus(bool forceRedraw) {
 
 // the return value indicates whether the event should propagate
 bool Lcd::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
-    if (3 == pad->index && Touch::Event::longTouch == event) {
+    if (1 == pad->index && Touch::Event::tripleTouch == event) {  // top right
         if (backlightState) {
             backlight(0);
             fg = BLACK;
@@ -449,4 +449,6 @@ uint16_t Lcd::lockedBg() { return RED; }
 uint16_t Lcd::unlockedFg() { return WHITE; }
 uint16_t Lcd::unlockedBg() { return DARKGREEN; }
 uint16_t Lcd::tareFg() { return YELLOW; }
-uint16_t Lcd::tareBg() { return color565(0, 0, 127); }  // dark blue
+uint16_t Lcd::tareBg() { return color565(0, 0, 127); }     // dark blue
+uint16_t Lcd::pasFg() { return color565(255, 180, 127); }  // orange
+uint16_t Lcd::pasBg() { return color565(0, 0, 127); }      // dark blue

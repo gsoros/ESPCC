@@ -25,7 +25,7 @@
 #include "oled.h"
 #elif DISPLAY_DEVICE == DISPLAY_LCD
 #include "databus/Arduino_HWSPI.h"
-//#include "databus/Arduino_ESP32SPI.h"
+// #include "databus/Arduino_ESP32SPI.h"
 #include "display/Arduino_SSD1283A.h"
 #include "lcd.h"
 #else
@@ -87,6 +87,9 @@ class Board : public Atoll::Task,
     void loop();
     bool loadSettings();
     void saveSettings();
+    void savePasLevel();
+
+    uint8_t pasLevel = 0;
 };
 
 extern Board board;
