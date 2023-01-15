@@ -397,6 +397,42 @@ void Display::message(const char *m, bool send) {
     }
 }
 
+// direction <0: down, >=0: up
+void Display::switchPage(int8_t direction) {
+    currentPage += 0 <= direction ? 1 : -1;
+    if (currentPage < 0) currentPage = numPages - 1;
+    if (numPages <= currentPage) currentPage = 0;
+    log_i("currentPage %d", currentPage);
+    if (!aquireMutex()) return;
+    clock(false, true);  // clear clock
+    char label[10] = "";
+    Area *b;
+    for (uint8_t i = 0; i < numFields; i++) {
+        if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
+            continue;
+        b = &field[i].area;
+        setClip(b);
+        fill(b, bg, false);
+        setCursor(b->x, b->y + fieldLabelVPos(b->h));
+        setFont(field[i].labelFont);
+        print(label);
+    }
+    sendBuffer();
+    setMaxClip();
+    releaseMutex();
+    lastFieldUpdate = millis();
+    enabled = false;
+    if (queue([this]() {
+            enabled = true;
+            displayFieldValues();
+        },
+              3000)) {
+        // log_i("queued enable; displayFieldValues() in 3000ms");
+    } else {
+        enabled = true;
+    }
+}
+
 bool Display::setContrast(uint8_t percent) {
     log_e("501");
     return false;
@@ -668,7 +704,7 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
 void Display::onRange(int16_t value) {
     log_i("%d", value);
     static int16_t last = -1;
-    if (-1 == value || -1 == last) {
+    if (-1 == value || -1 == last || INT16_MAX == value || INT16_MAX == last) {
         range = value;
     } else {
         int32_t tmp = (last + value) / 2;
@@ -780,75 +816,11 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             if (queue([this, a]() { fill(a, bg); }, 300)) {
                 // log_i("queued pad #%d clear in 300ms", pad->index);
             }
-            if (1 == pad->index || 3 == pad->index) {     // top right and bottom right to switch pages
-                currentPage += 1 == pad->index ? 1 : -1;  // top right to switch up
-                if (currentPage < 0) currentPage = numPages - 1;
-                if (numPages <= currentPage) currentPage = 0;
-                log_i("currentPage %d", currentPage);
-                if (!aquireMutex()) return true;
-                clock(false, true);  // clear clock
-                char label[10] = "";
-                Area *b;
-                for (uint8_t i = 0; i < numFields; i++) {
-                    if (fieldLabel(field[i].content[currentPage], label, sizeof(label)) < 1)
-                        continue;
-                    b = &field[i].area;
-                    setClip(b);
-                    fill(b, bg, false);
-                    setCursor(b->x, b->y + fieldLabelVPos(b->h));
-                    setFont(field[i].labelFont);
-                    print(label);
-                }
-                sendBuffer();
-                setMaxClip();
-                releaseMutex();
-                lastFieldUpdate = millis();
-                enabled = false;
-                if (queue([this]() {
-                        enabled = true;
-                        displayFieldValues();
-                    },
-                          3000)) {
-                    // log_i("queued enable; displayFieldValues() in 3000ms");
-                } else {
-                    enabled = true;
-                }
-                return false;                                 // do not propagate
-            } else if (0 == pad->index || 2 == pad->index) {  // top left and bottom left to adjust pas level
-                if (0 == pad->index && board.pasLevel < 50) {
-                    board.pasLevel += 2;
-                    if (50 < board.pasLevel) board.pasLevel = 50;
-                } else if (2 == pad->index) {
-                    if (1 < board.pasLevel)
-                        board.pasLevel -= 2;
-                    else
-                        board.pasLevel = 0;
-                }
-                board.savePasLevel();
-                log_d("pasLevel: %d", board.pasLevel);
-                // display pas level
-                if (!aquireMutex()) {
-                    log_d("could not aquire mutex");
-                    return false;  // do not propagate
-                }
-
-                fill(&field[0].area, pasBg(), false);
-                uint16_t savedFg = getColor();
-                setColor(pasFg());
-                printfFieldDigits(0, false, "%d", board.pasLevel * 10);
-                setColor(savedFg);
-                sendBuffer();
-                releaseMutex();
-                enabled = false;
-                unqueue("displayFieldContent 0");
-                if (!queue([this]() {
-                        enabled = true;
-                        displayFieldContent(0, field[0].content[currentPage]);
-                    },
-                           3000, "displayFieldContent 0")) {
-                    log_d("could not queue displayFieldContent 0");
-                    enabled = true;
-                }
+            if (1 == pad->index) {  // top right to switch page up
+                switchPage(1);
+                return false;              // do not propagate
+            } else if (3 == pad->index) {  // bottom right to switch page down
+                switchPage(-1);
                 return false;  // do not propagate
             }
             return true;
@@ -1022,6 +994,41 @@ void Display::onWifiStateChange() {
                           ? 2
                           : 1
                     : 0;
+}
+
+void Display::onPasChange() {
+    if (!queue([this]() {
+            if (!aquireMutex()) {
+                log_d("could not aquire mutex");
+                return;
+            }
+            enabled = true;
+            uint16_t savedFg = fg;
+            uint16_t savedBg = bg;
+            setColor(pasFg());
+            setBgColor(pasBg());
+            char out[4];
+            snprintf(out, 4, "%3d", board.pasLevel);
+            printField(0, out, false);
+            setColor(savedFg);
+            setBgColor(savedBg);
+            sendBuffer();
+            releaseMutex();
+        },
+               0, "displayPasLevel")) {
+        log_d("could not queue displayPasLevel");
+        return;
+    }
+    enabled = false;
+    unqueue("displayFieldContent 0");
+    if (!queue([this]() {
+            enabled = true;
+            displayFieldContent(0, field[0].content[currentPage]);
+        },
+               3000, "displayFieldContent 0")) {
+        log_d("could not queue displayFieldContent 0");
+        enabled = true;
+    }
 }
 
 void Display::logArea(Area *a, Area *b, const char *str, const char *areaType) const {

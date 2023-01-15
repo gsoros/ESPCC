@@ -39,7 +39,7 @@ void PowerChar::notify() {
         for (uint8_t i = 0; i < board.bleClient.peersMax; i++) {
             Atoll::Peer* peer = board.bleClient.peers[i];
             if (nullptr != peer && peer->isVesc() && peer->isConnected()) {
-                uint32_t power = lastValue * board.pasLevel / 10;
+                uint32_t power = lastValue * board.pasLevel;
                 if (UINT16_MAX < power) power = UINT16_MAX;
                 log_i("setting power to %d on %s (pasLevel: %d)", power, peer->saved.name, board.pasLevel);
                 ((Vesc*)peer)->setPower((uint16_t)power);

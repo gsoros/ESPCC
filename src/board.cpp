@@ -158,7 +158,7 @@ bool Board::loadSettings() {
         strncpy(timezone, tmpTz, sizeof(timezone));
     uint32_t tmpPasLevel = 0;
     tmpPasLevel = preferences->getUInt("pasLevel", tmpPasLevel);
-    if (10 < tmpPasLevel) tmpPasLevel = 10;
+    if (1 < tmpPasLevel) tmpPasLevel = 1;
     pasLevel = tmpPasLevel;
     preferencesEnd();
     return true;

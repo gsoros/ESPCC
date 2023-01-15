@@ -11,6 +11,18 @@ void Touch::fireEvent(uint8_t index, Event event) {
         return;  // must unlock
     }
     switch (event) {
+        case Event::singleTouch: {
+            if (0 == index) {  // top left to increase pas
+                board.pasLevel++;
+                if (12 < board.pasLevel) board.pasLevel = 12;
+            } else if (2 == index) {  // bottom left to decrease pas
+                if (0 < board.pasLevel)
+                    board.pasLevel--;
+            }
+            board.savePasLevel();
+            log_d("pasLevel: %d", board.pasLevel);
+            board.display.onPasChange();
+        } break;
         case Event::longTouch: {
             if (1 == index) {  // top right
                 board.bleClient.tarePowerMeter();

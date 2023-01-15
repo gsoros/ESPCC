@@ -176,6 +176,8 @@ class Display : public Atoll::Task, public Print {
     virtual void splash(bool send = true);
     virtual void message(const char *m, bool send = true);
 
+    virtual void switchPage(int8_t direction = 1);
+
     virtual bool setContrast(uint8_t percent);
     virtual void onPower(int16_t value);
     virtual void displayPower(int8_t fieldIndex = -1, bool send = true);
@@ -211,6 +213,7 @@ class Display : public Atoll::Task, public Print {
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event);
     virtual void updateStatus(bool forceRedraw = false);
     virtual void onWifiStateChange();
+    virtual void onPasChange();
     virtual void logArea(Area *a, Area *b, const char *str, const char *areaType) const;
     virtual void logAreas(Area *a, const char *str) const;
     // returns false if queue is full or item cannot be inserted
