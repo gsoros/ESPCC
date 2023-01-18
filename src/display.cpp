@@ -702,7 +702,10 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
 }
 
 void Display::onRange(int16_t value) {
-    log_i("%d", value);
+    log_d("value=%d", value);
+#if (4 <= ATOLL_LOG_LEVEL)  // debug
+    value /= 10;
+#endif
     static int16_t last = -1;
     if (-1 == value || -1 == last || INT16_MAX == value || INT16_MAX == last) {
         range = value;
@@ -711,6 +714,7 @@ void Display::onRange(int16_t value) {
         if (INT16_MAX < tmp) tmp = INT16_MAX;
         range = (int16_t)tmp;
     }
+    log_d("last=%d range=%d", last, range);
     if (last == range) return;
     displayRange();
     last = range;
@@ -743,6 +747,10 @@ void Display::onPMDisconnected() {
 void Display::onHRMDisconnected() {
     onHeartrate(-1);
     onBattHRM(-1);
+}
+
+void Display::onVescConnected() {
+    onPasChange();
 }
 
 void Display::onVescDisconnected() {

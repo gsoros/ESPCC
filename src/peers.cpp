@@ -30,7 +30,7 @@ void BattHRMChar::notify() {
 
 void PowerChar::notify() {
     Atoll::PeerCharacteristicPower::notify();
-    // log_i("PowerChar %d %d", lastValue, lastCadence);
+    log_d("PowerChar %d %d", lastValue, lastCadence);
     board.display.onPower(lastValue);
     board.display.onCadence(lastCadence);
     board.recorder.onPower(lastValue);
@@ -81,29 +81,33 @@ Vesc::Vesc(Atoll::Peer::Saved saved,
 void Vesc::loop() {
     Peer::loop();
     if (!requestUpdate()) return;
-    uint8_t level = Atoll::Battery::calculateLevel(uart->data.inpVoltage, 13);  // TODO get # of cells in series from settings
-    if (INT8_MAX < level) level = INT8_MAX;
-    log_d("level: %d%");
-    board.display.onBattVesc((int8_t)level);
+    uint8_t battLevel = Atoll::Battery::calculateLevel(uart->data.inpVoltage, 13);  // TODO get # of cells in series from settings
+    if (INT8_MAX < battLevel) battLevel = INT8_MAX;
+    board.display.onBattVesc((int8_t)battLevel);
     if (board.gps.device.speed.isValid() &&
         0.0f < uart->data.avgInputCurrent &&
         0.0f < uart->data.inpVoltage) {
         const float battCapacityWh = 740.0f;  // 3.7V * 20Ah, TODO get from settings
-        float range = (float)board.gps.device.speed.kmph() * battCapacityWh * level / (uart->data.avgInputCurrent * uart->data.inpVoltage);
+        float range = (float)board.gps.device.speed.kmph() * battCapacityWh * battLevel / (uart->data.avgInputCurrent * uart->data.inpVoltage);
         if (INT16_MAX < range)
             range = INT16_MAX;
         else if (range < 0.0f)
             range = 0;
         board.display.onRange((int16_t)range);
-        log_d("%.1fkm/h * %.0fWh * %d% / (%.2fA * %.2fV) = %.0fkm",
+        log_d("%.1fkm/h * %.0fWh * %d%% / (%.2fA * %.2fV) = %.0fkm",
               board.gps.device.speed.kmph(),
               battCapacityWh,
-              level,
+              battLevel,
               uart->data.avgInputCurrent,
               uart->data.inpVoltage,
               range);
     } else
         board.display.onRange(INT16_MAX);  // infinite range
+}
+
+void Vesc::onConnect(BLEClient* client) {
+    Atoll::Vesc::onConnect(client);
+    board.display.onVescConnected();
 }
 
 void Vesc::onDisconnect(BLEClient* client, int reason) {

@@ -206,6 +206,7 @@ class Display : public Atoll::Task, public Print {
     virtual void displayRange(int8_t fieldIndex = -1, bool send = true);
     virtual void onPMDisconnected();
     virtual void onHRMDisconnected();
+    virtual void onVescConnected();
     virtual void onVescDisconnected();
     virtual void onOta(const char *str);
     virtual void onTare();
