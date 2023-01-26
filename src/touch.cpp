@@ -24,7 +24,12 @@ void Touch::fireEvent(uint8_t index, Event event) {
             board.display.onPasChange();
         } break;
         case Event::longTouch: {
-            if (1 == index) {  // top right
+            if (0 == index || 2 == index) {  // top left or bottom left
+                board.pasMode = board.pasMode == PAS_MODE_PROPORTIONAL ? PAS_MODE_CONSTANT : PAS_MODE_PROPORTIONAL;
+                board.savePasMode();
+                log_d("pasMode: %d", board.pasMode);
+                board.display.onPasChange();
+            } else if (1 == index) {  // top right
                 board.bleClient.tarePowerMeter();
             } else if (3 == index && board.recorder.start()) {  // bottom right
                 // disable wifi but don't save

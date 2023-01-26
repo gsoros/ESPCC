@@ -1016,7 +1016,7 @@ void Display::onPasChange() {
             setColor(pasFg());
             setBgColor(pasBg());
             char out[4];
-            snprintf(out, 4, "P%2d", board.pasLevel);
+            snprintf(out, 4, "%c%2d", board.pasMode == PAS_MODE_PROPORTIONAL ? 'P' : 'C', board.pasLevel);
             printField(0, out, false);
             setColor(savedFg);
             setBgColor(savedBg);

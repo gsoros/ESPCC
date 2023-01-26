@@ -63,6 +63,7 @@ class Vesc : public Atoll::Vesc {
          Atoll::PeerCharacteristicVescRX* customVescRX = nullptr,
          Atoll::PeerCharacteristicVescTX* customVescTX = nullptr);
     virtual void loop() override;
+    virtual void setPower(uint16_t power) override;
     virtual void onConnect(BLEClient* client) override;
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };

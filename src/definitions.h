@@ -40,6 +40,10 @@
 #define DISPLAY_LCD_NUM_FIELDS 3               //
 #define DISPLAY_NUM_FEEDBACK 4                 //
 ;                                              //
+#define PAS_MODE_PROPORTIONAL 0                //
+#define PAS_MODE_CONSTANT 1                    //
+#define PAS_MODE_MAX 2                         //
+;                                              //
 #define LED_PIN 22                             // onboard LED pin
 #define BATTERY_PIN 35                         // pin for battery voltage measurement
 #define GPS_RX_PIN 17                          // -> T

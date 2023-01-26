@@ -105,6 +105,14 @@ void Vesc::loop() {
         board.display.onRange(INT16_MAX);  // infinite range
 }
 
+void Vesc::setPower(uint16_t power) {
+    if (PAS_MODE_CONSTANT == board.pasMode && 50 < power) {
+        power = board.pasLevel * 100;
+        log_d("setting constant power %dW", power);
+    }
+    Atoll::Vesc::setPower(power);
+}
+
 void Vesc::onConnect(BLEClient* client) {
     Atoll::Vesc::onConnect(client);
     board.display.onVescConnected();
