@@ -43,7 +43,9 @@ void Touch::fireEvent(uint8_t index, Event event) {
 #ifdef FEATURE_WEBSERVER
                     board.wifi.autoStartWebserver = true;
 #endif
+#ifdef FEATURE_SERIAL
                     board.wifi.autoStartWifiSerial = false;
+#endif
                     // enable wifi but don't save
                     board.wifi.setEnabled(true, false);
                 }
