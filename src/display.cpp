@@ -703,9 +703,9 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
 
 void Display::onRange(int16_t value) {
     log_d("value=%d", value);
-#if (4 <= ATOLL_LOG_LEVEL)  // debug
-    value /= 10;
-#endif
+    // #if (4 <= ATOLL_LOG_LEVEL)  // debug
+    //     value /= 10;
+    // #endif
     static int16_t last = -1;
     if (-1 == value || -1 == last || INT16_MAX == value || INT16_MAX == last) {
         range = value;

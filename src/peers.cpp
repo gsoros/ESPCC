@@ -90,12 +90,11 @@ void Vesc::loop() {
         0.0f < uart->data.avgInputCurrent &&
         0.0f < uart->data.inpVoltage) {
         const float battCapacityWh = 740.0f;  // 3.7V * 20Ah, TODO get from settings
-        float range = (float)board.gps.device.speed.kmph() * battCapacityWh * battLevel / (uart->data.avgInputCurrent * uart->data.inpVoltage);
+        float range = (float)board.gps.device.speed.kmph() * battCapacityWh * (float)battLevel / 100.0f / (uart->data.avgInputCurrent * uart->data.inpVoltage);
         if (INT16_MAX < range)
             range = INT16_MAX;
         else if (range < 0.0f)
-            range = 0;
-        board.display.onRange((int16_t)range);
+            range = 0.0;
         log_d("%.1fkm/h * %.0fWh * %d%% / (%.2fA * %.2fV) = %.0fkm",
               board.gps.device.speed.kmph(),
               battCapacityWh,
@@ -103,6 +102,7 @@ void Vesc::loop() {
               uart->data.avgInputCurrent,
               uart->data.inpVoltage,
               range);
+        board.display.onRange((int16_t)range);
     } else
         board.display.onRange(INT16_MAX);  // infinite range
 }
