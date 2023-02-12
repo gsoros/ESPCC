@@ -87,8 +87,9 @@ class Board : public Atoll::Task,
     void loop();
     bool loadSettings();
     void saveSettings();
-    void savePasMode();
-    void savePasLevel();
+    void saveOtaMode(bool mode, bool skipStartEnd = false);
+    void savePasMode(bool skipStartEnd = false);
+    void savePasLevel(bool skipStartEnd = false);
 
     uint8_t pasMode = PAS_MODE_PROPORTIONAL;
     uint8_t pasLevel = 0;

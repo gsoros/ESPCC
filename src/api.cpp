@@ -35,6 +35,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
     }
 
     else if (msg->argIs("ota") || msg->argIs("OTA")) {
+        /*
         log_i("entering ota mode");
         log_i("free heap before: %d", xPortGetFreeHeapSize());
         log_i("stopping recorder");
@@ -58,6 +59,10 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
 #endif
         board.wifi.setEnabled(true, false);
         board.display.onOta("waiting");
+        */
+        log_i("saving ota mode");
+        board.saveOtaMode(true);
+        process("system=reboot");
         msg->replyAppend("ota");
         return success();
     } else if (msg->argStartsWith("startWifiOnRecordingEnd")) {

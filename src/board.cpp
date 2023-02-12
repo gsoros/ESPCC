@@ -68,7 +68,7 @@ void Board::setup() {
     touch.setup(&arduinoPreferences, "Touch");
     battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
     recorder.setup(&gps, &sdcard, &api, &recorder);
-// uploader.setup(&recorder, &sdcard, &wifi);
+    // uploader.setup(&recorder, &sdcard, &wifi);
 #ifdef FEATURE_WEBSERVER
     webserver.setup(&sdcard, &recorder, &ota);
 #endif
@@ -77,6 +77,20 @@ void Board::setup() {
     wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
 
     bleServer.start();
+
+    if (otaMode) {
+        log_i("otaMode is true");
+        saveOtaMode(false);
+        bleServer.taskStart(BLE_SERVER_TASK_FREQ, 4096);
+        display.taskStart(DISPLAY_TASK_FREQ, 4096 - 1024);
+        battery.taskStart(BATTERY_TASK_FREQ, 4096 - 1024);
+        // touch.taskStart(TOUCH_TASK_FREQ, 4096);
+        taskStart(BOARD_TASK_FREQ, 4096 + 1024);
+        wifi.start();
+        wifi.setEnabled(true, false);
+        display.onOta("waiting");
+        return;
+    }
 
     gps.taskStart(GPS_TASK_FREQ, 4096 - 1024);
     bleClient.taskStart(BLE_CLIENT_TASK_FREQ, 4096 - 1024);
@@ -156,13 +170,14 @@ bool Board::loadSettings() {
             sizeof(timezone));
     if (1 < strlen(tmpTz))
         strncpy(timezone, tmpTz, sizeof(timezone));
+    otaMode = preferences->getBool("ota", false);
     uint32_t tmpPas = PAS_MODE_PROPORTIONAL;
     tmpPas = preferences->getUInt("pasMode", tmpPas);
     if (PAS_MODE_MAX <= tmpPas) tmpPas = PAS_MODE_PROPORTIONAL;
     pasMode = tmpPas;
     tmpPas = 0;
     tmpPas = preferences->getUInt("pasLevel", tmpPas);
-    if (1 < tmpPas) tmpPas = 1;
+    if (1 < tmpPas) tmpPas = 1;  // always start with either 0 or 1
     pasLevel = tmpPas;
     preferencesEnd();
     return true;
@@ -172,19 +187,26 @@ void Board::saveSettings() {
     if (!preferencesStartSave()) return;
     preferences->putString("hostName", hostName);
     preferences->putString("tz", timezone);
-    preferences->putUInt("pasMode", (uint32_t)pasMode);
-    preferences->putUInt("pasLevel", (uint32_t)pasLevel);
+    savePasMode(true);
+    savePasLevel(true);
     preferencesEnd();
 }
 
-void Board::savePasMode() {
-    if (!preferencesStartSave()) return;
-    preferences->putUInt("pasMode", (uint32_t)pasMode);
-    preferencesEnd();
+void Board::saveOtaMode(bool mode, bool skipStartEnd) {
+    if (!skipStartEnd && !preferencesStartSave()) return;
+    size_t written = preferences->putBool("ota", mode);
+    log_d("mode: %d, written %d", mode, written);
+    if (!skipStartEnd) preferencesEnd();
 }
 
-void Board::savePasLevel() {
-    if (!preferencesStartSave()) return;
+void Board::savePasMode(bool skipStartEnd) {
+    if (!skipStartEnd && !preferencesStartSave()) return;
+    preferences->putUInt("pasMode", (uint32_t)pasMode);
+    if (!skipStartEnd) preferencesEnd();
+}
+
+void Board::savePasLevel(bool skipStartEnd) {
+    if (!skipStartEnd && !preferencesStartSave()) return;
     preferences->putUInt("pasLevel", (uint32_t)pasLevel);
-    preferencesEnd();
+    if (!skipStartEnd) preferencesEnd();
 }
