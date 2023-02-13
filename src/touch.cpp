@@ -19,14 +19,14 @@ void Touch::fireEvent(uint8_t index, Event event) {
                 if (0 < board.pasLevel)
                     board.pasLevel--;
             }
-            board.savePasLevel();
+            board.savePasSettings();
             log_d("pasLevel: %d", board.pasLevel);
             board.display.onPasChange();
         } break;
         case Event::longTouch: {
             if (0 == index || 2 == index) {  // top left or bottom left
                 board.pasMode = board.pasMode == PAS_MODE_PROPORTIONAL ? PAS_MODE_CONSTANT : PAS_MODE_PROPORTIONAL;
-                board.savePasMode();
+                board.savePasSettings();
                 log_d("pasMode: %d", board.pasMode);
                 board.display.onPasChange();
             } else if (1 == index) {  // top right

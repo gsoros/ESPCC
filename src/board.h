@@ -71,7 +71,6 @@ class Board : public Atoll::Task,
     Touch touch;
     Api api;
     Wifi wifi;
-    bool otaMode = false;
     Ota ota;
     Atoll::Mdns mdns;
     Battery battery;
@@ -88,11 +87,22 @@ class Board : public Atoll::Task,
     bool loadSettings();
     void saveSettings();
     void saveOtaMode(bool mode, bool skipStartEnd = false);
-    void savePasMode(bool skipStartEnd = false);
-    void savePasLevel(bool skipStartEnd = false);
+    void savePasSettings(bool skipStartEnd = false);
+    void saveVescSettings(bool skipStartEnd = false);
 
+    bool otaMode = false;
     uint8_t pasMode = PAS_MODE_PROPORTIONAL;
     uint8_t pasLevel = 0;
+    uint8_t vescBattNumSeries = 13;
+    float vescBattCapacityWh = 740;  // 3.7V * 20Ah
+    uint16_t vescMaxPower = 2500;
+    float vescMinCurrent = 1.1f;
+    float vescMaxCurrent = 50.0f;
+    bool vescRampUp = true;
+    bool vescRampDown = true;
+    float vescRampMinCurrentDiff = 1.0f;
+    uint8_t vescRampNumSteps = 3;
+    uint16_t vescRampTime = 500;
 };
 
 extern Board board;

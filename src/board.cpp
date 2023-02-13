@@ -156,6 +156,7 @@ void Board::loop() {
 
 bool Board::loadSettings() {
     if (!preferencesStartLoad()) return false;
+
     char tmpHostName[sizeof(hostName)];
     strncpy(tmpHostName,
             preferences->getString("hostName", hostName).c_str(),
@@ -164,21 +165,58 @@ bool Board::loadSettings() {
         strncpy(hostName,
                 tmpHostName,
                 sizeof(hostName));
+
     char tmpTz[sizeof(timezone)];
     strncpy(tmpTz,
             preferences->getString("tz", timezone).c_str(),
             sizeof(timezone));
     if (1 < strlen(tmpTz))
         strncpy(timezone, tmpTz, sizeof(timezone));
+
     otaMode = preferences->getBool("ota", false);
-    uint32_t tmpPas = PAS_MODE_PROPORTIONAL;
-    tmpPas = preferences->getUInt("pasMode", tmpPas);
-    if (PAS_MODE_MAX <= tmpPas) tmpPas = PAS_MODE_PROPORTIONAL;
-    pasMode = tmpPas;
-    tmpPas = 0;
-    tmpPas = preferences->getUInt("pasLevel", tmpPas);
-    if (1 < tmpPas) tmpPas = 1;  // always start with either 0 or 1
-    pasLevel = tmpPas;
+
+    uint32_t tmpUint = PAS_MODE_PROPORTIONAL;
+    tmpUint = preferences->getUInt("pasMode", tmpUint);
+    if (PAS_MODE_MAX <= tmpUint) tmpUint = PAS_MODE_PROPORTIONAL;
+    pasMode = tmpUint;
+
+    tmpUint = 0;
+    tmpUint = preferences->getUInt("pasLevel", tmpUint);
+    if (1 < tmpUint) tmpUint = 1;  // always start with either 0 or 1
+    pasLevel = tmpUint;
+
+    tmpUint = preferences->getUInt("vescBNS", vescBattNumSeries);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    vescBattNumSeries = tmpUint;
+
+    vescBattCapacityWh = preferences->getFloat("vescBC", vescBattCapacityWh);
+    if (vescBattCapacityWh < 0.0f) vescBattCapacityWh = 0.0f;
+
+    tmpUint = preferences->getUInt("vescMP", vescMaxPower);
+    if (UINT16_MAX < tmpUint) tmpUint = UINT16_MAX;
+    vescMaxPower = tmpUint;
+
+    vescMinCurrent = preferences->getFloat("vescMiC", vescMinCurrent);
+    if (vescMinCurrent < 0.0f) vescMinCurrent = 0.0f;
+
+    vescMaxCurrent = preferences->getFloat("vescMaC", vescMaxCurrent);
+    if (vescMaxCurrent < 0.0f) vescMaxCurrent = 0.0f;
+
+    vescRampUp = preferences->getFloat("vescRU", vescRampUp);
+
+    vescRampDown = preferences->getFloat("vescRD", vescRampDown);
+
+    vescRampMinCurrentDiff = preferences->getFloat("vescRMCD", vescRampMinCurrentDiff);
+    if (vescRampMinCurrentDiff < 0.0f) vescRampMinCurrentDiff = 0.0f;
+
+    tmpUint = preferences->getUInt("vescRNS", vescRampNumSteps);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    vescRampNumSteps = tmpUint;
+
+    tmpUint = preferences->getUInt("vescRT", vescRampTime);
+    if (UINT16_MAX < tmpUint) tmpUint = UINT16_MAX;
+    vescRampTime = tmpUint;
+
     preferencesEnd();
     return true;
 }
@@ -187,8 +225,8 @@ void Board::saveSettings() {
     if (!preferencesStartSave()) return;
     preferences->putString("hostName", hostName);
     preferences->putString("tz", timezone);
-    savePasMode(true);
-    savePasLevel(true);
+    savePasSettings(true);
+    saveVescSettings(true);
     preferencesEnd();
 }
 
@@ -199,14 +237,24 @@ void Board::saveOtaMode(bool mode, bool skipStartEnd) {
     if (!skipStartEnd) preferencesEnd();
 }
 
-void Board::savePasMode(bool skipStartEnd) {
+void Board::savePasSettings(bool skipStartEnd) {
     if (!skipStartEnd && !preferencesStartSave()) return;
     preferences->putUInt("pasMode", (uint32_t)pasMode);
+    preferences->putUInt("pasLevel", (uint32_t)pasLevel);
     if (!skipStartEnd) preferencesEnd();
 }
 
-void Board::savePasLevel(bool skipStartEnd) {
+void Board::saveVescSettings(bool skipStartEnd) {
     if (!skipStartEnd && !preferencesStartSave()) return;
-    preferences->putUInt("pasLevel", (uint32_t)pasLevel);
+    preferences->putUInt("vescBNS", vescBattNumSeries);
+    preferences->putFloat("vescBC", vescBattCapacityWh);
+    preferences->putUInt("vescMP", vescMaxPower);
+    preferences->putFloat("vescMiC", vescMinCurrent);
+    preferences->putFloat("vescMaC", vescMaxCurrent);
+    preferences->putBool("vescRU", vescRampUp);
+    preferences->putBool("vescRD", vescRampDown);
+    preferences->putFloat("vescRMCD", vescRampMinCurrentDiff);
+    preferences->putUInt("vescRNS", vescRampNumSteps);
+    preferences->putUInt("vescRT", vescRampTime);
     if (!skipStartEnd) preferencesEnd();
 }

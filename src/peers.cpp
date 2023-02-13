@@ -41,7 +41,11 @@ void PowerChar::notify() {
             if (nullptr != peer && peer->isVesc() && peer->isConnected()) {
                 uint32_t power = lastValue * board.pasLevel;
                 if (UINT16_MAX < power) power = UINT16_MAX;
-                log_i("setting power to %d on %s (pasLevel: %d)", power, peer->saved.name, board.pasLevel);
+                log_i("setting power to %d on %s (PAS: %c%d)",
+                      power,
+                      peer->saved.name,
+                      PAS_MODE_CONSTANT == board.pasMode ? 'C' : 'P',
+                      board.pasLevel);
                 ((Vesc*)peer)->setPower((uint16_t)power);
             }
         }
@@ -83,21 +87,20 @@ Vesc::Vesc(Atoll::Peer::Saved saved,
 void Vesc::loop() {
     Peer::loop();
     if (!requestUpdate()) return;
-    uint8_t battLevel = Atoll::Battery::calculateLevel(uart->data.inpVoltage, 13);  // TODO get # of cells in series from settings
+    uint8_t battLevel = Atoll::Battery::calculateLevel(uart->data.inpVoltage, board.vescBattNumSeries);
     if (INT8_MAX < battLevel) battLevel = INT8_MAX;
     board.display.onBattVesc((int8_t)battLevel);
     if (board.gps.device.speed.isValid() &&
         0.0f < uart->data.avgInputCurrent &&
         0.0f < uart->data.inpVoltage) {
-        const float battCapacityWh = 740.0f;  // 3.7V * 20Ah, TODO get from settings
-        float range = (float)board.gps.device.speed.kmph() * battCapacityWh * (float)battLevel / 100.0f / (uart->data.avgInputCurrent * uart->data.inpVoltage);
+        float range = (float)board.gps.device.speed.kmph() * board.vescBattCapacityWh * (float)battLevel / 100.0f / (uart->data.avgInputCurrent * uart->data.inpVoltage);
         if (INT16_MAX < range)
             range = INT16_MAX;
         else if (range < 0.0f)
             range = 0.0;
         log_d("%.1fkm/h * %.0fWh * %d%% / (%.2fA * %.2fV) = %.0fkm",
               board.gps.device.speed.kmph(),
-              battCapacityWh,
+              board.vescBattCapacityWh,
               battLevel,
               uart->data.avgInputCurrent,
               uart->data.inpVoltage,
@@ -112,7 +115,51 @@ void Vesc::setPower(uint16_t power) {
         power = board.pasLevel * 100;
         log_d("setting constant power %dW", power);
     }
-    Atoll::Vesc::setPower(power);
+
+    const uint16_t rampDelay = board.vescRampNumSteps ? board.vescRampTime / board.vescRampNumSteps : 0;
+    static float prevCurrent = 0.0f;
+
+    if (board.vescMaxPower < power) power = board.vescMaxPower;
+    float voltage = getVoltage();
+    if (voltage <= 0.01f) {
+        log_e("voltage is 0");
+        return;
+    }
+    if (1000.0f < voltage) {
+        log_e("voltage too high");
+        return;
+    }
+    float current = (float)(power / voltage);
+    if (power <= 10)
+        current = 0.0f;
+    else if (current < board.vescMinCurrent)
+        current = board.vescMinCurrent;
+    else if (board.vescMaxCurrent < current)
+        current = board.vescMaxCurrent;
+    if (0.0f < current && 0 < board.vescRampNumSteps && board.vescRampMinCurrentDiff <= abs(current - prevCurrent)) {
+        if (board.vescRampUp && prevCurrent < current) {
+            if (prevCurrent < board.vescMinCurrent)
+                prevCurrent = board.vescMinCurrent;
+            float rampUnit = (current - prevCurrent) / board.vescRampNumSteps;
+            for (uint8_t i = 0; i < board.vescRampNumSteps; i++) {
+                float rampCurrent = prevCurrent + rampUnit * i;
+                log_d("setting ramp up current #%d: %2.2fA", i, rampCurrent);
+                uart->setCurrent(rampCurrent);
+                delay(rampDelay);
+            }
+        } else if (board.vescRampDown && current < prevCurrent) {
+            float rampUnit = (prevCurrent - current) / board.vescRampNumSteps;
+            for (uint8_t i = board.vescRampNumSteps; 0 < i; i--) {
+                float rampCurrent = current + rampUnit * i;
+                log_d("setting ramp down current #%d: %2.2fA", i, rampCurrent);
+                uart->setCurrent(rampCurrent);
+                delay(rampDelay);
+            }
+        }
+    }
+    log_d("setting current: %2.2fA (%dW)", current, power);
+    uart->setCurrent(current);
+    prevCurrent = current;
 }
 
 void Vesc::onConnect(BLEClient* client) {

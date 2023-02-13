@@ -11,11 +11,15 @@ void Api::setup(
 
     addCommand(ApiCommand("system", Api::systemProcessor));
     addCommand(ApiCommand("touch", Api::touchProcessor));
+
+    // TODO move this to Atoll, peers=scan, peers=add:, etc.
     addCommand(ApiCommand("scan", Api::scanProcessor));
     addCommand(ApiCommand("scanResult", Api::scanResultProcessor));
     addCommand(ApiCommand("peers", Api::peersProcessor));
     addCommand(ApiCommand("addPeer", Api::addPeerProcessor));
     addCommand(ApiCommand("deletePeer", Api::deletePeerProcessor));
+
+    addCommand(ApiCommand("vesc", Api::vescProcessor));
 }
 
 ApiResult *Api::systemProcessor(ApiMessage *msg) {
@@ -275,4 +279,169 @@ ApiResult *Api::deletePeerProcessor(ApiMessage *msg) {
         return success();
     }
     return error();
+}
+
+ApiResult *Api::vescProcessor(ApiMessage *msg) {
+    if (msg->log) log_i("arg: %s", msg->arg);
+
+    if (msg->argIs("")) {
+        msg->replyAppend("battNumSeries[:i]|battCapacity[:f]|maxPower[:i]|minCurrent[:f]|maxCurrent[:f]|rampUp[:0|1]|rampDown[:0|1]|rampMinCurrentDiff[:f]|rampNumSteps[:i]|rampTime[:i]");
+        return argInvalid();
+    }
+
+    if (msg->argStartsWith("battNumSeries")) {
+        char buf[4] = "";
+        if (msg->argGetParam("battNumSeries:", buf, sizeof(buf))) {
+            int i = atoi(buf);
+            char check[4] = "";
+            snprintf(check, sizeof(check), "%d", i);
+            if (0 != strcmp(buf, check) || i < 1 || UINT8_MAX < i) return argInvalid();
+            board.vescBattNumSeries = (uint8_t)i;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "battNumSeries:%d", board.vescBattNumSeries);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("battCapacity")) {
+        char buf[8] = "";
+        if (msg->argGetParam("battCapacity:", buf, sizeof(buf))) {
+            float f = (float)atof(buf);
+            if (f < 0.1f || 20000.0f < f) return argInvalid();
+            board.vescBattCapacityWh = f;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "battCapacity:%.2f", board.vescBattCapacityWh);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("maxPower")) {
+        char buf[8] = "";
+        if (msg->argGetParam("maxPower:", buf, sizeof(buf))) {
+            int i = atoi(buf);
+            char check[8] = "";
+            snprintf(check, sizeof(check), "%d", i);
+            if (0 != strcmp(buf, check) || i < 0 || UINT16_MAX < i) return argInvalid();
+            board.vescMaxPower = (uint16_t)i;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "maxPower:%d", board.vescMaxPower);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("minCurrent")) {
+        char buf[8] = "";
+        if (msg->argGetParam("minCurrent:", buf, sizeof(buf))) {
+            float f = (float)atof(buf);
+            if (f < 0.0f || 100.0f < f) return argInvalid();
+            board.vescMinCurrent = f;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "minCurrent:%.2f", board.vescMinCurrent);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("maxCurrent")) {
+        char buf[8] = "";
+        if (msg->argGetParam("maxCurrent:", buf, sizeof(buf))) {
+            float f = (float)atof(buf);
+            if (f < 0.0f || 200.0f < f) return argInvalid();
+            board.vescMaxCurrent = f;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "maxCurrent:%.2f", board.vescMaxCurrent);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("rampUp")) {
+        char buf[8] = "";
+        if (msg->argGetParam("rampUp:", buf, sizeof(buf))) {
+            if (0 == strcmp(buf, "1") || 0 == strcasecmp(buf, "true")) {
+                board.vescRampUp = true;
+                board.saveVescSettings();
+            } else if (0 == strcmp(buf, "0") || 0 == strcasecmp(buf, "false")) {
+                board.vescRampUp = false;
+                board.saveVescSettings();
+            }
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "rampUp:%d", board.vescRampUp);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("rampDown")) {
+        char buf[8] = "";
+        if (msg->argGetParam("rampDown:", buf, sizeof(buf))) {
+            if (0 == strcmp(buf, "1") || 0 == strcasecmp(buf, "true")) {
+                board.vescRampDown = true;
+                board.saveVescSettings();
+            } else if (0 == strcmp(buf, "0") || 0 == strcasecmp(buf, "false")) {
+                board.vescRampDown = false;
+                board.saveVescSettings();
+            }
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "rampDown:%d", board.vescRampDown);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("rampMinCurrentDiff")) {
+        char buf[8] = "";
+        if (msg->argGetParam("rampMinCurrentDiff:", buf, sizeof(buf))) {
+            float f = (float)atof(buf);
+            if (f < 0.0f || 100.0f < f) return argInvalid();
+            board.vescRampMinCurrentDiff = f;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "rampMinCurrentDiff:%.2f", board.vescRampMinCurrentDiff);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("rampNumSteps")) {
+        char buf[4] = "";
+        if (msg->argGetParam("rampNumSteps:", buf, sizeof(buf))) {
+            int i = atoi(buf);
+            char check[4] = "";
+            snprintf(check, sizeof(check), "%d", i);
+            if (0 != strcmp(buf, check) || i < 0 || UINT8_MAX < i) return argInvalid();
+            board.vescRampNumSteps = (uint8_t)i;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "rampNumSteps:%d", board.vescRampNumSteps);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    if (msg->argStartsWith("rampTime")) {
+        char buf[8] = "";
+        if (msg->argGetParam("rampTime:", buf, sizeof(buf))) {
+            int i = atoi(buf);
+            char check[8] = "";
+            snprintf(check, sizeof(check), "%d", i);
+            if (0 != strcmp(buf, check) || i < 0 || UINT16_MAX < i) return argInvalid();
+            board.vescRampTime = (uint16_t)i;
+            board.saveVescSettings();
+        }
+        char reply[32];
+        snprintf(reply, sizeof(reply), "rampTime:%d", board.vescRampTime);
+        msg->replyAppend(reply);
+        return success();
+    }
+
+    return argInvalid();
 }
