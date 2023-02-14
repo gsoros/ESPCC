@@ -282,11 +282,24 @@ ApiResult *Api::deletePeerProcessor(ApiMessage *msg) {
 }
 
 ApiResult *Api::vescProcessor(ApiMessage *msg) {
-    if (msg->log) log_i("arg: %s", msg->arg);
+    if (msg->log) log_d("arg: %s", msg->arg);
 
     if (msg->argIs("")) {
-        msg->replyAppend("battNumSeries[:i]|battCapacity[:f]|maxPower[:i]|minCurrent[:f]|maxCurrent[:f]|rampUp[:0|1]|rampDown[:0|1]|rampMinCurrentDiff[:f]|rampNumSteps[:i]|rampTime[:i]");
-        return argInvalid();
+        char reply[200];
+        snprintf(reply, sizeof(reply),
+                 "battNumSeries:%d|battCapacity:%.2f|maxPower:%d|minCurrent:%.2f|maxCurrent:%.2f|rampUp:%d|rampDown:%d|rampMinCurrentDiff:%.2f|rampNumSteps:%d|rampTime:%d",
+                 board.vescBattNumSeries,
+                 board.vescBattCapacityWh,
+                 board.vescMaxPower,
+                 board.vescMinCurrent,
+                 board.vescMaxCurrent,
+                 board.vescRampUp,
+                 board.vescRampDown,
+                 board.vescRampMinCurrentDiff,
+                 board.vescRampNumSteps,
+                 board.vescRampTime);
+        msg->replyAppend(reply);
+        return success();
     }
 
     if (msg->argStartsWith("battNumSeries")) {
