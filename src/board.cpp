@@ -48,7 +48,7 @@ void Board::setup() {
 #endif
     preferencesSetup(&arduinoPreferences, "BOARD");
     loadSettings();
-    log_i("\n\n\n%s %s %s\n\n\n", hostName, __DATE__, __TIME__);
+    log_i("%s %s %s", hostName, __DATE__, __TIME__);
     // log_d("free heap: %d", xPortGetFreeHeapSize());
     // heap_caps_print_heap_info(MALLOC_CAP_DEFAULT | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
     // log_d("timezone %s", timezone);
