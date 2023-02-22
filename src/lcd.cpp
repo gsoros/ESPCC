@@ -191,12 +191,12 @@ void Lcd::setup(uint8_t backlightPin) {
         releaseMutex();
         if (!queue([this]() { enabled = true; }, 2000)) enabled = true;
     }
-    for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
-        log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
-    for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
-        log_i("feedback %d: %3d %3d %3d %3d", i, feedback[i].x, feedback[i].y, feedback[i].w, feedback[i].h);
-    log_i("status:     %3d %3d %3d %3d", statusArea.x, statusArea.y, statusArea.w, statusArea.h);
-    log_i("clock:      %3d %3d %3d %3d", clockArea.x, clockArea.y, clockArea.w, clockArea.h);
+    // for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
+    //     log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
+    // for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
+    //     log_i("feedback %d: %3d %3d %3d %3d", i, feedback[i].x, feedback[i].y, feedback[i].w, feedback[i].h);
+    // log_i("status:     %3d %3d %3d %3d", statusArea.x, statusArea.y, statusArea.w, statusArea.h);
+    // log_i("clock:      %3d %3d %3d %3d", clockArea.x, clockArea.y, clockArea.w, clockArea.h);
 }
 
 void Lcd::writePixelPreclipped(int16_t x, int16_t y, uint16_t color) {
@@ -421,7 +421,7 @@ void Lcd::backlight(uint8_t state) {
         log_e("pin not set");
         return;
     }
-    log_i("setting backlight: %d", backlightState);
+    // log_d("setting backlight: %d", backlightState);
     digitalWrite(this->backlightPin, backlightState);
 }
 

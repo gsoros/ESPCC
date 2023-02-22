@@ -12,7 +12,7 @@ void BleClient::loadSettings() {
                 preferences->getString(key, packed).c_str(),
                 sizeof(packed));
         if (strlen(packed) < 1) continue;
-        log_i("loading %s: %s", key, packed);
+        // log_d("loading %s: %s", key, packed);
         Peer::Saved saved;
         if (Peer::unpack(packed, &saved)) {
             Peer *peer = createPeer(saved);
@@ -61,7 +61,7 @@ void BleClient::printSettings() {
 }
 
 Peer *BleClient::createPeer(Peer::Saved saved) {
-    log_d("creating %s,%d,%s,%s,%d", saved.address, saved.addressType, saved.type, saved.name, saved.passkey);
+    // log_d("creating %s,%d,%s,%s,%d", saved.address, saved.addressType, saved.type, saved.name, saved.passkey);
     Peer *peer;
     if (strstr(saved.type, "E"))
         peer = new ESPM(saved);

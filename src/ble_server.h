@@ -9,7 +9,7 @@ class BleServer : public Atoll::BleServer {
    public:
     virtual void init() override;
     virtual uint16_t getAppearance() override;
-
+    
     void notifyApiTx(const char *str);
 };
 

@@ -49,9 +49,9 @@ void Board::setup() {
     preferencesSetup(&arduinoPreferences, "BOARD");
     loadSettings();
     log_i("\n\n\n%s %s %s\n\n\n", hostName, __DATE__, __TIME__);
-    log_i("free heap: %d", xPortGetFreeHeapSize());
+    // log_d("free heap: %d", xPortGetFreeHeapSize());
     // heap_caps_print_heap_info(MALLOC_CAP_DEFAULT | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
-    log_i("timezone %s", timezone);
+    // log_d("timezone %s", timezone);
     Atoll::setTimezone(timezone);
 
     bleServer.setup(hostName);
@@ -79,7 +79,7 @@ void Board::setup() {
     bleServer.start();
 
     if (otaMode) {
-        log_i("otaMode is true");
+        // log_d("otaMode is true");
         saveOtaMode(false);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ, 4096);
         display.taskStart(DISPLAY_TASK_FREQ, 4096 - 1024);
