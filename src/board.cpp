@@ -56,23 +56,22 @@ void Board::setup() {
 
     bleServer.setup(hostName);
     api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
-    gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
+    if (!otaMode) gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
     SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
-    sdcard.setup();
+    if (!otaMode) sdcard.setup();
 #if DISPLAY_DEVICE == DISPLAY_OLED
     display.setup();  // oled
 #elif DISPLAY_DEVICE == DISPLAY_LCD
     display.setup(LCD_BACKLIGHT_PIN);
 #endif
-    bleClient.setup(hostName, &arduinoPreferences);
-    touch.setup(&arduinoPreferences, "Touch");
+    if (!otaMode) bleClient.setup(hostName, &arduinoPreferences);
+    if (!otaMode) touch.setup(&arduinoPreferences, "Touch");
     battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
-    recorder.setup(&gps, &sdcard, &api, &recorder);
-    // uploader.setup(&recorder, &sdcard, &wifi);
+    if (!otaMode) recorder.setup(&gps, &sdcard, &api, &recorder);
+        // uploader.setup(&recorder, &sdcard, &wifi);
 #ifdef FEATURE_WEBSERVER
-    webserver.setup(&sdcard, &recorder, &ota);
+    if (!otaMode) webserver.setup(&sdcard, &recorder, &ota);
 #endif
-    ota.setup(hostName);
     mdns.setup(hostName, 3232);
     wifi.setup(hostName, &arduinoPreferences, "Wifi", &wifi, &api, &ota);
 
@@ -81,6 +80,7 @@ void Board::setup() {
     if (otaMode) {
         // log_d("otaMode is true");
         saveOtaMode(false);
+        ota.setup(hostName);
         bleServer.taskStart(BLE_SERVER_TASK_FREQ, 4096);
         display.taskStart(DISPLAY_TASK_FREQ, 4096 - 1024);
         battery.taskStart(BATTERY_TASK_FREQ, 4096 - 1024);
@@ -202,9 +202,9 @@ bool Board::loadSettings() {
     vescMaxCurrent = preferences->getFloat("vescMaC", vescMaxCurrent);
     if (vescMaxCurrent < 0.0f) vescMaxCurrent = 0.0f;
 
-    vescRampUp = preferences->getFloat("vescRU", vescRampUp);
+    vescRampUp = preferences->getBool("vescRU", vescRampUp);
 
-    vescRampDown = preferences->getFloat("vescRD", vescRampDown);
+    vescRampDown = preferences->getBool("vescRD", vescRampDown);
 
     vescRampMinCurrentDiff = preferences->getFloat("vescRMCD", vescRampMinCurrentDiff);
     if (vescRampMinCurrentDiff < 0.0f) vescRampMinCurrentDiff = 0.0f;

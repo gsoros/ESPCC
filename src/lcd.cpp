@@ -174,7 +174,10 @@ Lcd::~Lcd() {
 void Lcd::setup(uint8_t backlightPin) {
     Display::setup();
     Arduino_Canvas::begin();
-    fillScreen(bg);
+    if (aquireMutex()) {
+        fillScreen(bg);
+        releaseMutex();
+    }
     if (INT8_MAX < backlightPin)
         log_e("pin out of range");
     else
