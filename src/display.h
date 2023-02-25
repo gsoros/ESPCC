@@ -85,6 +85,7 @@ class Display : public Atoll::Task, public Print {
     struct OutputField {
         Area area;
         FieldContent content[DISPLAY_NUM_PAGES];
+        bool enabled;
         uint8_t *font;
         uint8_t *labelFont;
         uint8_t *smallFont;
@@ -93,6 +94,7 @@ class Display : public Atoll::Task, public Print {
         OutputField() : area() {
             for (uint8_t i = 0; i < DISPLAY_NUM_PAGES; i++)
                 content[i] = FC_EMPTY;
+            enabled = true;
             font = nullptr;
             labelFont = nullptr;
             smallFont = nullptr;
@@ -174,8 +176,9 @@ class Display : public Atoll::Task, public Print {
     virtual int fieldLabel(FieldContent content, char *buf, size_t len);
     virtual uint8_t fieldLabelVPos(uint8_t fieldHeight);
     virtual void splash(bool send = true);
-    virtual void message(const char *m, bool send = true);
+    virtual void message(const char *m, uint8_t fieldIndex = 0, bool send = true);
 
+    // direction <0: down, 0: display labels only, 0<: up
     virtual void switchPage(int8_t direction = 1);
 
     virtual bool setContrast(uint8_t percent);

@@ -57,6 +57,8 @@ class Lcd : public Display, public Arduino_Canvas {
     // the return value indicates whether the event should propagate
     virtual bool onTouchEvent(Touch::Pad *pad, Touch::Event event) override;
 
+    virtual void onVescConnected() override;
+
     virtual uint16_t lockedFg() override;
     virtual uint16_t lockedBg() override;
     virtual uint16_t unlockedFg() override;

@@ -447,6 +447,12 @@ void Lcd::diag(bool send) {
     }
 }
 
+void Lcd::onVescConnected() {
+    currentPage = 1;
+    switchPage(0);
+    queue([this] { Display::onVescConnected(); }, 4000);
+}
+
 uint16_t Lcd::lockedFg() { return WHITE; }
 uint16_t Lcd::lockedBg() { return RED; }
 uint16_t Lcd::unlockedFg() { return WHITE; }

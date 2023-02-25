@@ -138,8 +138,8 @@ void Display::printField(const uint8_t fieldIndex,
                          const char *str,
                          const bool send,
                          const uint8_t *font) {
-    if (!enabled) {
-        log_i("not enabled");
+    if (!field[fieldIndex].enabled) {
+        log_i("field %d not enabled", fieldIndex);
         return;
     }
     // log_i("field %d %s", fieldIndex, str);
@@ -238,8 +238,8 @@ void Display::printField2plus1(const uint8_t fieldIndex,
                                const char *two,
                                const char *one,
                                const bool send) {
-    if (!enabled) {
-        log_i("not enabled");
+    if (!field[fieldIndex].enabled) {
+        log_i("field %d not enabled", fieldIndex);
         return;
     }
     Area *a = &field[fieldIndex].area;
@@ -380,12 +380,12 @@ uint8_t Display::fieldLabelVPos(uint8_t fieldHeight) {
 }
 
 void Display::splash(bool send) {
-    message("espcc", send);
+    message("espcc", 0, send);
 }
 
-void Display::message(const char *m, bool send) {
+void Display::message(const char *m, uint8_t fieldIndex, bool send) {
     if (send && !aquireMutex()) return;
-    Area *a = &field[0].area;
+    Area *a = &field[fieldIndex].area;
     setClip(a);
     setFont(smallFont);
     setCursor(a->x + 10, a->y + a->h - 5);
@@ -397,13 +397,21 @@ void Display::message(const char *m, bool send) {
     }
 }
 
-// direction <0: down, >=0: up
+// direction <0: down, 0: display labels only, 0<: up
 void Display::switchPage(int8_t direction) {
-    currentPage += 0 <= direction ? 1 : -1;
-    if (currentPage < 0) currentPage = numPages - 1;
-    if (numPages <= currentPage) currentPage = 0;
+    if (direction < -1)
+        direction = -1;
+    else if (1 < direction)
+        direction = 1;
+    if (!(0 == currentPage && -1 == direction))
+        currentPage += direction;
+    if (currentPage < 0)
+        currentPage = 0;
+    else if (numPages - 1 < currentPage)
+        currentPage = numPages - 1;
     log_i("currentPage %d", currentPage);
     if (!aquireMutex()) return;
+    enabled = true;
     clock(false, true);  // clear clock
     char label[10] = "";
     Area *b;
@@ -419,9 +427,9 @@ void Display::switchPage(int8_t direction) {
     }
     sendBuffer();
     setMaxClip();
+    enabled = false;
     releaseMutex();
     lastFieldUpdate = millis();
-    enabled = false;
     if (queue([this]() {
             enabled = true;
             displayFieldValues();
@@ -691,7 +699,11 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_BATTERY_VESC);
     if (fieldIndex < 0) return;
-    if (battVesc < 0) {
+    if (-2 == battVesc < 0) {  // connected
+        printfFieldChars(fieldIndex, send, "...");
+        return;
+    }
+    if (battVesc < 0) {  // -1: disconnected
         fill(&field[fieldIndex].area, bg, send);
         return;
     }
@@ -701,20 +713,21 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
+// -1: disconnected, -2: connected
 void Display::onRange(int16_t value) {
     log_d("value=%d", value);
     // #if (4 <= ATOLL_LOG_LEVEL)  // debug
     //     value /= 10;
     // #endif
     static int16_t last = -1;
-    if (-1 == value || -1 == last || INT16_MAX == value || INT16_MAX == last) {
+    if (value < 0 || last < 0 || INT16_MAX == value || INT16_MAX == last) {
         range = value;
     } else {
         int32_t tmp = (last + value) / 2;
         if (INT16_MAX < tmp) tmp = INT16_MAX;
         range = (int16_t)tmp;
     }
-    log_d("last=%d range=%d", last, range);
+    // log_d("last=%d range=%d", last, range);
     if (last == range) return;
     displayRange();
     last = range;
@@ -724,7 +737,11 @@ void Display::displayRange(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_RANGE);
     if (fieldIndex < 0) return;
-    if (range < 0) {
+    if (-2 == range) {  // connected
+        printfFieldChars(fieldIndex, send, "...");
+        return;
+    }
+    if (range < 0) {  // -1: disconnected
         fill(&field[fieldIndex].area, bg, send);
         return;
     }
@@ -750,6 +767,8 @@ void Display::onHRMDisconnected() {
 }
 
 void Display::onVescConnected() {
+    // onRange(-2);
+    // onBattVesc(-2);
     onPasChange();
 }
 
@@ -773,21 +792,28 @@ void Display::onOta(const char *str) {
 }
 
 void Display::onTare() {
-    log_i("displaying tare, disabling...");
-    fill(&field[0].area, tareBg());
+    const uint8_t fieldIndex = 0;
+    if (!aquireMutex()) {
+        log_d("could not aquire mutex");
+        return;
+    }
+    log_i("displaying tare, disabling field %d...", fieldIndex);
+    fill(&field[fieldIndex].area, tareBg(), false);
     uint16_t savedFg = getColor();
     setColor(tareFg());
-    message("TARE");
+    message("TARE", fieldIndex, false);
+    sendBuffer();
     setColor(savedFg);
-    enabled = false;
+    field[fieldIndex].enabled = false;
+    releaseMutex();
     if (!queue([this]() {
-            log_i("...enabling");
-            enabled = true;
-            displayFieldContent(0, field[0].content[currentPage]);
+            log_i("...enabling field %d", fieldIndex);
+            field[fieldIndex].enabled = true;
+            displayFieldContent(fieldIndex, field[fieldIndex].content[currentPage]);
         },
                3000)) {
-        log_w("could not queue displayFieldContent, enabling");
-        enabled = true;
+        log_w("could not queue displayFieldContent, enabling field %d", fieldIndex);
+        field[fieldIndex].enabled = true;
     }
 }
 
@@ -1005,37 +1031,35 @@ void Display::onWifiStateChange() {
 }
 
 void Display::onPasChange() {
-    if (!queue([this]() {
-            if (!aquireMutex()) {
-                log_d("could not aquire mutex");
-                return;
-            }
-            enabled = true;
-            uint16_t savedFg = fg;
-            uint16_t savedBg = bg;
-            setColor(pasFg());
-            setBgColor(pasBg());
-            char out[4];
-            snprintf(out, 4, "%c%2d", board.pasMode == PAS_MODE_PROPORTIONAL ? 'P' : 'C', board.pasLevel);
-            printField(0, out, false);
-            setColor(savedFg);
-            setBgColor(savedBg);
-            sendBuffer();
-            releaseMutex();
-        },
-               0, "displayPasLevel")) {
-        log_d("could not queue displayPasLevel");
+    const uint8_t fieldIndex = 0;
+    log_d("pasMode %d, pasLevel %d", board.pasMode, board.pasLevel);
+    if (!aquireMutex()) {
+        log_d("could not aquire mutex");
         return;
     }
-    enabled = false;
-    unqueue("displayFieldContent 0");
+    field[fieldIndex].enabled = true;
+    uint16_t savedFg = fg;
+    uint16_t savedBg = bg;
+    setColor(pasFg());
+    setBgColor(pasBg());
+    char out[4];
+    snprintf(out, 4, "%c%2d", board.pasMode == PAS_MODE_PROPORTIONAL ? 'P' : 'C', board.pasLevel);
+    printField(fieldIndex, out, false);
+    sendBuffer();
+    setColor(savedFg);
+    setBgColor(savedBg);
+    field[fieldIndex].enabled = false;
+    releaseMutex();
+    char tag[32] = "";
+    snprintf(tag, sizeof(tag), "displayFieldContent %d", fieldIndex);
+    unqueue(tag);
     if (!queue([this]() {
-            enabled = true;
-            displayFieldContent(0, field[0].content[currentPage]);
+            field[fieldIndex].enabled = true;
+            displayFieldContent(fieldIndex, field[fieldIndex].content[currentPage]);
         },
-               3000, "displayFieldContent 0")) {
-        log_d("could not queue displayFieldContent 0");
-        enabled = true;
+               3000, tag)) {
+        log_d("could not queue %s", tag);
+        field[fieldIndex].enabled = true;
     }
 }
 
@@ -1150,19 +1174,23 @@ void Display::onLockChanged(bool locked) {
         // log_i("queued lockedFeedback all clear in %dms", 500);
     }
     */
-    fill(&field[0].area, locked ? lockedBg() : unlockedBg());
+    const uint8_t fieldIndex = 0;
+    if (!aquireMutex()) return;
+    fill(&field[0].area, locked ? lockedBg() : unlockedBg(), false);
     uint16_t savedFg = getColor();
     setColor(locked ? lockedFg() : unlockedFg());
-    message(locked ? "locked" : "unlocked");
+    message(locked ? "locked" : "unlocked", fieldIndex, false);
+    sendBuffer();
     setColor(savedFg);
-    enabled = false;
+    field[fieldIndex].enabled = false;
+    releaseMutex();
     if (!queue([this]() {
-            enabled = true;
-            displayFieldContent(0, field[0].content[currentPage]);
+            field[fieldIndex].enabled = true;
+            displayFieldContent(fieldIndex, field[fieldIndex].content[currentPage]);
         },
                3000)) {
-        log_w("could not queue displayFieldContent");
-        enabled = true;
+        log_w("could not queue displayFieldContent %d", fieldIndex);
+        field[fieldIndex].enabled = true;
     }
 }
 
