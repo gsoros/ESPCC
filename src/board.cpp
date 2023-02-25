@@ -30,9 +30,14 @@ Board::Board() : arduinoPreferences(),
                          130, 130, 3, 36, &spiMutex)
 #endif
 {
+    pinMode(SD_CS_PIN, OUTPUT);
+    digitalWrite(SD_CS_PIN, HIGH);
+    pinMode(LCD_CS_PIN, OUTPUT);
+    digitalWrite(LCD_CS_PIN, HIGH);
 }
 
-Board::~Board() {}
+Board::~Board() {
+}
 
 void Board::setup() {
     setCpuFrequencyMhz(80);
@@ -46,6 +51,8 @@ void Board::setup() {
     Serial.setup(&hwSerial, &wifiSerial);
     while (!hwSerial) vTaskDelay(10);
 #endif
+    SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
+
     preferencesSetup(&arduinoPreferences, "BOARD");
     loadSettings();
     log_i("%s %s %s", hostName, __DATE__, __TIME__);
@@ -53,12 +60,12 @@ void Board::setup() {
     // heap_caps_print_heap_info(MALLOC_CAP_DEFAULT | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
     // log_d("timezone %s", timezone);
     Atoll::setTimezone(timezone);
+    if (!otaMode) sdcard.setup();
 
     bleServer.setup(hostName);
     api.setup(&api, &arduinoPreferences, "API", &bleServer, API_SERVICE_UUID);
     if (!otaMode) gps.setup(9600, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN);
-    SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
-    if (!otaMode) sdcard.setup();
+
 #if DISPLAY_DEVICE == DISPLAY_OLED
     display.setup();  // oled
 #elif DISPLAY_DEVICE == DISPLAY_LCD
