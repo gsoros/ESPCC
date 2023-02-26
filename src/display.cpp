@@ -81,7 +81,7 @@ void Display::loop() {
     }
     static ulong lastStatusUpdate = 0;
     t = millis();
-    if (t - 1000 < lastStatusUpdate) return;
+    if (t - 500 < lastStatusUpdate) return;
     lastStatusUpdate = t;
     // log_i("updateStatus()");
     updateStatus();
@@ -533,9 +533,9 @@ void Display::onSpeed(double value) {
     last = speed;
     motionState = board.gps.minMovingSpeed <= speed
                       ? 10.0 < speed
-                            ? 2
-                            : 1
-                      : 0;
+                            ? msCycling
+                            : msWalking
+                      : msStanding;
 }
 
 void Display::displaySpeed(int8_t fieldIndex, bool send) {
@@ -686,6 +686,7 @@ void Display::displayBattHRM(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
+// -1: disconnected, -2: connected
 void Display::onBattVesc(int8_t value) {
     log_i("%d", value);
     static int8_t last = -1;
@@ -699,7 +700,7 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_BATTERY_VESC);
     if (fieldIndex < 0) return;
-    if (-2 == battVesc < 0) {  // connected
+    if (-2 == battVesc) {  // connected
         printfFieldChars(fieldIndex, send, "...");
         return;
     }
@@ -967,49 +968,60 @@ void Display::updateStatus(bool forceRedraw) {
 
     static Area icon = Area(a->x, a->y, statusIconSize, statusIconSize);
 
-    static int8_t lastMotionState = -1;
+    static uint8_t lastMotionState = msUnknown;
 
-    static int8_t lastWifiState = -1;
+    static uint8_t lastWifiState = wsUnknown;
 
-    static int8_t lastRecordingState = -1;
-    // 0: not recording, 1: recording but no gps fix yet, 2: recording
-    int8_t recordingState = board.recorder.isRecording ? board.gps.locationIsValid() ? 2 : 1 : 0;
+    enum recStates {
+        rsUnknown,
+        rsNotRecording,
+        rsRecordingButNoGpsFix,
+        rsRecording
+    };
+
+    static uint8_t lastRecState = rsUnknown;
+
+    uint8_t recState = board.recorder.isRecording
+                           ? board.gps.locationIsValid()
+                                 ? rsRecording
+                                 : rsRecordingButNoGpsFix
+                           : rsNotRecording;
 
     if (!forceRedraw &&
         motionState == lastMotionState &&
         wifiState == lastWifiState &&
-        1 != wifiState &&
-        recordingState == lastRecordingState &&
-        1 != recordingState)
+        wsEnabled != wifiState &&
+        recState == lastRecState &&
+        rsRecordingButNoGpsFix != recState)
         return;
 
     if (!aquireMutex()) return;
 
     icon.x = a->x;
-    if (recordingState != lastRecordingState || 1 == recordingState || forceRedraw) {
+    if (recState != lastRecState || rsRecordingButNoGpsFix == recState || forceRedraw) {
         fillUnrestricted(&icon, bg, false);
-        static bool recordingBlinkState = false;
-        if (2 == recordingState || (1 == recordingState && recordingBlinkState))
+        static bool recBlinkState = false;
+        if (rsRecording == recState || (rsRecordingButNoGpsFix == recState && recBlinkState))
             drawXBitmap(icon.x, icon.y, icon.w, icon.h, recXbm, fg, false);
-        if (1 == recordingState) recordingBlinkState = !recordingBlinkState;
+        if (rsRecordingButNoGpsFix == recState) recBlinkState = !recBlinkState;
     }
 
     icon.x = a->x + a->w / 2 - statusIconSize / 2;
-    if (wifiState != lastWifiState || 1 == wifiState || forceRedraw) {
+    if (wifiState != lastWifiState || wsEnabled == wifiState || forceRedraw) {
         fillUnrestricted(&icon, bg, false);
         static bool wifiBlinkState = false;
-        if (2 == wifiState || (1 == wifiState && wifiBlinkState))
+        if (wsConnected == wifiState || (wsEnabled == wifiState && wifiBlinkState))
             drawXBitmap(icon.x, icon.y, icon.w, icon.h, wifiXbm, fg, false);
-        if (1 == wifiState) wifiBlinkState = !wifiBlinkState;
+        if (wsEnabled == wifiState) wifiBlinkState = !wifiBlinkState;
     }
 
     icon.x = a->x + a->w - statusIconSize;
     if (motionState != lastMotionState || forceRedraw) {
         fillUnrestricted(&icon, bg, false);
         drawXBitmap(icon.x, icon.y, icon.w, icon.h,
-                    2 == motionState
+                    msCycling == motionState
                         ? rideXbm
-                    : 1 == motionState
+                    : msWalking == motionState
                         ? walkXbm
                         : standXbm,
                     fg, false);
@@ -1019,15 +1031,15 @@ void Display::updateStatus(bool forceRedraw) {
 
     lastMotionState = motionState;
     lastWifiState = wifiState;
-    lastRecordingState = recordingState;
+    lastRecState = recState;
 }
 
 void Display::onWifiStateChange() {
     wifiState = board.wifi.isEnabled()
                     ? board.wifi.isConnected()
-                          ? 2
-                          : 1
-                    : 0;
+                          ? wsConnected
+                          : wsEnabled
+                    : wsDisabled;
 }
 
 void Display::onPasChange() {

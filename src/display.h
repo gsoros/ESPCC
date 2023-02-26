@@ -287,7 +287,6 @@ class Display : public Atoll::Task, public Print {
     int16_t cadence = -1;
     int16_t heartrate = 0;
     double speed = 0.0;
-    int8_t motionState = 0;
     uint distance = 0;
     uint16_t altGain = 0;
     int8_t battery = -1;
@@ -295,7 +294,22 @@ class Display : public Atoll::Task, public Print {
     int8_t battHRM = -1;
     int8_t battVesc = -1;
     int16_t range = -1;
-    int8_t wifiState = -1;  // 0: disabled, 1: enabled, 2: connected
+
+    enum motionStates {
+        msUnknown,
+        msStanding,
+        msWalking,
+        msCycling
+    };
+    uint8_t motionState = motionStates::msUnknown;
+
+    enum wifiStates {
+        wsUnknown,
+        wsDisabled,
+        wsEnabled,
+        wsConnected
+    };
+    uint8_t wifiState = wsUnknown;
 
     float defaultTaskFreq = 0;
     TickType_t defaultTaskDelay = 0;
