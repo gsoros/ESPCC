@@ -86,20 +86,14 @@ class Display : public Atoll::Task, public Print {
         Area area;
         FieldContent content[DISPLAY_NUM_PAGES];
         bool enabled;
+        uint8_t id;
         uint8_t *font;
         uint8_t *labelFont;
         uint8_t *smallFont;
         uint8_t smallFontWidth;
 
-        OutputField() : area() {
-            for (uint8_t i = 0; i < DISPLAY_NUM_PAGES; i++)
-                content[i] = FC_EMPTY;
-            enabled = true;
-            font = nullptr;
-            labelFont = nullptr;
-            smallFont = nullptr;
-            smallFontWidth = 0;
-        };
+        OutputField(uint8_t id = 0);
+        void setEnabled(bool state = true);
     };
 
     typedef std::function<void()> QueueItemCallback;
@@ -180,6 +174,10 @@ class Display : public Atoll::Task, public Print {
 
     // direction <0: down, 0: display labels only, 0<: up
     virtual void switchPage(int8_t direction = 1);
+
+    virtual bool validFieldIndex(uint8_t fieldIndex);
+    virtual void setEnabled(uint8_t fieldIndex, bool state = true);
+    virtual bool enabled(uint8_t fieldIndex);
 
     virtual bool setContrast(uint8_t percent);
     virtual void onPower(int16_t value);
@@ -316,7 +314,6 @@ class Display : public Atoll::Task, public Print {
     QueueHandle_t _queue;
     SemaphoreHandle_t defaultMutex;
     SemaphoreHandle_t *mutex = &defaultMutex;
-    bool enabled = true;
 
     virtual bool aquireMutex(uint32_t timeout = 100);
     virtual void releaseMutex();

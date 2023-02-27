@@ -190,9 +190,14 @@ void Lcd::setup(uint8_t backlightPin) {
     if (aquireMutex()) {
         splash(false);
         sendBuffer();
-        enabled = false;
+        for (uint8_t i = 0; i < numFields; i++) setEnabled(i, false);
         releaseMutex();
-        if (!queue([this]() { enabled = true; }, 2000)) enabled = true;
+        if (!queue([this]() {
+                for (uint8_t i = 0; i < numFields; i++) setEnabled(i); },
+                   2000)) {
+            log_d("could not queue setEnabled() 2000");
+            for (uint8_t i = 0; i < numFields; i++) setEnabled(i);
+        }
     }
     // for (uint8_t i = 0; i < sizeof(field) / sizeof(field[0]); i++)
     //     log_i("field %d:    %3d %3d %3d %3d", i, field[i].area.x, field[i].area.y, field[i].area.w, field[i].area.h);
@@ -343,7 +348,7 @@ void Lcd::drawXBitmap(int16_t x,
 
 void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
     // log_i("send: %d clear: %d skip: %d", send, clear, skipFieldIndex);
-    if (board.otaMode) return;
+    if (!enabled(0) || board.otaMode) return;
     static const Area *a = &clockArea;
     if (-2 == lastMinute) return;  // avoid recursion
     tm t = Atoll::localTm();
