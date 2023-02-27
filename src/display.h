@@ -82,7 +82,7 @@ class Display : public Atoll::Task, public Print {
         }
     };
 
-    struct OutputField {
+    struct Field {
         Area area;
         FieldContent content[DISPLAY_NUM_PAGES];
         bool enabled;
@@ -92,7 +92,7 @@ class Display : public Atoll::Task, public Print {
         uint8_t *smallFont;
         uint8_t smallFontWidth;
 
-        OutputField(uint8_t id = 0);
+        Field(uint8_t id = 0);
         void setEnabled(bool state = true);
     };
 
@@ -258,7 +258,7 @@ class Display : public Atoll::Task, public Print {
     uint8_t *labelFont = nullptr;  // font for displaying the field labels
     uint8_t labelFontHeight = 0;   //
 
-    OutputField field[DISPLAY_NUM_FIELDS];         // output fields
+    Field field[DISPLAY_NUM_FIELDS];               // output fields
     uint8_t fieldWidth = 1;                        // width of the output fields
     uint8_t fieldHeight = 1;                       // height of the output fields
     uint8_t fieldVSeparation = 1;                  // vertical distance between the output fields

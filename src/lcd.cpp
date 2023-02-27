@@ -348,7 +348,8 @@ void Lcd::drawXBitmap(int16_t x,
 
 void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
     // log_i("send: %d clear: %d skip: %d", send, clear, skipFieldIndex);
-    if (!enabled(0) || board.otaMode) return;
+    static bool displayed = false;
+    if (!enabled(0) || (!displayed && clear) || board.otaMode) return;
     static const Area *a = &clockArea;
     if (-2 == lastMinute) return;  // avoid recursion
     tm t = Atoll::localTm();
@@ -365,6 +366,7 @@ void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
                                     field[i].content[currentPage],
                                     false);
         lastMinute = t.tm_min;
+        displayed = false;
         if (!send) return;
         sendBuffer();
         releaseMutex();
@@ -378,6 +380,7 @@ void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
     Arduino_Canvas::printf("%d.%02d", t.tm_mon + 1, t.tm_mday);
     setMaxClip();
     lastMinute = t.tm_min;
+    displayed = true;
     if (!send) return;
     sendBuffer();
     releaseMutex();
