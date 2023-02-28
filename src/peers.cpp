@@ -54,9 +54,39 @@ void PowerChar::notify() {
 
 void ApiTxChar::notify() {
     Atoll::PeerCharacteristicApiTX::notify();
-    if (lastValue == String("1;5=")) {  // TODO command 5=tare
-        log_i("TODO process api replies");
+    // if (nullptr != peer && peer->isESPM()) {
+    //     ApiCommand* c = ((ESPM*)peer)->
+    // }
+    char val[512] = "";
+    strncpy(val, lastValue.c_str(), sizeof(val));
+    val[511] = '\0';
+    log_d("%s", val);
+    if (0 == strncmp("1;1=", val, 4)) {  // TODO command 1=init
+        log_i("TODO process api init");
+    } else if (0 == strcmp("1;5=", val)) {  // TODO command 5=tare
         board.display.onTare();
+    } else if (0 == strncmp("1;29=", val, 5)) {  // TODO command 29=bat
+        char bat[32] = "";
+        strncpy(bat, val + 5, strlen(val) - 5);
+        char* semi = strchr(bat, ';');
+        if (nullptr != semi) {
+            char vstr[5] = "";
+            uint8_t vlen = 5 < semi - bat ? 5 : semi - bat;
+            strncpy(vstr, bat, vlen);
+            float voltage = (float)atof(vstr);
+            if (ATOLL_BATTERY_EMPTY <= voltage && voltage <= ATOLL_BATTERY_FULL) {
+                log_d("voltage: %.2f", voltage);
+            }
+            char state[12] = "";
+            strncpy(state, semi + 1, 12);
+            if (0 == strcmp("charging", state)) {
+                board.display.onBattPMState(Battery::ChargingState::csCharging);
+                log_d("charging");
+            } else if (0 == strcmp("discharging", state)) {
+                log_d("discharging");
+                board.display.onBattPMState(Battery::ChargingState::csDischarging);
+            }
+        }
     }
 }
 

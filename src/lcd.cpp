@@ -8,7 +8,8 @@ Lcd::Lcd(Arduino_GFX *device,
          uint8_t fieldHeight,
          SemaphoreHandle_t *mutex)
     : Display(width, height, feedbackWidth, fieldHeight, mutex),
-      Arduino_Canvas(width, height, device, 0, 0) {
+      Arduino_Canvas(width, height, device, 0, 0),
+      device(device) {
     /*
             // ┌─┬──────────────┬┬──────────────┬─┐
             // │f│ field0       ││ field1       │f│
@@ -119,6 +120,7 @@ Lcd::Lcd(Arduino_GFX *device,
     field[2].content[3] = FC_BATTERY_HEARTRATE;
 
     fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
+    fieldFontWidth = 20;
     smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
     timeFont = (uint8_t *)u8g2_font_logisoso42_tr;
     timeFontHeight = 42;
@@ -128,12 +130,14 @@ Lcd::Lcd(Arduino_GFX *device,
     labelFontHeight = 12;
 
     field[0].font = (uint8_t *)u8g2_font_logisoso50_tr;
+    field[0].fontWidth = 32;
     field[0].labelFont = labelFont;
     field[0].smallFont = (uint8_t *)u8g2_font_logisoso32_tr;
     field[0].smallFontWidth = 20;
 
     for (uint8_t i = 1; i < numFields; i++) {
         field[i].font = fieldFont;
+        field[i].fontWidth = fieldFontWidth;
         field[i].labelFont = labelFont;
         field[i].smallFont = smallFont;
         field[i].smallFontWidth = 13;
@@ -386,6 +390,20 @@ void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
     releaseMutex();
 }
 
+uint16_t Lcd::getStrWidth(const char *str) {
+    if (nullptr == device) {
+        log_e("device is null");
+        return (uint16_t)0;
+    }
+    // int16_t x, y;
+    // uint16_t w, h;
+    // device->getTextBounds(str, (int16_t)0, Display::height, &x, &y, &w, &h);
+    // log_d("%s x: %d, y: %d, w: %d, h: %d", str, x, y, w, h);
+    // return w;
+    log_e("arduino gfx cannot calculate u8g2 font width");
+    return (uint16_t)0;
+}
+
 void Lcd::updateStatus(bool forceRedraw) {
     // 4th of 5 evenly spaced, equally sized icons
     static Area icon = Area(statusArea.x + ((statusArea.w - statusIconSize) / 4) * 3,
@@ -466,6 +484,7 @@ uint16_t Lcd::lockedBg() { return RED; }
 uint16_t Lcd::unlockedFg() { return WHITE; }
 uint16_t Lcd::unlockedBg() { return DARKGREEN; }
 uint16_t Lcd::tareFg() { return YELLOW; }
-uint16_t Lcd::tareBg() { return color565(0, 0, 127); }     // dark blue
-uint16_t Lcd::pasFg() { return color565(255, 180, 127); }  // orange
-uint16_t Lcd::pasBg() { return color565(0, 0, 127); }      // dark blue
+uint16_t Lcd::tareBg() { return color565(0, 0, 127); }         // dark blue
+uint16_t Lcd::pasFg() { return color565(255, 180, 127); }      // orange
+uint16_t Lcd::pasBg() { return color565(0, 0, 127); }          // dark blue
+uint16_t Lcd::chargingFg() { return color565(245, 10, 200); }  // pink

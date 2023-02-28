@@ -52,6 +52,7 @@ class Lcd : public Display, public Arduino_Canvas {
                              uint16_t color,
                              bool send = true) override;
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
+    virtual uint16_t getStrWidth(const char *str) override;
     virtual void updateStatus(bool forceRedraw = false) override;
 
     // the return value indicates whether the event should propagate
@@ -67,6 +68,7 @@ class Lcd : public Display, public Arduino_Canvas {
     virtual uint16_t tareBg() override;
     virtual uint16_t pasFg() override;
     virtual uint16_t pasBg() override;
+    virtual uint16_t chargingFg() override;
 
     void backlight(uint8_t state);
     void diag(bool send = true);

@@ -281,10 +281,11 @@ void Display::printField2plus1(const uint8_t fieldIndex,
     setClip(a);
     fill(a, bg, false);
     setFont(field[fieldIndex].font);
-    setCursor(a->x, a->y + a->h - 1);
+    // uint16_t w = getStrWidth(two);
+    setCursor(a->x + a->w - field[fieldIndex].smallFontWidth - strlen(two) * field[fieldIndex].fontWidth - 4, a->y + a->h - 1);
     print(two);
     setFont(field[fieldIndex].smallFont);
-    setCursor(a->x + a->w - field[fieldIndex].smallFontWidth, a->y + a->h);
+    setCursor(a->x + a->w - field[fieldIndex].smallFontWidth, a->y + a->h - 1);
     print(one);
     setMaxClip();
     if (!send) return;
@@ -511,10 +512,10 @@ bool Display::setContrast(uint8_t percent) {
     return false;
 }
 
-void Display::onPower(int16_t value) {
+void Display::onPower(int16_t w) {
     static int16_t last = -1;
-    // log_d("value: %d, last: %d", value, last);
-    power = value;
+    // log_d("value: %d, last: %d", w, last);
+    power = w;
     if (last == power) return;
     if (0 == power) {
         log_d("power is 0, displaying weight");
@@ -539,11 +540,11 @@ void Display::displayPower(int8_t fieldIndex, bool send) {
     lastPowerUpdate = lastFieldUpdate;
 }
 
-void Display::onWeight(double value) {
-    log_d(" %.1f", value);
+void Display::onWeight(double kg) {
     static double last = 0.0;
-    weight = value;
+    weight = kg;
     if (last == weight) return;
+    log_d(" %.1f", kg);
     if (lastPowerUpdate + 1000 < millis())
         displayWeight();
     else
@@ -560,9 +561,9 @@ void Display::displayWeight(int8_t fieldIndex, bool send) {
     lastWeightUpdate = lastFieldUpdate;
 }
 
-void Display::onCadence(int16_t value) {
+void Display::onCadence(int16_t rpm) {
     static int16_t last = 0;
-    cadence = value;
+    cadence = rpm;
     if (last == cadence) return;
     displayCadence();
     last = cadence;
@@ -579,11 +580,11 @@ void Display::displayCadence(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
-void Display::onHeartrate(int16_t value) {
-    log_d("%d", value);
+void Display::onHeartrate(int16_t bpm) {
     static int16_t last = 0;
-    heartrate = value;
+    heartrate = bpm;
     if (last == heartrate) return;
+    log_d("%d", bpm);
     displayHeartrate();
     last = heartrate;
 }
@@ -599,11 +600,11 @@ void Display::displayHeartrate(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
-void Display::onSpeed(double value) {
+void Display::onSpeed(double kmh) {
     static double last = 0.0;
-    speed = value;
+    speed = kmh;
     if (abs(last - speed) < 0.1) return;
-    log_d("%.2f", value);
+    log_d("%.2f", kmh);
     displaySpeed();
     last = speed;
     if (board.gps.minCyclingSpeed <= speed)
@@ -626,10 +627,10 @@ void Display::displaySpeed(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
-void Display::onDistance(uint value) {
+void Display::onDistance(uint m) {
     // log_i("%d", value);
     static uint last = 0;
-    distance = value;
+    distance = m;
     if (last == distance) return;
     displayDistance();
     last = distance;
@@ -650,9 +651,9 @@ void Display::displayDistance(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
-void Display::onAltGain(uint16_t value) {
+void Display::onAltGain(uint16_t m) {
     static uint16_t last = 0;
-    altGain = value;
+    altGain = m;
     if (last == altGain) return;
     displayAltGain();
     last = altGain;
@@ -673,16 +674,15 @@ void Display::displayAltGain(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
-void Display::onBattery(int8_t value) {
-    // log_i("%d", value);
-    static int8_t last = -1;
-    battery = value;
-    if (last == battery) return;
+void Display::onBattery(int8_t level, Battery::ChargingState state) {
+    // log_d("%d %d", level, state);
+    if (batteryLevel == level && batteryState == state) return;
+    batteryLevel = level;
+    batteryState = state;
     displayBattery();
-    last = battery;
 }
 
-void Display::printBattCharging(int8_t fieldIndex, bool send) {
+void Display::printBattCharging(int8_t fieldIndex, bool send, bool fillBg) {
     static const uint8_t chgIconSize = 24;
     static const uint8_t chgIcon[] = {
         0x00, 0x00, 0x10, 0x00, 0x40, 0x18, 0x00, 0xe0, 0x0c, 0x00, 0xb0, 0xc7,
@@ -695,8 +695,8 @@ void Display::printBattCharging(int8_t fieldIndex, bool send) {
     Area *a = &field[fieldIndex].area;
     if (send && !aquireMutex()) return;
     setClip(a);
-    fill(a, bg, false);
-    drawXBitmap(a->x + a->w - chgIconSize, a->y, chgIconSize, chgIconSize, chgIcon, fg, false);
+    if (fillBg) fill(a, bg, false);
+    drawXBitmap(a->x + a->w - chgIconSize, a->y, chgIconSize, chgIconSize, chgIcon, chargingFg(), false);
     setMaxClip();
     if (!send) return;
     sendBuffer();
@@ -707,45 +707,64 @@ void Display::displayBattery(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_BATTERY);
     if (fieldIndex < 0) return;
-    if (99 <= battery) {
-        printBattCharging(fieldIndex, send);
-    } else if (0 <= battery) {
+    if (send && !aquireMutex()) return;
+    if (100 <= batteryLevel) {
+        printfFieldChars(fieldIndex, false, "full");
+    } else if (0 <= batteryLevel) {
         char level[3] = "";
-        snprintf(level, 3, "%2d", battery);
-        printField2plus1(fieldIndex, level, "%", send);
+        snprintf(level, 3, "%2d", batteryLevel);
+        printField2plus1(fieldIndex, level, "%", false);
     } else
-        fill(&field[fieldIndex].area, bg, send);
+        fill(&field[fieldIndex].area, bg, false);
+    if (Battery::ChargingState::csCharging == batteryState) {
+        printBattCharging(fieldIndex, false, false);
+    }
     lastFieldUpdate = millis();
+    if (!send) return;
+    sendBuffer();
+    releaseMutex();
 }
 
-void Display::onBattPM(int8_t value) {
-    // log_i("%d", value);
-    static int8_t last = -1;
-    battPM = value;
-    if (last == battPM) return;
+void Display::onBattPM(int8_t level) {
+    // log_i("%d", level);
+    if (level == battPM) return;
+    battPM = level;
     displayBattPM();
-    last = battPM;
+}
+
+void Display::onBattPMState(Battery::ChargingState state) {
+    // log_i("%d", state);
+    if (state == battPMState) return;
+    battPMState = state;
+    displayBattPM();
 }
 
 void Display::displayBattPM(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_BATTERY_POWER);
     if (fieldIndex < 0) return;
-    if (99 <= battPM) {
-        printBattCharging(fieldIndex, send);
+    if (send && !aquireMutex()) return;
+    if (100 <= battPM) {
+        printfFieldChars(fieldIndex, false, "full");
     } else if (0 <= battPM) {
         char level[3] = "";
         snprintf(level, 3, "%2d", battPM);
-        printField2plus1(fieldIndex, level, "%", send);
+        printField2plus1(fieldIndex, level, "%", false);
     } else
-        fill(&field[fieldIndex].area, bg, send);
+        fill(&field[fieldIndex].area, bg, false);
+    if (Battery::ChargingState::csCharging == battPMState) {
+        printBattCharging(fieldIndex, false, false);
+    }
     lastFieldUpdate = millis();
+    if (!send) return;
+    sendBuffer();
+    releaseMutex();
 }
 
-void Display::onBattHRM(int8_t value) {
-    log_i("%d", value);
+void Display::onBattHRM(int8_t level) {
+    log_i("%d", level);
     static int8_t last = -1;
-    battHRM = value;
+    battHRM = level;
     if (last == battHRM) return;
     displayBattHRM();
     last = battHRM;
@@ -767,10 +786,10 @@ void Display::displayBattHRM(int8_t fieldIndex, bool send) {
 }
 
 // -1: disconnected, -2: connected
-void Display::onBattVesc(int8_t value) {
+void Display::onBattVesc(int8_t level) {
     // log_i("%d", value);
     static int8_t last = -1;
-    battVesc = value;
+    battVesc = level;
     if (last == battVesc) return;
     displayBattVesc();
     last = battVesc;
@@ -788,23 +807,27 @@ void Display::displayBattVesc(int8_t fieldIndex, bool send) {
         fill(&field[fieldIndex].area, bg, send);
         return;
     }
-    char level[3] = "";
-    snprintf(level, 3, "%2d", 99 < battVesc ? 99 : battVesc);
-    printField2plus1(fieldIndex, level, "%", send);
+    if (99 < battVesc) {
+        printfFieldChars(fieldIndex, send, "full");
+    } else {
+        char level[3] = "";
+        snprintf(level, 3, "%2d", battVesc);
+        printField2plus1(fieldIndex, level, "%", send);
+    }
     lastFieldUpdate = millis();
 }
 
 // -1: disconnected, -2: connected
-void Display::onRange(int16_t value) {
+void Display::onRange(int16_t km) {
     // log_d("%d", value);
     //  #if (4 <= ATOLL_LOG_LEVEL)  // debug
     //      value /= 10;
     //  #endif
     static int16_t last = -1;
-    if (value < 0 || last < 0 || INT16_MAX == value || INT16_MAX == last) {
-        range = value;
+    if (km < 0 || last < 0 || INT16_MAX == km || INT16_MAX == last) {
+        range = km;
     } else {
-        int32_t tmp = (last + value) / 2;
+        int32_t tmp = (last + km) / 2;
         if (INT16_MAX < tmp) tmp = INT16_MAX;
         range = (int16_t)tmp;
     }
@@ -1316,6 +1339,7 @@ uint16_t Display::tareFg() { return bg; }
 uint16_t Display::tareBg() { return fg; }
 uint16_t Display::pasFg() { return bg; }
 uint16_t Display::pasBg() { return fg; }
+uint16_t Display::chargingFg() { return fg; }
 
 bool Display::aquireMutex(uint32_t timeout) {
     // log_d("aquireMutex %d", (int)mutex);

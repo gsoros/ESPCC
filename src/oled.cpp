@@ -46,3 +46,11 @@ void Oled::clock(bool send, bool clear, int8_t skipFieldIndex) {
     sendBuffer();
     releaseMutex();
 }
+
+uint16_t Oled::getStrWidth(const char *str) {
+    if (nullptr == device) {
+        log_e("device is null");
+        return (uint16_t)0;
+    }
+    return (uint16_t)device->getStrWidth(str);
+}

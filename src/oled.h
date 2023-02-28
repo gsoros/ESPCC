@@ -69,6 +69,7 @@ class Oled : public Display {
         field[2].content[3] = FC_BATTERY_HEARTRATE;
 
         fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
+        fieldFontWidth = 20;
         smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
         timeFont = (uint8_t *)u8g2_font_logisoso32_tn;
         timeFontHeight = 32;
@@ -79,6 +80,7 @@ class Oled : public Display {
 
         for (uint8_t i = 0; i < numFields; i++) {
             field[i].font = fieldFont;
+            field[i].fontWidth = fieldFontWidth;
             field[i].labelFont = labelFont;
             field[i].smallFont = smallFont;
             field[i].smallFontWidth = 13;
@@ -199,6 +201,8 @@ class Oled : public Display {
     }
 
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
+
+    virtual uint16_t getStrWidth(const char *str) override;
 
     virtual uint8_t fieldLabelVPos(uint8_t fieldHeight) override {
         return fieldHeight - 4;

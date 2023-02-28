@@ -4,6 +4,7 @@
 #include <CircularBuffer.h>
 
 #include "definitions.h"
+#include "battery.h"
 
 #if DISPLAY_DEVICE == DISPLAY_OLED
 #define DISPLAY_NUM_FIELDS DISPLAY_OLED_NUM_FIELDS
@@ -88,6 +89,7 @@ class Display : public Atoll::Task, public Print {
         bool enabled;
         uint8_t id;
         uint8_t *font;
+        uint8_t fontWidth;  // workaround as arduino gfx cannot calculate u8g2 font width
         uint8_t *labelFont;
         uint8_t *smallFont;
         uint8_t smallFontWidth;
@@ -132,6 +134,7 @@ class Display : public Atoll::Task, public Print {
     virtual void setClip(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
     virtual void setFont(const uint8_t *font) = 0;
     virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) = 0;
+    virtual uint16_t getStrWidth(const char *str) = 0;
 
     virtual void setClip(const Area *a);
     virtual void setMaxClip();
@@ -139,6 +142,7 @@ class Display : public Atoll::Task, public Print {
     virtual uint16_t getColor();
     virtual void setColor(uint16_t fg, uint16_t bg);
     virtual void setBgColor(uint16_t color);
+
     virtual size_t print(const char *str);
 
     virtual size_t printUnrestricted(const char *str);
@@ -180,30 +184,31 @@ class Display : public Atoll::Task, public Print {
     virtual bool enabled(uint8_t fieldIndex);
 
     virtual bool setContrast(uint8_t percent);
-    virtual void onPower(int16_t value);
+    virtual void onPower(int16_t w);
     virtual void displayPower(int8_t fieldIndex = -1, bool send = true);
-    virtual void onWeight(double value);
+    virtual void onWeight(double kg);
     virtual void displayWeight(int8_t fieldIndex = -1, bool send = true);
-    virtual void onCadence(int16_t value);
+    virtual void onCadence(int16_t rpm);
     virtual void displayCadence(int8_t fieldIndex = -1, bool send = true);
-    virtual void onHeartrate(int16_t value);
+    virtual void onHeartrate(int16_t bpm);
     virtual void displayHeartrate(int8_t fieldIndex = -1, bool send = true);
-    virtual void onSpeed(double value);
+    virtual void onSpeed(double kmh);
     virtual void displaySpeed(int8_t fieldIndex = -1, bool send = true);
-    virtual void onDistance(uint value);
+    virtual void onDistance(uint m);
     virtual void displayDistance(int8_t fieldIndex = -1, bool send = true);
-    virtual void onAltGain(uint16_t value);
+    virtual void onAltGain(uint16_t m);
     virtual void displayAltGain(int8_t fieldIndex = -1, bool send = true);
-    virtual void onBattery(int8_t value);
-    virtual void printBattCharging(int8_t fieldIndex = -1, bool send = true);
+    virtual void onBattery(int8_t level, Battery::ChargingState state = Battery::ChargingState::csUnknown);
+    virtual void printBattCharging(int8_t fieldIndex = -1, bool send = true, bool drawBg = true);
     virtual void displayBattery(int8_t fieldIndex = -1, bool send = true);
-    virtual void onBattPM(int8_t value);
+    virtual void onBattPM(int8_t level);
+    virtual void onBattPMState(Battery::ChargingState state = Battery::ChargingState::csUnknown);
     virtual void displayBattPM(int8_t fieldIndex = -1, bool send = true);
-    virtual void onBattHRM(int8_t value);
+    virtual void onBattHRM(int8_t level);
     virtual void displayBattHRM(int8_t fieldIndex = -1, bool send = true);
-    virtual void onBattVesc(int8_t value);
+    virtual void onBattVesc(int8_t level);
     virtual void displayBattVesc(int8_t fieldIndex = -1, bool send = true);
-    virtual void onRange(int16_t value);
+    virtual void onRange(int16_t km);
     virtual void displayRange(int8_t fieldIndex = -1, bool send = true);
     virtual void onPMDisconnected();
     virtual void onHRMDisconnected();
@@ -237,6 +242,7 @@ class Display : public Atoll::Task, public Print {
     virtual uint16_t tareBg();
     virtual uint16_t pasFg();
     virtual uint16_t pasBg();
+    virtual uint16_t chargingFg();
 
     static uint16_t rgb888to565(uint8_t r, uint8_t g, uint8_t b) {
         return (((r & 0xf8) << 8) + ((g & 0xfc) << 3) + (b >> 3));
@@ -250,6 +256,7 @@ class Display : public Atoll::Task, public Print {
     uint16_t bg = BLACK;  // 16-bit RGB (5-6-5) background color
 
     uint8_t *fieldFont = nullptr;  // font for displaying field content
+    uint8_t fieldFontWidth = 0;    // workaround as arduino gfx cannot calculate u8g2 fornt width
     uint8_t *smallFont = nullptr;  // small characters for field content
     uint8_t *timeFont = nullptr;   // font for displaying the time
     uint8_t timeFontHeight = 0;    //
@@ -287,8 +294,10 @@ class Display : public Atoll::Task, public Print {
     double speed = 0.0;
     uint distance = 0;
     uint16_t altGain = 0;
-    int8_t battery = -1;
+    int8_t batteryLevel = -1;
+    Battery::ChargingState batteryState = Battery::ChargingState::csUnknown;
     int8_t battPM = -1;
+    Battery::ChargingState battPMState = Battery::ChargingState::csUnknown;
     int8_t battHRM = -1;
     int8_t battVesc = -1;
     int16_t range = -1;
