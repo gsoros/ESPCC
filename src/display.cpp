@@ -600,20 +600,18 @@ void Display::displayHeartrate(int8_t fieldIndex, bool send) {
 }
 
 void Display::onSpeed(double value) {
-    log_d("%.2f", value);
-    static double last = 0;
+    static double last = 0.0;
     speed = value;
-    if (last == speed) return;
+    if (abs(last - speed) < 0.1) return;
+    log_d("%.2f", value);
     displaySpeed();
     last = speed;
-    if (!board.gps.device.speed.isValid())
-        motionState = msUnknown;
-    else if (speed < board.gps.minMovingSpeed)
-        motionState = msStanding;
-    else if (speed <= 10)
+    if (board.gps.minCyclingSpeed <= speed)
+        motionState = msCycling;
+    else if (board.gps.minWalkingSpeed <= speed)
         motionState = msWalking;
     else
-        motionState = msCycling;
+        motionState = msStanding;
 }
 
 void Display::displaySpeed(int8_t fieldIndex, bool send) {
