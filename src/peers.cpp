@@ -171,13 +171,13 @@ void ApiTxChar::onApiReply(uint8_t code, const char* value, size_t len) {
     if (code == commandCode("bat")) {
         log_d("processing bat");
         const char* sep = strchr(value, '|');
-        const char* charging = "charging";
-        const char* discharging = "discharging";
+        const char charging[] = "charging";
+        const char discharging[] = "discharging";
         if (nullptr != sep) {
-            if (sep + strlen(charging) < value + len && 0 == strcmp(charging, sep + 1)) {
+            if (sep + sizeof(charging) < value + len && 0 == strncmp(charging, sep + 1, sizeof(charging) - 1)) {
                 board.display.onBattPMState(Battery::ChargingState::csCharging);
                 log_d("charging");
-            } else if (sep + strlen(discharging) < value + len && 0 == strcmp(discharging, sep + 1)) {
+            } else if (sep + sizeof(discharging) < value + len && 0 == strncmp(discharging, sep + 1, sizeof(discharging) - 1)) {
                 board.display.onBattPMState(Battery::ChargingState::csDischarging);
                 log_d("discharging");
             }
