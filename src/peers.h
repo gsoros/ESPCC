@@ -22,7 +22,13 @@ class PowerMeter : public Atoll::PowerMeter {
 
 class ApiTxChar : public Atoll::PeerCharacteristicApiTX {
    public:
+    ApiTxChar();
     virtual void notify() override;
+    virtual void processApiReply(const char* reply);
+    virtual void processInit(const char* value);
+    virtual void onApiReply(uint8_t commandCode, const char* value, size_t len);
+    char commands[ATOLL_API_MAX_COMMANDS][ATOLL_API_COMMAND_NAME_LENGTH];
+    uint8_t commandCode(const char* name);
 };
 
 class WeightChar : public Atoll::PeerCharacteristicWeightscale {

@@ -52,42 +52,170 @@ void PowerChar::notify() {
     }
 }
 
+ApiTxChar::ApiTxChar() {
+    PeerCharacteristicApiTX();
+    strncpy(commands[0], "invalid", sizeof(commands[0]));
+    strncpy(commands[1], "init", sizeof(commands[1]));
+    for (uint8_t i = 2; i < sizeof(commands) / sizeof(commands[0]); i++)
+        strncpy(commands[i], "", sizeof(commands[i]));
+}
+
 void ApiTxChar::notify() {
     Atoll::PeerCharacteristicApiTX::notify();
-    // if (nullptr != peer && peer->isESPM()) {
-    //     ApiCommand* c = ((ESPM*)peer)->
-    // }
-    char val[512] = "";
-    strncpy(val, lastValue.c_str(), sizeof(val));
-    val[511] = '\0';
-    log_d("%s", val);
-    if (0 == strncmp("1;1=", val, 4)) {  // TODO command 1=init
-        log_i("TODO process api init");
-    } else if (0 == strcmp("1;5=", val)) {  // TODO command 5=tare
+    processApiReply(lastValue.c_str());
+}
+
+void ApiTxChar::processApiReply(const char* reply) {
+    // log_d("processing %s", reply);
+
+    const char* cur = reply;
+
+    const uint8_t success = 1;
+    char search[3];
+    snprintf(search, sizeof(search), "%d;", success);
+    size_t searchLen = strlen(search);
+    if (0 != strncmp(search, cur, searchLen)) {
+        log_d("no success");
+        return;
+    }
+    cur += searchLen;
+
+    const char* eq = strchr(cur, '=');
+    if (!eq) {
+        log_d("no eq");
+        return;
+    }
+
+    char codeStr[3];
+    size_t codeStrLen = eq - cur;
+    if (sizeof(codeStr) - 1 < codeStrLen) codeStrLen = sizeof(codeStr) - 1;
+    snprintf(codeStr, codeStrLen + 1, "%s", cur);
+    int code = atoi(codeStr);
+    // log_d("codeStr: %s, code: %d", codeStr, code);
+    if (code < 1 || ATOLL_API_MAX_COMMANDS - 1 < code) {
+        log_e("command code %d out of range");
+        return;
+    }
+
+    cur = eq + 1;
+
+    if (code == commandCode("init")) {
+        processInit(cur);
+        return;
+    }
+
+    onApiReply(code, cur, strlen(cur));
+}
+
+void ApiTxChar::processInit(const char* value) {
+    // 2:name2=value2;3:name3;4:name4=;5:name5=value5;...
+    // log_d("processing init: %s", value);
+    size_t len = strlen(value);
+    if (len < 2) {
+        log_i("init too short");
+        return;
+    }
+    const char* cur = value;
+    const char* semi;
+    if (!semi) semi = cur + len;
+    const char* colon;
+    char codeStr[3];
+    size_t codeStrLen;
+    int code;
+    const char* name;
+    size_t nameLen;
+    const char* eq;
+    do {
+        semi = strchr(cur, ';');
+        if (!semi) semi = cur + strlen(cur);
+        colon = strchr(cur, ':');
+        if (!colon || semi < colon) goto cont;
+        codeStrLen = colon - cur;
+        if (sizeof(codeStr) - 1 < codeStrLen) codeStrLen = sizeof(codeStr) - 1;
+        snprintf(codeStr, codeStrLen + 1, "%s", cur);
+        code = atoi(codeStr);
+        if (code < 2 || ATOLL_API_MAX_COMMANDS - 1 < code) {
+            log_e("code %d out of range", code);
+            goto cont;
+        }
+        eq = strchr(colon + 1, '=');
+        if (semi < eq) eq = nullptr;
+        nameLen = eq ? eq - colon - 1 : semi - colon - 1;
+        if (nameLen < 1 || sizeof(commands[0]) - 1 < nameLen) {
+            log_e("name length out of range: %d", nameLen);
+            goto cont;
+        }
+        name = colon + 1;
+        snprintf(commands[code], nameLen + 1, "%s", name);
+        // log_d("added command %d: %s", code, commands[code]);
+        if (!eq || 0 == strncmp("system", name, nameLen)) goto cont;
+        onApiReply(code, eq + 1, semi - eq);
+
+    cont:
+        cur = semi + 1;
+    } while (semi = strchr(cur, ';'));
+    return;
+}
+
+void ApiTxChar::onApiReply(uint8_t code, const char* value, size_t len) {
+    if (code < 2 || ATOLL_API_MAX_COMMANDS - 1 < code) {
+        log_e("command code %d out of range");
+        return;
+    }
+
+    if (code == commandCode("tare")) {
+        log_d("processing tare");
         board.display.onTare();
-    } else if (0 == strncmp("1;29=", val, 5)) {  // TODO command 29=bat
-        char bat[32] = "";
-        strncpy(bat, val + 5, strlen(val) - 5);
-        char* semi = strchr(bat, ';');
-        if (nullptr != semi) {
-            char vstr[5] = "";
-            uint8_t vlen = 5 < semi - bat ? 5 : semi - bat;
-            strncpy(vstr, bat, vlen);
-            float voltage = (float)atof(vstr);
-            if (ATOLL_BATTERY_EMPTY <= voltage && voltage <= ATOLL_BATTERY_FULL) {
-                log_d("voltage: %.2f", voltage);
-            }
-            char state[12] = "";
-            strncpy(state, semi + 1, 12);
-            if (0 == strcmp("charging", state)) {
+        return;
+    }
+    if (code == commandCode("bat")) {
+        log_d("processing bat");
+        const char* sep = strchr(value, '|');
+        const char* charging = "charging";
+        const char* discharging = "discharging";
+        if (nullptr != sep) {
+            if (sep + strlen(charging) < value + len && 0 == strcmp(charging, sep + 1)) {
                 board.display.onBattPMState(Battery::ChargingState::csCharging);
                 log_d("charging");
-            } else if (0 == strcmp("discharging", state)) {
-                log_d("discharging");
+            } else if (sep + strlen(discharging) < value + len && 0 == strcmp(discharging, sep + 1)) {
                 board.display.onBattPMState(Battery::ChargingState::csDischarging);
+                log_d("discharging");
             }
         }
+        char vstr[5] = "";
+        size_t vlen = sep ? sep - value : strlen(value);
+        if (len < vlen) vlen = len;
+        if (sizeof(vstr) - 1 < vlen) vlen = sizeof(vstr) - 1;
+        snprintf(vstr, vlen, "%s", value);
+        // log_d("vstr: %s", vstr);
+        float voltage = (float)atof(vstr);
+        if (ATOLL_BATTERY_EMPTY <= voltage && voltage <= ATOLL_BATTERY_FULL) {
+            log_d("voltage: %.2f", voltage);
+        }
     }
+}
+
+uint8_t ApiTxChar::commandCode(const char* name) {
+    if (!strlen(name)) {
+        log_e("empty name");
+        return 0;
+    }
+
+    for (uint8_t i = 1; i < sizeof(commands) / sizeof(commands[0]); i++)
+        if (0 == strcmp(name, commands[i])) return i;
+
+    // char debug[256] = "";
+    // snprintf(debug, sizeof(debug), "%s not found in ", name);
+    // char cur[20] = "";
+    // size_t curLen;
+    // for (uint8_t i = 1; i < sizeof(commands) / sizeof(commands[0]); i++) {
+    //     snprintf(cur, sizeof(cur), "%s, ", i, commands[i]);
+    //     if (strlen(debug) + strlen(cur) < sizeof(debug) - 1)
+    //         strcat(debug, cur);
+    // }
+    // log_e("%s", debug);
+
+    return 0;
 }
 
 void WeightChar::notify() {

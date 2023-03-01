@@ -124,16 +124,16 @@ bool BleClient::tarePowerMeter() {
             continue;
         }
         if (!peers[i]->isConnected()) {
-            log_i("peer #%d not connected", i);
+            log_d("peer #%d not connected", i);
             continue;
         }
         if (!peers[i]->isESPM()) {
-            log_i("peer #%d not ESPM", i);
+            log_d("peer #%d not ESPM", i);
             continue;
         }
         ESPM *espm = (ESPM *)peers[i];
         if (espm->sendApiCommand("tare=0")) {
-            log_i("peer #%d tare command sent");
+            log_d("peer #%d tare command sent", i);
             return true;
         }
     }

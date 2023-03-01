@@ -282,7 +282,7 @@ void Display::printField2plus1(const uint8_t fieldIndex,
     fill(a, bg, false);
     setFont(field[fieldIndex].font);
     // uint16_t w = getStrWidth(two);
-    setCursor(a->x + a->w - field[fieldIndex].smallFontWidth - strlen(two) * field[fieldIndex].fontWidth - 4, a->y + a->h - 1);
+    setCursor(a->x + a->w - field[fieldIndex].smallFontWidth - strlen(two) * field[fieldIndex].fontWidth - 5, a->y + a->h - 1);
     print(two);
     setFont(field[fieldIndex].smallFont);
     setCursor(a->x + a->w - field[fieldIndex].smallFontWidth, a->y + a->h - 1);
@@ -543,8 +543,9 @@ void Display::displayPower(int8_t fieldIndex, bool send) {
 void Display::onWeight(double kg) {
     static double last = 0.0;
     weight = kg;
-    if (last == weight) return;
-    log_d(" %.1f", kg);
+    double perc = weight / 100;
+    if (weight - perc < last && last < weight + perc) return;
+    log_d(" %.1f", weight);
     if (lastPowerUpdate + 1000 < millis())
         displayWeight();
     else
