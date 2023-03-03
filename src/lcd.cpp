@@ -10,64 +10,7 @@ Lcd::Lcd(Arduino_GFX *device,
     : Display(width, height, feedbackWidth, fieldHeight, mutex),
       Arduino_Canvas(width, height, device, 0, 0),
       device(device) {
-    /*
-            // ┌─┬──────────────┬┬──────────────┬─┐
-            // │f│ field0       ││ field1       │f│
-            // │e│              ││              │e│
-            // │e│              ││              │e│
-            // │d│              ││              │d│
-            // │b│          c l o c k           │b│
-            // │0│              ││              │1│
-            // ├─┼──────────────┼┼──────────────┼─┤
-            // │f├──────────────┼┼──────────────┤f│
-            // │e│ field2       ││ field3       │e│
-            // │e│              ││              │e│
-            // │d│              ││              │d│
-            // │b│              ││              │b│
-            // │2│              ││              │3│
-            // │ ├──────────────┴┴──────────────┤ │
-            // │ │             status           │ │
-            // └─┴──────────────────────────────┴─┘
-
-            fieldWidth = (width - 2 * feedbackWidth - fieldHSeparation) / 2;
-            fieldVSeparation = (height - 2 * fieldHeight) / 4;
-
-            field[0].area.x = feedbackWidth;
-            field[0].area.y = 0;
-            field[0].area.w = fieldWidth;
-            field[0].area.h = fieldHeight;
-
-            field[1].area.x = feedbackWidth + fieldWidth + fieldHSeparation;
-            field[1].area.y = 0;
-            field[1].area.w = fieldWidth;
-            field[1].area.h = fieldHeight;
-
-            field[2].area.x = feedbackWidth;
-            field[2].area.y = fieldHeight + fieldVSeparation;
-            field[2].area.w = fieldWidth;
-            field[2].area.h = fieldHeight;
-
-            field[3].area.x = feedbackWidth + fieldWidth + fieldHSeparation;
-            field[3].area.y = fieldHeight + fieldVSeparation;
-            field[3].area.w = fieldWidth;
-            field[3].area.h = fieldHeight;
-
-            field[0].content[0] = FC_POWER;
-            field[1].content[0] = FC_HEARTRATE;
-            field[2].content[0] = FC_CADENCE;
-            field[3].content[0] = FC_HEARTRATE;
-
-            field[0].content[1] = FC_SPEED;
-            field[1].content[1] = FC_DISTANCE;
-            field[2].content[1] = FC_ALTGAIN;
-            field[3].content[1] = FC_ALTGAIN;
-
-            field[0].content[2] = FC_BATTERY;
-            field[1].content[2] = FC_BATTERY_POWER;
-            field[2].content[2] = FC_BATTERY_HEARTRATE;
-            field[3].content[2] = FC_BATTERY_HEARTRATE;
-    */
-
+    //
     // ┌─┬──────────────────────────────┬─┐
     // │f│ field0 / clock               │f│
     // │e│                              │e│
@@ -354,7 +297,7 @@ void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
     // log_i("send: %d clear: %d skip: %d", send, clear, skipFieldIndex);
     static bool displayed = false;
     if (!enabled(0)               // field 0 not enabled
-        || 2 == currentPage       // don't cover battery display
+        || 3 == currentPage       // don't cover battery display
         || (!displayed && clear)  // nothing to clear
         || board.otaMode          // no clock in ota mode
         ) return;
