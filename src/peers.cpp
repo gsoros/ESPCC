@@ -149,7 +149,7 @@ void ApiTxChar::processInit(const char* value) {
         snprintf(commands[code], nameLen + 1, "%s", name);
         // log_d("added command %d: %s", code, commands[code]);
         if (!eq || 0 == strncmp("system", name, nameLen)) goto cont;
-        onApiReply(code, eq + 1, semi - eq);
+        onApiReply(code, eq + 1, semi - eq - 1);
 
     cont:
         cur = semi + 1;
@@ -169,15 +169,15 @@ void ApiTxChar::onApiReply(uint8_t code, const char* value, size_t len) {
         return;
     }
     if (code == commandCode("bat")) {
-        log_d("processing bat");
+        // log_d("processing bat, value: \"%s\", len: %d", value, len);
         const char* sep = strchr(value, '|');
         const char charging[] = "charging";
         const char discharging[] = "discharging";
         if (nullptr != sep) {
-            if (sep + sizeof(charging) < value + len && 0 == strncmp(charging, sep + 1, sizeof(charging) - 1)) {
+            if (sep + sizeof(charging) - 1 < value + len && 0 == strncmp(charging, sep + 1, sizeof(charging) - 1)) {
                 board.display.onBattPMState(Battery::ChargingState::csCharging);
                 log_d("charging");
-            } else if (sep + sizeof(discharging) < value + len && 0 == strncmp(discharging, sep + 1, sizeof(discharging) - 1)) {
+            } else if (sep + sizeof(discharging) - 1 < value + len && 0 == strncmp(discharging, sep + 1, sizeof(discharging) - 1)) {
                 board.display.onBattPMState(Battery::ChargingState::csDischarging);
                 log_d("discharging");
             }
@@ -186,7 +186,7 @@ void ApiTxChar::onApiReply(uint8_t code, const char* value, size_t len) {
         size_t vlen = sep ? sep - value : strlen(value);
         if (len < vlen) vlen = len;
         if (sizeof(vstr) - 1 < vlen) vlen = sizeof(vstr) - 1;
-        snprintf(vstr, vlen, "%s", value);
+        snprintf(vstr, vlen + 1, "%s", value);
         // log_d("vstr: %s", vstr);
         float voltage = (float)atof(vstr);
         if (ATOLL_BATTERY_EMPTY <= voltage && voltage <= ATOLL_BATTERY_FULL) {

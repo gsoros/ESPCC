@@ -545,7 +545,7 @@ void Display::onWeight(double kg) {
     weight = kg;
     double perc = weight / 100;
     if (weight - perc < last && last < weight + perc) return;
-    log_d(" %.1f", weight);
+    // log_d(" %.1f", weight);
     if (lastPowerUpdate + 1000 < millis())
         displayWeight();
     else
@@ -864,6 +864,7 @@ void Display::onPMDisconnected() {
     onPower(-1);
     onCadence(-1);
     onBattPM(-1);
+    onBattPMState();
 }
 
 void Display::onHRMDisconnected() {
