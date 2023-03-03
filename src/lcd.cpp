@@ -353,7 +353,11 @@ void Lcd::drawXBitmap(int16_t x,
 void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
     // log_i("send: %d clear: %d skip: %d", send, clear, skipFieldIndex);
     static bool displayed = false;
-    if (!enabled(0) || (!displayed && clear) || board.otaMode) return;
+    if (!enabled(0)               // field 0 not enabled
+        || 2 == currentPage       // don't cover battery display
+        || (!displayed && clear)  // nothing to clear
+        || board.otaMode          // no clock in ota mode
+        ) return;
     static const Area *a = &clockArea;
     if (-2 == lastMinute) return;  // avoid recursion
     tm t = Atoll::localTm();
