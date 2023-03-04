@@ -91,18 +91,23 @@ class Board : public Atoll::Task,
     void saveVescSettings(bool skipStartEnd = false);
 
     bool otaMode = false;
-    uint8_t pasMode = PAS_MODE_PROPORTIONAL;
-    uint8_t pasLevel = 0;
-    uint8_t vescBattNumSeries = 13;
-    float vescBattCapacityWh = 740;  // 3.7V * 20Ah
-    uint16_t vescMaxPower = 2500;
-    float vescMinCurrent = 1.1f;
-    float vescMaxCurrent = 50.0f;
-    bool vescRampUp = true;
-    bool vescRampDown = true;
-    float vescRampMinCurrentDiff = 1.0f;
-    uint8_t vescRampNumSteps = 3;
-    uint16_t vescRampTime = 500;
+
+    uint8_t pasMode = PAS_MODE_PROPORTIONAL;  //
+    uint8_t pasLevel = 0;                     //
+    uint8_t pasMinHumanPower = 50;            // W, threshold to activate pas
+    uint16_t pasConstantFactor = 100;         // power factor in constant mode
+    float pasProportionalFactor = 1.0f;       // power factor in proportional mode
+
+    uint8_t vescBattNumSeries = 13;       // number of cells in series
+    float vescBattCapacityWh = 740;       // 3.7V * 20Ah
+    uint16_t vescMaxPower = 2500;         // power limit
+    float vescMinCurrent = 1.1f;          // for startup
+    float vescMaxCurrent = 50.0f;         // current limit
+    bool vescRampUp = true;               //
+    bool vescRampDown = true;             //
+    float vescRampMinCurrentDiff = 1.0f;  //
+    uint8_t vescRampNumSteps = 3;         //
+    uint16_t vescRampTime = 500;          //
 };
 
 extern Board board;

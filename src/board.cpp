@@ -192,6 +192,21 @@ bool Board::loadSettings() {
     if (1 < tmpUint) tmpUint = 1;  // always start with either 0 or 1
     pasLevel = tmpUint;
 
+    tmpUint = preferences->getUInt("pasMHP", pasMinHumanPower);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    pasMinHumanPower = tmpUint;
+
+    tmpUint = preferences->getUInt("pasCF", pasConstantFactor);
+    if (UINT16_MAX < tmpUint) tmpUint = UINT16_MAX;
+    pasConstantFactor = tmpUint;
+
+    float tmpFloat = preferences->getFloat("pasPF", pasProportionalFactor);
+    if (tmpFloat < 0.0f)
+        tmpFloat = 0.0f;
+    else if (20.0f < tmpFloat)
+        tmpFloat = 20.0f;
+    pasProportionalFactor = tmpFloat;
+
     tmpUint = preferences->getUInt("vescBNS", vescBattNumSeries);
     if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
     vescBattNumSeries = tmpUint;
@@ -248,6 +263,9 @@ void Board::savePasSettings(bool skipStartEnd) {
     if (!skipStartEnd && !preferencesStartSave()) return;
     preferences->putUInt("pasMode", (uint32_t)pasMode);
     preferences->putUInt("pasLevel", (uint32_t)pasLevel);
+    preferences->putUInt("pasMHP", (uint32_t)pasMinHumanPower);
+    preferences->putUInt("pasCF", (uint32_t)pasConstantFactor);
+    preferences->putFloat("pasPF", pasProportionalFactor);
     if (!skipStartEnd) preferencesEnd();
 }
 

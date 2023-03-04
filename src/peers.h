@@ -72,6 +72,8 @@ class Vesc : public Atoll::Vesc {
     virtual void setPower(uint16_t power) override;
     virtual void onConnect(BLEClient* client) override;
     virtual void onDisconnect(BLEClient* client, int reason) override;
+    virtual void onHumanPower(uint16_t humanPower);
+    virtual uint16_t rampDelay();
 };
 
 #endif

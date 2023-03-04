@@ -34,21 +34,14 @@ void BleClient::saveSettings() {
         strncpy(saved,
                 preferences->getString(key).c_str(),
                 sizeof(saved));
-        if (nullptr == peers[i] || peers[i]->markedForRemoval) {
-            if (0 != strcmp(saved, "")) {
-                log_i("removing %s", key);
-                preferences->putString(key, "");
-            }
-        } else {
-            if (!peers[i]->pack(packed, sizeof(packed))) {
-                log_e("could not pack %s: %s", key, peers[i]->saved.address);
-                continue;
-            }
-            if (0 != strcmp(saved, packed)) {
-                log_i("saving %s: %s", key, packed);
-                preferences->putString(key, packed);
-            }
+        if (nullptr != peers[i] &&
+            !peers[i]->markedForRemoval &&
+            !peers[i]->pack(packed, sizeof(packed))) {
+            log_e("could not pack %s: %s", key, peers[i]->saved.address);
+            continue;
         }
+        log_i("saving %s: %s", key, packed);
+        preferences->putString(key, packed);
     }
     preferencesEnd();
 }

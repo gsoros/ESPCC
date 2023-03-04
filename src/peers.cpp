@@ -39,14 +39,7 @@ void PowerChar::notify() {
         for (uint8_t i = 0; i < board.bleClient.peersMax; i++) {
             Atoll::Peer* peer = board.bleClient.peers[i];
             if (nullptr != peer && peer->isVesc() && peer->isConnected()) {
-                uint32_t power = lastValue * board.pasLevel;
-                if (UINT16_MAX < power) power = UINT16_MAX;
-                log_i("setting power to %d on %s (PAS: %c%d)",
-                      power,
-                      peer->saved.name,
-                      PAS_MODE_CONSTANT == board.pasMode ? 'C' : 'P',
-                      board.pasLevel);
-                ((Vesc*)peer)->setPower((uint16_t)power);
+                ((Vesc*)peer)->onHumanPower(lastValue);
             }
         }
     }
@@ -269,12 +262,6 @@ void Vesc::loop() {
 }
 
 void Vesc::setPower(uint16_t power) {
-    if (PAS_MODE_CONSTANT == board.pasMode && 50 < power) {
-        power = board.pasLevel * 100;
-        log_d("setting constant power %dW", power);
-    }
-
-    const uint16_t rampDelay = board.vescRampNumSteps ? board.vescRampTime / board.vescRampNumSteps : 0;
     static float prevCurrent = 0.0f;
 
     if (board.vescMaxPower < power) power = board.vescMaxPower;
@@ -299,19 +286,21 @@ void Vesc::setPower(uint16_t power) {
             if (prevCurrent < board.vescMinCurrent)
                 prevCurrent = board.vescMinCurrent;
             float rampUnit = (current - prevCurrent) / board.vescRampNumSteps;
+            uint16_t rampD = rampDelay();
             for (uint8_t i = 0; i < board.vescRampNumSteps; i++) {
                 float rampCurrent = prevCurrent + rampUnit * i;
                 log_d("setting ramp up current #%d: %2.2fA", i, rampCurrent);
                 uart->setCurrent(rampCurrent);
-                delay(rampDelay);
+                delay(rampD);
             }
         } else if (board.vescRampDown && current < prevCurrent) {
             float rampUnit = (prevCurrent - current) / board.vescRampNumSteps;
+            uint16_t rampD = rampDelay();
             for (uint8_t i = board.vescRampNumSteps; 0 < i; i--) {
                 float rampCurrent = current + rampUnit * i;
                 log_d("setting ramp down current #%d: %2.2fA", i, rampCurrent);
                 uart->setCurrent(rampCurrent);
-                delay(rampDelay);
+                delay(rampD);
             }
         }
     }
@@ -328,4 +317,29 @@ void Vesc::onConnect(BLEClient* client) {
 void Vesc::onDisconnect(BLEClient* client, int reason) {
     Atoll::Vesc::onDisconnect(client, reason);
     board.display.onVescDisconnected();
+}
+
+void Vesc::onHumanPower(uint16_t humanPower) {
+    if (humanPower < board.pasMinHumanPower) return;
+
+    uint32_t power = 0;
+    if (PAS_MODE_CONSTANT == board.pasMode) {
+        power = board.pasLevel * board.pasConstantFactor;
+    } else {  // PAS_MODE_PROPORTIONAL
+        power = humanPower * board.pasLevel * board.pasProportionalFactor;
+    }
+
+    if (UINT16_MAX < power) power = UINT16_MAX;
+
+    log_d("setting power to %d on %s (PAS: %c%d, human: %dW)",
+          power,
+          saved.name,
+          PAS_MODE_CONSTANT == board.pasMode ? 'C' : 'P',
+          board.pasLevel,
+          humanPower);
+    setPower((uint16_t)power);
+}
+
+uint16_t Vesc::rampDelay() {
+    return board.vescRampNumSteps ? board.vescRampTime / board.vescRampNumSteps : (uint16_t)0;
 }
