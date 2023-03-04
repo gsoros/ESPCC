@@ -39,15 +39,13 @@ bool Recorder::rec2gpx(const char *in,
 }
 
 void Recorder::notifyStatus() {
-    BLECharacteristic *c = board.bleServer.getChar(BLEUUID(API_SERVICE_UUID), BLEUUID(API_TX_CHAR_UUID));
-    if (!c) {
-        log_e("could not get char");
+    if (!api) {
+        log_e("no api");
         return;
     }
-    ApiMessage m = board.api.process("rec");
-    char reply[8 + strlen(m.reply)];
+    ApiMessage m = api->process("rec");
+    char reply[9 + strlen(m.reply)];
     snprintf(reply, sizeof(reply), "%d;%d=%s", m.result->code, m.commandCode, m.reply);
     log_d("notifying: %s", reply);
-    c->setValue((uint8_t *)reply, strlen(reply));
-    c->notify();
+    api->notifyTxChar(reply);
 }
