@@ -29,7 +29,7 @@
 #include "display/Arduino_SSD1283A.h"
 #include "lcd.h"
 #else
-#error Unsupported DISPLAY_DEVICE
+#error unknown DISPLAY_DEVICE
 #endif
 
 #include "atoll_sdcard.h"
@@ -55,15 +55,15 @@ class Board : public Atoll::Task,
     ::Preferences arduinoPreferences;
 #ifdef FEATURE_SERIAL
     HardwareSerial hwSerial;
+#ifdef FEATURE_WIFI_SERIAL
     Atoll::WifiSerial wifiSerial;
+#endif
 #endif
     GPS gps;
 #if (DISPLAY_DEVICE == DISPLAY_OLED)
     Oled display;
 #elif (DISPLAY_DEVICE == DISPLAY_LCD)
     Lcd display;
-#else
-#error unknown DISPLAY_DEVICE
 #endif
     BleClient bleClient;
     BleServer bleServer;

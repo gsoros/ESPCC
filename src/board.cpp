@@ -47,10 +47,15 @@ void Board::setup() {
 
 #ifdef FEATURE_SERIAL
     hwSerial.begin(115200);
+#ifdef FEATURE_WIFI_SERIAL
     wifiSerial.setup(hostName, 0, 0, WIFISERIAL_TASK_FREQ, 2048 + 1024);
     Serial.setup(&hwSerial, &wifiSerial);
+#else
+    Serial.setup(&hwSerial);
+#endif
     while (!hwSerial) vTaskDelay(10);
 #endif
+
     SPI.begin(SPI_SCK_PIN, SPI_MISO_PIN, SPI_MOSI_PIN);
 
     preferencesSetup(&arduinoPreferences, "BOARD");
