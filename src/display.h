@@ -30,6 +30,7 @@ class Display : public Atoll::Task, public Print {
         FC_SPEED,
         FC_DISTANCE,
         FC_ALTGAIN,
+        FC_TEMPERATURE,
         FC_MOVETIME,
         FC_LAP_TIME,
         FC_LAP_DISTANCE,
@@ -40,7 +41,8 @@ class Display : public Atoll::Task, public Print {
         FC_BATTERY_CADENCE,
         FC_BATTERY_HEARTRATE,
         FC_BATTERY_VESC,
-        FC_RANGE
+        FC_RANGE,
+        FC_CLOCK
     };
 
     struct Area {
@@ -133,7 +135,6 @@ class Display : public Atoll::Task, public Print {
                              bool send = true) = 0;
     virtual void setClip(int16_t x, int16_t y, int16_t w, int16_t h) = 0;
     virtual void setFont(const uint8_t *font) = 0;
-    virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) = 0;
     virtual uint16_t getStrWidth(const char *str) = 0;
 
     virtual void setClip(const Area *a);
@@ -192,10 +193,14 @@ class Display : public Atoll::Task, public Print {
     virtual void displayCadence(int8_t fieldIndex = -1, bool send = true);
     virtual void onHeartrate(int16_t bpm);
     virtual void displayHeartrate(int8_t fieldIndex = -1, bool send = true);
+    virtual void onTemperature(float degC);
+    virtual void displayTemperature(int8_t fieldIndex = -1, bool send = true);
     virtual void onSpeed(double kmh);
     virtual void displaySpeed(int8_t fieldIndex = -1, bool send = true);
-    virtual void onDistance(uint m);
+    virtual void onDistance(uint32_t m);
     virtual void displayDistance(int8_t fieldIndex = -1, bool send = true);
+    virtual void onSatellites(uint32_t num);
+    virtual void displaySatellites(int8_t fieldIndex = -1, bool send = true);
     virtual void onAltGain(uint16_t m);
     virtual void displayAltGain(int8_t fieldIndex = -1, bool send = true);
     virtual void onBattery(int8_t level, Battery::ChargingState state = Battery::ChargingState::csUnknown);
@@ -210,6 +215,7 @@ class Display : public Atoll::Task, public Print {
     virtual void displayBattVesc(int8_t fieldIndex = -1, bool send = true);
     virtual void onRange(int16_t km);
     virtual void displayRange(int8_t fieldIndex = -1, bool send = true);
+    virtual void displayClock(int8_t fieldIndex = -1, bool send = true);
     virtual void onPMDisconnected();
     virtual void onHRMDisconnected();
     virtual void onVescConnected();
@@ -275,7 +281,6 @@ class Display : public Atoll::Task, public Print {
     uint8_t feedbackWidth = 1;                         // touch feedback area width
     const uint8_t numFeedback = DISPLAY_NUM_FEEDBACK;  // helper
 
-    Area clockArea = Area();      //
     Area statusArea = Area();     //
     uint8_t statusIconSize = 14;  // = 14
 
@@ -285,22 +290,24 @@ class Display : public Atoll::Task, public Print {
     ulong lastFieldUpdate = 0;
     int8_t lastMinute = -1;
 
-    int16_t power = -1;
-    ulong lastPowerUpdate = 0;
-    double weight = 0.0;
-    ulong lastWeightUpdate = 0;
-    int16_t cadence = -1;
-    int16_t heartrate = 0;
-    double speed = 0.0;
-    uint distance = 0;
-    uint16_t altGain = 0;
-    int8_t batteryLevel = -1;
-    Battery::ChargingState batteryState = Battery::ChargingState::csUnknown;
-    int8_t battPM = -1;
-    Battery::ChargingState battPMState = Battery::ChargingState::csUnknown;
-    int8_t battHRM = -1;
-    int8_t battVesc = -1;
-    int16_t range = -1;
+    int16_t power = -1;                                                       // <= -1: disconnected
+    ulong lastPowerUpdate = 0;                                                //
+    double weight = 0.0;                                                      //
+    ulong lastWeightUpdate = 0;                                               //
+    int16_t cadence = -1;                                                     // <= -1: disconnected
+    int16_t heartrate = 0;                                                    //
+    float temperature = -1000.0f;                                             // <= -100: disconnected
+    double speed = -1.0;                                                      // <0: unknown
+    uint distance = 0;                                                        //
+    uint16_t altGain = 0;                                                     //
+    int8_t batteryLevel = -1;                                                 // <= -1: unknown
+    Battery::ChargingState batteryState = Battery::ChargingState::csUnknown;  //
+    int8_t battPM = -1;                                                       // <= -1: disconnected
+    Battery::ChargingState battPMState = Battery::ChargingState::csUnknown;   //
+    int8_t battHRM = -1;                                                      // <= -1: disconnected
+    int8_t battVesc = -1;                                                     // <= -1: disconnected
+    int16_t range = -1;                                                       // <= -1: disconnected
+    uint32_t satellites = UINT32_MAX;                                         // UINT32_MAX: unknown
 
     enum motionStates {
         msUnknown,
@@ -308,7 +315,7 @@ class Display : public Atoll::Task, public Print {
         msWalking,
         msCycling
     };
-    uint8_t motionState = motionStates::msUnknown;
+    uint8_t motionState = msUnknown;
 
     enum wifiStates {
         wsUnknown,

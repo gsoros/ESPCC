@@ -68,6 +68,10 @@ class Oled : public Display {
         field[1].content[3] = FC_BATTERY_POWER;
         field[2].content[3] = FC_BATTERY_HEARTRATE;
 
+        field[0].content[3] = FC_CLOCK;
+        field[1].content[3] = FC_TEMPERATURE;
+        field[2].content[3] = FC_SATELLITES;
+
         fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
         fieldFontWidth = 20;
         smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
@@ -110,11 +114,6 @@ class Oled : public Display {
                           height - statusIconSize,
                           fieldWidth,
                           statusIconSize);
-
-        clockArea.x = field[0].area.x;
-        clockArea.y = field[0].area.y;
-        clockArea.w = fieldWidth;
-        clockArea.h = numFields * fieldHeight + (numFields - 1) * fieldVSeparation;
     }
 
     virtual ~Oled();
@@ -199,8 +198,6 @@ class Oled : public Display {
         sendBuffer();
         releaseMutex();
     }
-
-    virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
 
     virtual uint16_t getStrWidth(const char *str) override;
 

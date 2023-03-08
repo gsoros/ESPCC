@@ -217,6 +217,12 @@ void WeightChar::notify() {
     board.display.onWeight(lastValue);
 }
 
+void TemperatureChar::notify() {
+    Atoll::PeerCharacteristicTemperature::notify();
+    // log_i("TemperatureChar %2.2f", lastValue);
+    board.display.onTemperature(lastValue);
+}
+
 void HeartrateChar::notify() {
     Atoll::PeerCharacteristicHeartrate::notify();
     // log_i("HeartrateChar %d", lastValue);

@@ -12,7 +12,7 @@ Lcd::Lcd(Arduino_GFX *device,
       device(device) {
     //
     // ┌─┬──────────────────────────────┬─┐
-    // │f│ field0 / clock               │f│
+    // │f│ field0                       │f│
     // │e│                              │e│
     // │e│                              │e│
     // │d│                              │d│
@@ -62,6 +62,10 @@ Lcd::Lcd(Arduino_GFX *device,
     field[1].content[3] = FC_BATTERY_POWER;
     field[2].content[3] = FC_BATTERY_HEARTRATE;
 
+    field[0].content[4] = FC_CLOCK;
+    field[1].content[4] = FC_TEMPERATURE;
+    field[2].content[4] = FC_SATELLITES;
+
     fieldFont = (uint8_t *)u8g2_font_logisoso32_tr;
     fieldFontWidth = 20;
     smallFont = (uint8_t *)u8g2_font_logisoso18_tr;
@@ -110,8 +114,6 @@ Lcd::Lcd(Arduino_GFX *device,
                       height - statusIconSize,
                       width - feedbackWidth * 2,
                       statusIconSize);
-
-    clockArea = field[0].area;
 }
 
 Lcd::~Lcd() {
@@ -151,7 +153,6 @@ void Lcd::setup(uint8_t backlightPin) {
     // for (uint8_t i = 0; i < sizeof(feedback) / sizeof(feedback[0]); i++)
     //     log_i("feedback %d: %3d %3d %3d %3d", i, feedback[i].x, feedback[i].y, feedback[i].w, feedback[i].h);
     // log_i("status:     %3d %3d %3d %3d", statusArea.x, statusArea.y, statusArea.w, statusArea.h);
-    // log_i("clock:      %3d %3d %3d %3d", clockArea.x, clockArea.y, clockArea.w, clockArea.h);
 }
 
 void Lcd::writePixelPreclipped(int16_t x, int16_t y, uint16_t color) {
@@ -288,50 +289,6 @@ void Lcd::drawXBitmap(int16_t x,
     // logAreas(&a, "clip");
     if (send && !aquireMutex()) return;
     Arduino_Canvas::drawXBitmap(x, y, bitmap, w, h, color);
-    if (!send) return;
-    sendBuffer();
-    releaseMutex();
-}
-
-void Lcd::clock(bool send, bool clear, int8_t skipFieldIndex) {
-    // log_i("send: %d clear: %d skip: %d", send, clear, skipFieldIndex);
-    static bool displayed = false;
-    if (!enabled(0)               // field 0 not enabled
-        || 3 == currentPage       // don't cover battery display
-        || (!displayed && clear)  // nothing to clear
-        || board.otaMode          // no clock in ota mode
-        ) return;
-    static const Area *a = &clockArea;
-    if (-2 == lastMinute) return;  // avoid recursion
-    tm t = Atoll::localTm();
-    if (t.tm_min == lastMinute && !clear) return;
-    if (send && !aquireMutex()) return;
-    setClip(a->x, a->y, a->w, a->h);
-    fill(a, bg, false);
-    if (clear) {
-        setMaxClip();
-        lastMinute = -2;  // avoid recursion
-        for (uint8_t i = 0; i < numFields; i++)
-            if ((int8_t)i != skipFieldIndex)
-                displayFieldContent(i,
-                                    field[i].content[currentPage],
-                                    false);
-        lastMinute = t.tm_min;
-        displayed = false;
-        if (!send) return;
-        sendBuffer();
-        releaseMutex();
-        return;
-    }
-    setCursor(a->x, a->y + timeFontHeight + 2);
-    setFont(timeFont);
-    Arduino_Canvas::printf("%d:%02d", t.tm_hour, t.tm_min);
-    setCursor(a->x, a->y + a->h);
-    setFont(dateFont);
-    Arduino_Canvas::printf("%d.%02d", t.tm_mon + 1, t.tm_mday);
-    setMaxClip();
-    lastMinute = t.tm_min;
-    displayed = true;
     if (!send) return;
     sendBuffer();
     releaseMutex();

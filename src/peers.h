@@ -36,6 +36,11 @@ class WeightChar : public Atoll::PeerCharacteristicWeightscale {
     virtual void notify() override;
 };
 
+class TemperatureChar : public Atoll::PeerCharacteristicTemperature {
+   public:
+    virtual void notify() override;
+};
+
 class ESPM : public Atoll::ESPM {
    public:
     ESPM(Saved saved)
@@ -44,7 +49,8 @@ class ESPM : public Atoll::ESPM {
                       new BattPMChar(),
                       new ApiTxChar,
                       new Atoll::PeerCharacteristicApiRX(),
-                      new WeightChar()) {}
+                      new WeightChar(),
+                      new TemperatureChar()) {}
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 

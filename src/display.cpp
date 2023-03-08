@@ -98,10 +98,7 @@ void Display::loop() {
     // log_i("updateStatus()");
     updateStatus();
 
-    if (lastFieldUpdate < t - 15000 && Atoll::systemTimeLastSet()) {
-        // log_i("clock()");
-        clock();
-    }
+    if (Atoll::systemTimeLastSet()) displayClock();
 
     // static ulong lastFake = 0;
     // static double fake = 0.0;
@@ -192,10 +189,6 @@ void Display::printfFieldDigits(const uint8_t fieldIndex,
     vsnprintf(out, 4, format, argp);
     va_end(argp);
 
-    if (0 < lastMinute) {
-        // log_d("clearing clock, updating fields other than %d", fieldIndex);
-        clock(false, true, fieldIndex);  // clear clock area, update other fields
-    }
     // log_d("printing '%s' to field %d", out, fieldIndex);
     printField(fieldIndex, out, false);
     if (send) {
@@ -223,8 +216,6 @@ void Display::printfFieldChars(const uint8_t fieldIndex,
     vsnprintf(out, 5, format, argp);
     va_end(argp);
 
-    if (0 < lastMinute)
-        clock(false, true, fieldIndex);  // clear clock area, update other fields
     // log_i("printing '%s' to field %d", out, fieldIndex);
 
     printField(fieldIndex, out, false);
@@ -276,8 +267,6 @@ void Display::printField2plus1(const uint8_t fieldIndex,
         if (send) releaseMutex();
         return;
     }
-    if (0 < lastMinute)
-        clock(false, true, fieldIndex);  // clear clock area, update other fields
     setClip(a);
     fill(a, bg, false);
     setFont(field[fieldIndex].font);
@@ -327,6 +316,9 @@ void Display::displayFieldContent(uint8_t fieldIndex,
         case FC_HEARTRATE:
             displayHeartrate(fieldIndex, send);
             return;
+        case FC_TEMPERATURE:
+            displayTemperature(fieldIndex, send);
+            return;
         case FC_SPEED:
             displaySpeed(fieldIndex, send);
             return;
@@ -349,7 +341,7 @@ void Display::displayFieldContent(uint8_t fieldIndex,
             log_e("unhandled %d", content);
             return;
         case FC_SATELLITES:
-            log_e("unhandled %d", content);
+            displaySatellites(fieldIndex, send);
             return;
         case FC_BATTERY:
             displayBattery(fieldIndex, send);
@@ -367,6 +359,11 @@ void Display::displayFieldContent(uint8_t fieldIndex,
         case FC_RANGE:
             displayRange(fieldIndex, send);
             return;
+            return;
+        case FC_CLOCK:
+            lastMinute = -1;
+            displayClock(fieldIndex, send);
+            return;
         default:
             log_e("unhandled %d", content);
     }
@@ -382,10 +379,12 @@ int Display::fieldLabel(FieldContent content, char *buf, size_t len) {
             return snprintf(buf, len, "Cadence");
         case FC_HEARTRATE:
             return snprintf(buf, len, "HR");
+        case FC_TEMPERATURE:
+            return snprintf(buf, len, "Temp");
         case FC_SPEED:
             return snprintf(buf, len, "Speed");
         case FC_DISTANCE:
-            return snprintf(buf, len, "Dist.");
+            return snprintf(buf, len, "Distance");
         case FC_ALTGAIN:
             return snprintf(buf, len, "Alt. gain");
         case FC_MOVETIME:
@@ -397,18 +396,20 @@ int Display::fieldLabel(FieldContent content, char *buf, size_t len) {
         case FC_LAP_POWER:
             return snprintf(buf, len, "Lap power");
         case FC_SATELLITES:
-            return snprintf(buf, len, "Sat.");
+            return snprintf(buf, len, "Sats");
         case FC_BATTERY:
             return snprintf(buf, len, "Battery");
         case FC_BATTERY_POWER:
         case FC_BATTERY_CADENCE:
-            return snprintf(buf, len, "PM Bat.");
+            return snprintf(buf, len, "PM Bat");
         case FC_BATTERY_HEARTRATE:
-            return snprintf(buf, len, "HRM Bat.");
+            return snprintf(buf, len, "HRM Bat");
         case FC_BATTERY_VESC:
-            return snprintf(buf, len, "Vesc Bat.");
+            return snprintf(buf, len, "Vesc Bat");
         case FC_RANGE:
             return snprintf(buf, len, "Range");
+        case FC_CLOCK:
+            return snprintf(buf, len, "Clock");
         default:
             log_e("unhandled %d", content);
             return -1;
@@ -450,8 +451,8 @@ void Display::switchPage(int8_t direction) {
     else if (numPages - 1 < currentPage)
         currentPage = numPages - 1;
     log_i("currentPage %d", currentPage);
+    lastMinute = -1;
     if (!aquireMutex()) return;
-    // clock(false, true);  // clear clock
     char label[10] = "";
     Area *b;
     // log_d("displaying field labels, disabling fields");
@@ -601,8 +602,32 @@ void Display::displayHeartrate(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
+/// @brief
+/// @param degC <= -100: disconnected
+void Display::onTemperature(float degC) {
+    static float last = 0.0f;
+    temperature = degC;
+    log_d("%.2f", degC);
+    if (last == temperature) return;
+    displayTemperature();
+    last = temperature;
+}
+
+void Display::displayTemperature(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_TEMPERATURE);
+    if (fieldIndex < 0) return;
+    if (-100.0f < temperature)
+        printFieldDouble(fieldIndex, (double)temperature, send);
+    else  // disconnected
+        fill(&field[fieldIndex].area, bg, send);
+    lastFieldUpdate = millis();
+}
+
+/// @brief
+/// @param kmh <0 : unknown
 void Display::onSpeed(double kmh) {
-    static double last = 0.0;
+    static double last = -1.0;
     speed = kmh;
     if (abs(last - speed) < 0.1) return;
     log_d("%.2f", kmh);
@@ -620,7 +645,9 @@ void Display::displaySpeed(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_SPEED);
     if (fieldIndex < 0) return;
-    if (100.0 <= speed) {
+    if (speed < 0) {
+        fill(&field[fieldIndex].area, bg, send);
+    } else if (100.0 <= speed) {
         while (1000.0 <= speed) speed /= 10.0;
         printfFieldDigits(fieldIndex, send, "%3d", (int)speed);
     } else
@@ -628,9 +655,9 @@ void Display::displaySpeed(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
-void Display::onDistance(uint m) {
+void Display::onDistance(uint32_t m) {
     // log_i("%d", value);
-    static uint last = 0;
+    static uint32_t last = 0;
     distance = m;
     if (last == distance) return;
     displayDistance();
@@ -649,6 +676,27 @@ void Display::displayDistance(int8_t fieldIndex, bool send) {
         while (1000 <= distance) distance /= 10;
         printfFieldDigits(fieldIndex, send, "%3d", distance);  // >= 100 km
     }
+    lastFieldUpdate = millis();
+}
+
+/// @brief
+/// @param num UINT32_MAX: unknown
+void Display::onSatellites(uint32_t num) {
+    static uint32_t last = UINT32_MAX;
+    satellites = num;
+    if (last == satellites) return;
+    displaySatellites();
+    last = satellites;
+}
+
+void Display::displaySatellites(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_SATELLITES);
+    if (fieldIndex < 0) return;
+    if (satellites < UINT32_MAX)
+        printfFieldDigits(fieldIndex, send, "%3d", satellites);
+    else
+        fill(&field[fieldIndex].area, bg, send);
     lastFieldUpdate = millis();
 }
 
@@ -859,12 +907,37 @@ void Display::displayRange(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
+void Display::displayClock(int8_t fieldIndex, bool send) {
+    if (fieldIndex < 0)
+        fieldIndex = getFieldIndex(FC_CLOCK);
+    if (fieldIndex < 0 || !field[fieldIndex].enabled) return;
+    Area *a = &field[fieldIndex].area;
+    tm t = Atoll::localTm();
+    if (t.tm_min == lastMinute) return;
+    if (send && !aquireMutex()) return;
+    log_d("displaying clock");
+    setClip(a->x, a->y, a->w, a->h);
+    fill(a, bg, false);
+    setCursor(a->x, a->y + timeFontHeight + 2);
+    setFont(timeFont);
+    printf("%d:%02d", t.tm_hour, t.tm_min);
+    setCursor(a->x, a->y + a->h);
+    setFont(dateFont);
+    printf("%d.%02d", t.tm_mon + 1, t.tm_mday);
+    setMaxClip();
+    lastMinute = t.tm_min;
+    if (!send) return;
+    sendBuffer();
+    releaseMutex();
+}
+
 void Display::onPMDisconnected() {
     log_d("onPMDisconnected");
     onPower(-1);
     onCadence(-1);
     onBattPM(-1);
     onBattPMState();
+    onTemperature(-1000);
 }
 
 void Display::onHRMDisconnected() {
@@ -1199,7 +1272,6 @@ void Display::logAreas(Area *a, const char *str) const {
         snprintf(areaType, 10, "feedback%d", i);
         logArea((Area *)&feedback[i], a, str, areaType);
     }
-    logArea((Area *)&clockArea, a, str, "clock");
     logArea((Area *)&statusArea, a, str, "status");
 }
 

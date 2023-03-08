@@ -51,7 +51,6 @@ class Lcd : public Display, public Arduino_Canvas {
                              const uint8_t *bitmap,
                              uint16_t color,
                              bool send = true) override;
-    virtual void clock(bool send = true, bool clear = false, int8_t skipFieldIndex = -1) override;
     virtual uint16_t getStrWidth(const char *str) override;
     virtual void updateStatus(bool forceRedraw = false) override;
 

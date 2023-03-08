@@ -10,6 +10,7 @@ void Oled::fill(const Area *a, uint16_t color, bool send) {
     fillUnrestricted(a, color, send);
 }
 
+/*
 void Oled::clock(bool send, bool clear, int8_t skipFieldIndex) {
     if (board.otaMode) return;
     static const Area *a = &clockArea;
@@ -46,6 +47,7 @@ void Oled::clock(bool send, bool clear, int8_t skipFieldIndex) {
     sendBuffer();
     releaseMutex();
 }
+*/
 
 uint16_t Oled::getStrWidth(const char *str) {
     if (nullptr == device) {
