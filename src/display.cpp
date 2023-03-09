@@ -911,11 +911,15 @@ void Display::displayClock(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_CLOCK);
     if (fieldIndex < 0 || !field[fieldIndex].enabled) return;
+    if (!Atoll::systemTimeLastSet()) {
+        log_d("waiting msg");
+        printfFieldChars(fieldIndex, send, "waiting for sats...");
+        return;
+    }
     Area *a = &field[fieldIndex].area;
     tm t = Atoll::localTm();
     if (t.tm_min == lastMinute) return;
     if (send && !aquireMutex()) return;
-    log_d("displaying clock");
     setClip(a->x, a->y, a->w, a->h);
     fill(a, bg, false);
     setCursor(a->x, a->y + timeFontHeight + 2);
