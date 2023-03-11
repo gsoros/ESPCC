@@ -9,20 +9,20 @@ void Api::setup(
     const char *serviceUuid) {
     Atoll::Api::setup(instance, p, preferencesNS, bleServer, serviceUuid);
 
-    addCommand(ApiCommand("system", Api::systemProcessor));
-    addCommand(ApiCommand("touch", Api::touchProcessor));
+    addCommand(Api::Command("system", Api::systemProcessor));
+    addCommand(Api::Command("touch", Api::touchProcessor));
 
     // TODO move this to Atoll, peers=scan, peers=add:, etc.
-    addCommand(ApiCommand("scan", Api::scanProcessor));
-    addCommand(ApiCommand("scanResult", Api::scanResultProcessor));
-    addCommand(ApiCommand("peers", Api::peersProcessor));
-    addCommand(ApiCommand("addPeer", Api::addPeerProcessor));
-    addCommand(ApiCommand("deletePeer", Api::deletePeerProcessor));
+    addCommand(Api::Command("scan", Api::scanProcessor));
+    addCommand(Api::Command("scanResult", Api::scanResultProcessor));
+    addCommand(Api::Command("peers", Api::peersProcessor));
+    addCommand(Api::Command("addPeer", Api::addPeerProcessor));
+    addCommand(Api::Command("deletePeer", Api::deletePeerProcessor));
 
-    addCommand(ApiCommand("vesc", Api::vescProcessor));
+    addCommand(Api::Command("vesc", Api::vescProcessor));
 }
 
-ApiResult *Api::systemProcessor(ApiMessage *msg) {
+Api::Result *Api::systemProcessor(Api::Message *msg) {
     if (msg->argStartsWith("hostname")) {
         char buf[sizeof(board.hostName)] = "";
         msg->argGetParam("hostname:", buf, sizeof(buf));
@@ -95,7 +95,7 @@ ApiResult *Api::systemProcessor(ApiMessage *msg) {
 // disable touchpads for a number of seconds
 // arg: read|thresholds[:t0,...]|enabled[:0|1]|disableFor:numSeconds
 // reply format: read:r0,...|thresholds:t0,...|enabled:0|1
-ApiResult *Api::touchProcessor(ApiMessage *msg) {
+Api::Result *Api::touchProcessor(Api::Message *msg) {
     if (msg->log) log_i("arg: %s", msg->arg);
 
     if (msg->argIs("read")) {
@@ -195,7 +195,7 @@ ApiResult *Api::touchProcessor(ApiMessage *msg) {
     return argInvalid();
 }
 
-ApiResult *Api::scanProcessor(ApiMessage *msg) {
+Api::Result *Api::scanProcessor(Api::Message *msg) {
     if (!strlen(msg->arg)) return result("argInvalid");
     int duration = atoi(msg->arg);
     if (duration < 1 || 120 < duration) return result("argInvalid");
@@ -211,12 +211,12 @@ ApiResult *Api::scanProcessor(ApiMessage *msg) {
     return success();
 }
 
-ApiResult *Api::scanResultProcessor(ApiMessage *msg) {
+Api::Result *Api::scanResultProcessor(Api::Message *msg) {
     if (msg->log) log_e("command scanResult cannot be called directly, replies are generated after starting a scan");
     return error();
 }
 
-ApiResult *Api::peersProcessor(ApiMessage *msg) {
+Api::Result *Api::peersProcessor(Api::Message *msg) {
     char value[msgReplyLength] = "";
     int16_t remaining = 0;
     for (int i = 0; i < board.bleClient.peersMax; i++) {
@@ -236,7 +236,7 @@ ApiResult *Api::peersProcessor(ApiMessage *msg) {
     return success();
 }
 
-ApiResult *Api::addPeerProcessor(ApiMessage *msg) {
+Api::Result *Api::addPeerProcessor(Api::Message *msg) {
     if (strlen(msg->arg) < sizeof(Peer::Saved::address) + 5) {
         if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
         return result("argInvalid");
@@ -266,7 +266,7 @@ ApiResult *Api::addPeerProcessor(ApiMessage *msg) {
     return success();
 }
 
-ApiResult *Api::deletePeerProcessor(ApiMessage *msg) {
+Api::Result *Api::deletePeerProcessor(Api::Message *msg) {
     if (strlen(msg->arg) < sizeof(Peer::Saved::address) - 1) {
         if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
         return result("argInvalid");
@@ -281,7 +281,7 @@ ApiResult *Api::deletePeerProcessor(ApiMessage *msg) {
     return error();
 }
 
-ApiResult *Api::vescProcessor(ApiMessage *msg) {
+Api::Result *Api::vescProcessor(Api::Message *msg) {
     if (msg->log) log_d("arg: %s", msg->arg);
 
     if (msg->argIs("")) {

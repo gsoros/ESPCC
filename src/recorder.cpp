@@ -43,7 +43,7 @@ void Recorder::notifyStatus() {
         log_e("no api");
         return;
     }
-    ApiMessage m = api->process("rec");
+    Api::Message m = api->process("rec");
     char reply[9 + strlen(m.reply)];
     snprintf(reply, sizeof(reply), "%d;%d=%s", m.result->code, m.commandCode, m.reply);
     log_d("notifying: %s", reply);

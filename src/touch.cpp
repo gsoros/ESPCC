@@ -55,10 +55,8 @@ void Touch::fireEvent(uint8_t index, Event event) {
             locked = !locked;
             log_i("%slocked", locked ? "" : "un");
             board.display.onLockChanged(locked);
-            Atoll::ApiCommand *command = Api::command("touch");
-            Atoll::ApiResult *result = Api::success();
             char str[32] = "";
-            snprintf(str, sizeof(str), "%d;%d=locked:%d", result->code, command->code, locked ? 1 : 0);
+            snprintf(str, sizeof(str), "%d;%d=locked:%d", Api::success()->code, Api::command("touch")->code, locked ? 1 : 0);
             board.bleServer.notifyApiTx(str);
         } break;
         default:
@@ -68,9 +66,7 @@ void Touch::fireEvent(uint8_t index, Event event) {
 
 void Touch::onEnabledChanged() {
     Atoll::Touch::onEnabledChanged();
-    Atoll::ApiCommand *command = Api::command("touch");
-    Atoll::ApiResult *result = Api::success();
     char str[32] = "";
-    snprintf(str, sizeof(str), "%d;%d=enabled:%d", result->code, command->code, enabled ? 1 : 0);
+    snprintf(str, sizeof(str), "%d;%d=enabled:%d", Api::success()->code, Api::command("touch")->code, enabled ? 1 : 0);
     board.bleServer.notifyApiTx(str);
 }

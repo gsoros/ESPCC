@@ -5,20 +5,6 @@
 #include "atoll_api.h"
 #include "ble_server.h"
 
-typedef Atoll::ApiResult ApiResult;
-typedef Atoll::ApiMessage ApiMessage;
-
-typedef ApiResult *(*ApiProcessor)(ApiMessage *reply);
-
-class ApiCommand : public Atoll::ApiCommand {
-   public:
-    ApiCommand(
-        const char *name = "",
-        ApiProcessor processor = nullptr,
-        uint8_t code = 0)
-        : Atoll::ApiCommand(name, processor, code) {}
-};
-
 class Api : public Atoll::Api {
    public:
     static void setup(Api *instance,
@@ -28,16 +14,16 @@ class Api : public Atoll::Api {
                       const char *serviceUuid = nullptr);
 
    protected:
-    static ApiResult *systemProcessor(ApiMessage *);
-    static ApiResult *touchProcessor(ApiMessage *);
+    static Api::Result *systemProcessor(Api::Message *);
+    static Api::Result *touchProcessor(Api::Message *);
 
-    static ApiResult *scanProcessor(ApiMessage *);
-    static ApiResult *scanResultProcessor(ApiMessage *);
-    static ApiResult *peersProcessor(ApiMessage *);
-    static ApiResult *addPeerProcessor(ApiMessage *);
-    static ApiResult *deletePeerProcessor(ApiMessage *);
+    static Api::Result *scanProcessor(Api::Message *);
+    static Api::Result *scanResultProcessor(Api::Message *);
+    static Api::Result *peersProcessor(Api::Message *);
+    static Api::Result *addPeerProcessor(Api::Message *);
+    static Api::Result *deletePeerProcessor(Api::Message *);
 
-    static ApiResult *vescProcessor(ApiMessage *);
+    static Api::Result *vescProcessor(Api::Message *);
 };
 
 #endif
