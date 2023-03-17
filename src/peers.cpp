@@ -94,6 +94,7 @@ void ApiTxChar::processApiReply(const char* reply) {
 
     if (code == commandCode("init")) {
         processInit(cur);
+        // peer->getClient()->requestMTU(defaultMTU); not yet possible with nimbe_arduino
         return;
     }
 
@@ -147,7 +148,11 @@ void ApiTxChar::processInit(const char* value) {
     cont:
         cur = semi + 1;
     } while (semi = strchr(cur, ';'));
-    return;
+
+    // init is complete, this would be the time to request a small MTU
+    // but it is not (yet) possible with nimbe_arduino
+    // if (nullptr != peer && peer->isESPM() && ((ESPM*)peer)->defaultMTU)
+    // Atoll::Ble::setMTU(((ESPM*)peer)->defaultMTU);
 }
 
 void ApiTxChar::onApiReply(uint8_t code, const char* value, size_t len) {
