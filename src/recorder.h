@@ -12,6 +12,8 @@ class Recorder : public Atoll::Recorder {
     virtual void onAltGainChanged(uint16_t value) override;
     virtual bool rec2gpx(const char *in, const char *out, bool overwrite = false) override;
     virtual void notifyStatus();
+    virtual void onPMDisconnected();
+    virtual void onHRMDisconnected();
 };
 
 #endif

@@ -49,3 +49,24 @@ void Recorder::notifyStatus() {
     log_d("notifying: %s", reply);
     api->notifyTxChar(reply);
 }
+
+void Recorder::onPMDisconnected() {
+    log_d("onPMDisconnected");
+    if (aquireMutex(powerMutex)) {
+        powerBuf.clear();
+        releaseMutex(powerMutex);
+    }
+    if (aquireMutex(cadenceMutex)) {
+        cadenceBuf.clear();
+        releaseMutex(cadenceMutex);
+    }
+    temperature = INT16_MIN;
+}
+
+void Recorder::onHRMDisconnected() {
+    log_d("onHRMDisconnected");
+    if (aquireMutex(heartrateMutex)) {
+        heartrateBuf.clear();
+        releaseMutex(heartrateMutex);
+    }
+}

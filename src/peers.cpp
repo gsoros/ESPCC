@@ -4,6 +4,7 @@
 void PowerMeter::onDisconnect(BLEClient* client, int reason) {
     Atoll::PowerMeter::onDisconnect(client, reason);
     board.display.onPMDisconnected();
+    board.recorder.onPMDisconnected();
 }
 
 void ESPM::onDisconnect(BLEClient* client, int reason) {
@@ -14,6 +15,7 @@ void ESPM::onDisconnect(BLEClient* client, int reason) {
 void HeartrateMonitor::onDisconnect(BLEClient* client, int reason) {
     Atoll::HeartrateMonitor::onDisconnect(client, reason);
     board.display.onHRMDisconnected();
+    board.recorder.onHRMDisconnected();
 }
 
 void BattPMChar::notify() {
@@ -226,6 +228,7 @@ void TemperatureChar::notify() {
     Atoll::PeerCharacteristicTemperature::notify();
     // log_i("TemperatureChar %2.2f", lastValue);
     board.display.onTemperature(lastValue);
+    board.recorder.onTemperature((int16_t)(lastValue * 100));
 }
 
 void HeartrateChar::notify() {
