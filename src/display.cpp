@@ -907,6 +907,44 @@ void Display::displayRange(int8_t fieldIndex, bool send) {
     lastFieldUpdate = millis();
 }
 
+void Display::onVescTemperature(float degC) {
+    static ulong last = 0;
+    ulong t = millis();
+    if (t < last + 5000) return;
+    log_d("%.2f˚C", degC);
+    printfFieldChars(0, true, degC < 100.0f ? "e%.0f" : "%.0f", degC);
+    setEnabled(0, false);
+    if (!queue([this]() {
+            log_d("enabling field 0, displaying content");
+            setEnabled(0);
+            displayFieldContent(0, field[0].content[currentPage]);
+        },
+               2000)) {
+        log_w("could not queue displayFieldContent, enabling field 0");
+        setEnabled(0);
+    }
+    last = t;
+}
+
+void Display::onMotorTemperature(float degC) {
+    static ulong last = 0;
+    ulong t = millis();
+    if (t < last + 5000) return;
+    log_d("%.2f˚C", degC);
+    printfFieldChars(0, true, degC < 100.0f ? "m%.0f" : "%.0f", degC);
+    setEnabled(0, false);
+    if (!queue([this]() {
+            log_d("enabling field 0, displaying content");
+            setEnabled(0);
+            displayFieldContent(0, field[0].content[currentPage]);
+        },
+               2000)) {
+        log_w("could not queue displayFieldContent, enabling field 0");
+        setEnabled(0);
+    }
+    last = t;
+}
+
 void Display::displayClock(int8_t fieldIndex, bool send) {
     if (fieldIndex < 0)
         fieldIndex = getFieldIndex(FC_CLOCK);
@@ -1343,30 +1381,6 @@ void Display::taskStart(float freq,
 }
 
 void Display::onLockChanged(bool locked) {
-    /*
-    uint8_t i;
-    uint16_t oldColor = locked ? unlockedFg() : lockedFg();
-    uint16_t newColor = locked ? lockedFg() : unlockedFg();
-    for (i = 0; i < numFeedback; i++) {
-        lockedFeedback(i, oldColor, 0);
-    }
-    if (queue([this, newColor]() {
-            for (uint8_t i = 0; i < numFeedback; i++) {
-                lockedFeedback(i, newColor, 0);
-            }
-        },
-              200)) {
-        // log_i("queued lockedFeedback all in %dms", 200);
-    }
-    if (queue([this]() {
-            for (uint8_t i = 0; i < numFeedback; i++) {
-                fill(&feedback[i], bg);
-            }
-        },
-              500)) {
-        // log_i("queued lockedFeedback all clear in %dms", 500);
-    }
-    */
     const uint8_t fieldIndex = 0;
     if (!aquireMutex()) return;
     setEnabled(fieldIndex);

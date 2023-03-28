@@ -215,6 +215,8 @@ class Display : public Atoll::Task, public Print {
     virtual void displayBattVesc(int8_t fieldIndex = -1, bool send = true);
     virtual void onRange(int16_t km);
     virtual void displayRange(int8_t fieldIndex = -1, bool send = true);
+    virtual void onVescTemperature(float degC);
+    virtual void onMotorTemperature(float degC);
     virtual void displayClock(int8_t fieldIndex = -1, bool send = true);
     virtual void onPMDisconnected();
     virtual void onHRMDisconnected();

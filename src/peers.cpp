@@ -262,7 +262,7 @@ void Vesc::loop() {
         if (INT16_MAX < range)
             range = INT16_MAX;
         else if (range < 0.0f)
-            range = 0.0;
+            range = 0.0f;
         log_d("%.1fkm/h * %.0fWh * %d%% / (%.2fA * %.2fV) = %.0fkm",
               board.gps.device.speed.kmph(),
               board.vescBattCapacityWh,
@@ -271,8 +271,17 @@ void Vesc::loop() {
               uart->data.inpVoltage,
               range);
         board.display.onRange((int16_t)range);
-    } else
+    } else {
         board.display.onRange(INT16_MAX);  // infinite range
+    }
+    // log_d("motor temp: %.2f˚C", uart->data.tempMotor);
+    if (60.0f <= uart->data.tempMotor) {  // TODO get threshold from vesc or preferences
+        board.display.onMotorTemperature(uart->data.tempMotor);
+    }
+    // log_d("vesc temp: %.2f˚C", uart->data.tempMosfet);
+    if (70.0f <= uart->data.tempMosfet) {  // TODO get threshold from vesc or preferences
+        board.display.onVescTemperature(uart->data.tempMosfet);
+    }
 }
 
 void Vesc::setPower(uint16_t power) {
