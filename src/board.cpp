@@ -112,7 +112,7 @@ void Board::setup() {
     recorder.taskStart(RECORDER_TASK_FREQ, 4096 - 1024);
     // uploader.taskStart(UPLOADER_TASK_FREQ);
     touch.taskStart(TOUCH_TASK_FREQ, 4096);
-    taskStart(BOARD_TASK_FREQ, 4096 + 1024);
+    taskStart(BOARD_TASK_FREQ, 4096 + 2048);
 
     recorder.start();
     wifi.start();
@@ -244,6 +244,22 @@ bool Board::loadSettings() {
     if (UINT16_MAX < tmpUint) tmpUint = UINT16_MAX;
     vescRampTime = tmpUint;
 
+    tmpUint = preferences->getUInt("vescTMW", vescTMW);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    vescTMW = tmpUint;
+
+    tmpUint = preferences->getUInt("vescTML", vescTML);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    vescTML = tmpUint;
+
+    tmpUint = preferences->getUInt("vescTEW", vescTEW);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    vescTEW = tmpUint;
+
+    tmpUint = preferences->getUInt("vescTEL", vescTEL);
+    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
+    vescTEL = tmpUint;
+
     preferencesEnd();
     return true;
 }
@@ -286,5 +302,9 @@ void Board::saveVescSettings(bool skipStartEnd) {
     preferences->putFloat("vescRMCD", vescRampMinCurrentDiff);
     preferences->putUInt("vescRNS", vescRampNumSteps);
     preferences->putUInt("vescRT", vescRampTime);
+    preferences->putUInt("vescTMW", vescTMW);
+    preferences->putUInt("vescTML", vescTML);
+    preferences->putUInt("vescTEW", vescTEW);
+    preferences->putUInt("vescTEL", vescTEL);
     if (!skipStartEnd) preferencesEnd();
 }

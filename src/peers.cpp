@@ -275,11 +275,11 @@ void Vesc::loop() {
         board.display.onRange(INT16_MAX);  // infinite range
     }
     // log_d("motor temp: %.2f˚C", uart->data.tempMotor);
-    if (60.0f <= uart->data.tempMotor) {  // TODO get threshold from vesc or preferences
+    if (0 < board.vescTMW && board.vescTMW <= uart->data.tempMotor) {
         board.display.onMotorTemperature(uart->data.tempMotor);
     }
     // log_d("vesc temp: %.2f˚C", uart->data.tempMosfet);
-    if (70.0f <= uart->data.tempMosfet) {  // TODO get threshold from vesc or preferences
+    if (0 < board.vescTEW && board.vescTEW <= uart->data.tempMosfet) {
         board.display.onVescTemperature(uart->data.tempMosfet);
     }
 }
@@ -345,10 +345,21 @@ void Vesc::onDisconnect(BLEClient* client, int reason) {
 void Vesc::onHumanPower(uint16_t humanPower) {
     if (humanPower < board.pasMinHumanPower) return;
 
+    if ((0 < board.vescTML && board.vescTML <= uart->data.tempMotor)  //
+        ||
+        (0 < board.vescTEL && board.vescTEL <= uart->data.tempMosfet)) {
+        log_d("temperature limit exceeded, motor: %.2f˚C, esc: %.2f˚C, stopping %s",
+              uart->data.tempMotor,
+              uart->data.tempMosfet,
+              saved.name);
+        setPower(0);
+        return;
+    }
+
     uint32_t power = 0;
     if (PAS_MODE_CONSTANT == board.pasMode) {
         power = board.pasLevel * board.pasConstantFactor;
-    } else {  // PAS_MODE_PROPORTIONAL
+    } else {  // PAS_MODE_PROPORTIONAL == board.pasMode
         power = humanPower * board.pasLevel * board.pasProportionalFactor;
     }
 

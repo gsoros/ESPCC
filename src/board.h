@@ -100,14 +100,18 @@ class Board : public Atoll::Task,
 
     uint8_t vescBattNumSeries = 13;       // number of cells in series
     float vescBattCapacityWh = 740;       // 3.7V * 20Ah
-    uint16_t vescMaxPower = 2500;         // power limit
-    float vescMinCurrent = 1.1f;          // for startup
-    float vescMaxCurrent = 50.0f;         // current limit
-    bool vescRampUp = true;               //
-    bool vescRampDown = true;             //
-    float vescRampMinCurrentDiff = 1.0f;  //
-    uint8_t vescRampNumSteps = 3;         //
-    uint16_t vescRampTime = 500;          //
+    uint16_t vescMaxPower = 2500;         // power limit, W
+    float vescMinCurrent = 1.1f;          // minimum current for startup, A
+    float vescMaxCurrent = 50.0f;         // current limit, A
+    bool vescRampUp = true;               // ramp up active
+    bool vescRampDown = true;             // ramp down active
+    float vescRampMinCurrentDiff = 1.0f;  // minimum current difference for ramping, A
+    uint8_t vescRampNumSteps = 3;         // number of ramp steps
+    uint16_t vescRampTime = 500;          // remp time in ms
+    uint8_t vescTMW = 60;                 // tMotor warning, ˚C
+    uint8_t vescTML = 90;                 // tMotor limit, ˚C
+    uint8_t vescTEW = 50;                 // tESC warning, ˚C
+    uint8_t vescTEL = 90;                 // tESC limit, ˚C
 };
 
 extern Board board;
