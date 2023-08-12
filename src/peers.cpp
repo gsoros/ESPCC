@@ -252,20 +252,20 @@ Vesc::Vesc(Atoll::Peer::Saved saved,
 void Vesc::loop() {
     Peer::loop();
     if (!requestUpdate()) return;
-    uint8_t battLevel = Atoll::Battery::calculateLevel(uart->data.inpVoltage, board.vescBattNumSeries);
+    uint8_t battLevel = Atoll::Battery::calculateLevel(uart->data.inpVoltage, board.vescSettings.battNumSeries);
     if (INT8_MAX < battLevel) battLevel = INT8_MAX;
     board.display.onBattVesc((int8_t)battLevel);
     if (board.gps.device.speed.isValid() &&
         0.0f < uart->data.avgInputCurrent &&
         0.0f < uart->data.inpVoltage) {
-        float range = (float)board.gps.device.speed.kmph() * board.vescBattCapacityWh * (float)battLevel / 100.0f / (uart->data.avgInputCurrent * uart->data.inpVoltage);
+        float range = (float)board.gps.device.speed.kmph() * board.vescSettings.battCapacityWh * (float)battLevel / 100.0f / (uart->data.avgInputCurrent * uart->data.inpVoltage);
         if (INT16_MAX < range)
             range = INT16_MAX;
         else if (range < 0.0f)
             range = 0.0f;
         log_d("%.1fkm/h * %.0fWh * %d%% / (%.2fA * %.2fV) = %.0fkm",
               board.gps.device.speed.kmph(),
-              board.vescBattCapacityWh,
+              board.vescSettings.battCapacityWh,
               battLevel,
               uart->data.avgInputCurrent,
               uart->data.inpVoltage,
@@ -275,11 +275,11 @@ void Vesc::loop() {
         board.display.onRange(INT16_MAX);  // infinite range
     }
     // log_d("motor temp: %.2f˚C", uart->data.tempMotor);
-    if (0 < board.vescTMW && board.vescTMW <= uart->data.tempMotor) {
+    if (0 < board.vescSettings.tMotorWarn && board.vescSettings.tMotorWarn <= uart->data.tempMotor) {
         board.display.onMotorTemperature(uart->data.tempMotor);
     }
     // log_d("vesc temp: %.2f˚C", uart->data.tempMosfet);
-    if (0 < board.vescTEW && board.vescTEW <= uart->data.tempMosfet) {
+    if (0 < board.vescSettings.tEscWarn && board.vescSettings.tEscWarn <= uart->data.tempMosfet) {
         board.display.onVescTemperature(uart->data.tempMosfet);
     }
 }
@@ -287,7 +287,7 @@ void Vesc::loop() {
 void Vesc::setPower(uint16_t power) {
     static float prevCurrent = 0.0f;
 
-    if (board.vescMaxPower < power) power = board.vescMaxPower;
+    if (board.vescSettings.maxPower < power) power = board.vescSettings.maxPower;
     float voltage = getVoltage();
     if (voltage <= 0.01f) {
         log_e("voltage is 0");
@@ -300,26 +300,26 @@ void Vesc::setPower(uint16_t power) {
     float current = (float)(power / voltage);
     if (power <= 10)
         current = 0.0f;
-    else if (current < board.vescMinCurrent)
-        current = board.vescMinCurrent;
-    else if (board.vescMaxCurrent < current)
-        current = board.vescMaxCurrent;
-    if (0.0f < current && 0 < board.vescRampNumSteps && board.vescRampMinCurrentDiff <= abs(current - prevCurrent)) {
-        if (board.vescRampUp && prevCurrent < current) {
-            if (prevCurrent < board.vescMinCurrent)
-                prevCurrent = board.vescMinCurrent;
-            float rampUnit = (current - prevCurrent) / board.vescRampNumSteps;
+    else if (current < board.vescSettings.minCurrent)
+        current = board.vescSettings.minCurrent;
+    else if (board.vescSettings.maxCurrent < current)
+        current = board.vescSettings.maxCurrent;
+    if (0.0f < current && 0 < board.vescSettings.rampNumSteps && board.vescSettings.rampMinCurrentDiff <= abs(current - prevCurrent)) {
+        if (board.vescSettings.rampUp && prevCurrent < current) {
+            if (prevCurrent < board.vescSettings.minCurrent)
+                prevCurrent = board.vescSettings.minCurrent;
+            float rampUnit = (current - prevCurrent) / board.vescSettings.rampNumSteps;
             uint16_t rampD = rampDelay();
-            for (uint8_t i = 0; i < board.vescRampNumSteps; i++) {
+            for (uint8_t i = 0; i < board.vescSettings.rampNumSteps; i++) {
                 float rampCurrent = prevCurrent + rampUnit * i;
                 log_d("setting ramp up current #%d: %2.2fA", i, rampCurrent);
                 uart->setCurrent(rampCurrent);
                 delay(rampD);
             }
-        } else if (board.vescRampDown && current < prevCurrent) {
-            float rampUnit = (prevCurrent - current) / board.vescRampNumSteps;
+        } else if (board.vescSettings.rampDown && current < prevCurrent) {
+            float rampUnit = (prevCurrent - current) / board.vescSettings.rampNumSteps;
             uint16_t rampD = rampDelay();
-            for (uint8_t i = board.vescRampNumSteps; 0 < i; i--) {
+            for (uint8_t i = board.vescSettings.rampNumSteps; 0 < i; i--) {
                 float rampCurrent = current + rampUnit * i;
                 log_d("setting ramp down current #%d: %2.2fA", i, rampCurrent);
                 uart->setCurrent(rampCurrent);
@@ -345,9 +345,9 @@ void Vesc::onDisconnect(BLEClient* client, int reason) {
 void Vesc::onHumanPower(uint16_t humanPower) {
     if (humanPower < board.pasMinHumanPower) return;
 
-    if ((0 < board.vescTML && board.vescTML <= uart->data.tempMotor)  //
+    if ((0 < board.vescSettings.tMotorLimit && board.vescSettings.tMotorLimit <= uart->data.tempMotor)  //
         ||
-        (0 < board.vescTEL && board.vescTEL <= uart->data.tempMosfet)) {
+        (0 < board.vescSettings.tEscLimit && board.vescSettings.tEscLimit <= uart->data.tempMosfet)) {
         log_d("temperature limit exceeded, motor: %.2f˚C, esc: %.2f˚C, stopping %s",
               uart->data.tempMotor,
               uart->data.tempMosfet,
@@ -375,5 +375,5 @@ void Vesc::onHumanPower(uint16_t humanPower) {
 }
 
 uint16_t Vesc::rampDelay() {
-    return board.vescRampNumSteps ? board.vescRampTime / board.vescRampNumSteps : (uint16_t)0;
+    return board.vescSettings.rampNumSteps ? board.vescSettings.rampTime / board.vescSettings.rampNumSteps : (uint16_t)0;
 }

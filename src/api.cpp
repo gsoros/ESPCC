@@ -288,23 +288,23 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         char buf[100];
         snprintf(buf, sizeof(buf),
                  "BNS:%d|BC:%.2f|MP:%d|MiC:%.2f|MaC:%.2f|RU:%d|RD:%d",
-                 board.vescBattNumSeries,
-                 board.vescBattCapacityWh,
-                 board.vescMaxPower,
-                 board.vescMinCurrent,
-                 board.vescMaxCurrent,
-                 board.vescRampUp,
-                 board.vescRampDown);
+                 board.vescSettings.battNumSeries,
+                 board.vescSettings.battCapacityWh,
+                 board.vescSettings.maxPower,
+                 board.vescSettings.minCurrent,
+                 board.vescSettings.maxCurrent,
+                 board.vescSettings.rampUp,
+                 board.vescSettings.rampDown);
         msg->replyAppend(buf);
         snprintf(buf, sizeof(buf),
                  "|RMCD:%.2f|RNS:%d|RT:%d|TMW:%d|TML:%d|TEW:%d|TEL:%d",
-                 board.vescRampMinCurrentDiff,
-                 board.vescRampNumSteps,
-                 board.vescRampTime,
-                 board.vescTMW,
-                 board.vescTML,
-                 board.vescTEW,
-                 board.vescTEL);
+                 board.vescSettings.rampMinCurrentDiff,
+                 board.vescSettings.rampNumSteps,
+                 board.vescSettings.rampTime,
+                 board.vescSettings.tMotorWarn,
+                 board.vescSettings.tMotorLimit,
+                 board.vescSettings.tEscWarn,
+                 board.vescSettings.tEscLimit);
         msg->replyAppend(buf);
         return success();
     }
@@ -316,11 +316,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[4] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 1 || UINT8_MAX < i) return argInvalid();
-            board.vescBattNumSeries = (uint8_t)i;
+            board.vescSettings.battNumSeries = (uint8_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "BNS:%d", board.vescBattNumSeries);
+        snprintf(reply, sizeof(reply), "BNS:%d", board.vescSettings.battNumSeries);
         msg->replyAppend(reply);
         return success();
     }
@@ -330,11 +330,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         if (msg->argGetParam("BC:", buf, sizeof(buf))) {
             float f = (float)atof(buf);
             if (f < 0.1f || 20000.0f < f) return argInvalid();
-            board.vescBattCapacityWh = f;
+            board.vescSettings.battCapacityWh = f;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "BC:%.2f", board.vescBattCapacityWh);
+        snprintf(reply, sizeof(reply), "BC:%.2f", board.vescSettings.battCapacityWh);
         msg->replyAppend(reply);
         return success();
     }
@@ -346,11 +346,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[8] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT16_MAX < i) return argInvalid();
-            board.vescMaxPower = (uint16_t)i;
+            board.vescSettings.maxPower = (uint16_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "MP:%d", board.vescMaxPower);
+        snprintf(reply, sizeof(reply), "MP:%d", board.vescSettings.maxPower);
         msg->replyAppend(reply);
         return success();
     }
@@ -360,11 +360,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         if (msg->argGetParam("MiC:", buf, sizeof(buf))) {
             float f = (float)atof(buf);
             if (f < 0.0f || 100.0f < f) return argInvalid();
-            board.vescMinCurrent = f;
+            board.vescSettings.minCurrent = f;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "MiC:%.2f", board.vescMinCurrent);
+        snprintf(reply, sizeof(reply), "MiC:%.2f", board.vescSettings.minCurrent);
         msg->replyAppend(reply);
         return success();
     }
@@ -374,11 +374,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         if (msg->argGetParam("MaC:", buf, sizeof(buf))) {
             float f = (float)atof(buf);
             if (f < 0.0f || 200.0f < f) return argInvalid();
-            board.vescMaxCurrent = f;
+            board.vescSettings.maxCurrent = f;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "MaC:%.2f", board.vescMaxCurrent);
+        snprintf(reply, sizeof(reply), "MaC:%.2f", board.vescSettings.maxCurrent);
         msg->replyAppend(reply);
         return success();
     }
@@ -387,15 +387,15 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         char buf[8] = "";
         if (msg->argGetParam("RU:", buf, sizeof(buf))) {
             if (0 == strcmp(buf, "1") || 0 == strcasecmp(buf, "true")) {
-                board.vescRampUp = true;
+                board.vescSettings.rampUp = true;
                 board.saveVescSettings();
             } else if (0 == strcmp(buf, "0") || 0 == strcasecmp(buf, "false")) {
-                board.vescRampUp = false;
+                board.vescSettings.rampUp = false;
                 board.saveVescSettings();
             }
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "RU:%d", board.vescRampUp);
+        snprintf(reply, sizeof(reply), "RU:%d", board.vescSettings.rampUp);
         msg->replyAppend(reply);
         return success();
     }
@@ -404,15 +404,15 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         char buf[8] = "";
         if (msg->argGetParam("RD:", buf, sizeof(buf))) {
             if (0 == strcmp(buf, "1") || 0 == strcasecmp(buf, "true")) {
-                board.vescRampDown = true;
+                board.vescSettings.rampDown = true;
                 board.saveVescSettings();
             } else if (0 == strcmp(buf, "0") || 0 == strcasecmp(buf, "false")) {
-                board.vescRampDown = false;
+                board.vescSettings.rampDown = false;
                 board.saveVescSettings();
             }
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "RD:%d", board.vescRampDown);
+        snprintf(reply, sizeof(reply), "RD:%d", board.vescSettings.rampDown);
         msg->replyAppend(reply);
         return success();
     }
@@ -422,11 +422,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
         if (msg->argGetParam("RMCD:", buf, sizeof(buf))) {
             float f = (float)atof(buf);
             if (f < 0.0f || 100.0f < f) return argInvalid();
-            board.vescRampMinCurrentDiff = f;
+            board.vescSettings.rampMinCurrentDiff = f;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "RMCD:%.2f", board.vescRampMinCurrentDiff);
+        snprintf(reply, sizeof(reply), "RMCD:%.2f", board.vescSettings.rampMinCurrentDiff);
         msg->replyAppend(reply);
         return success();
     }
@@ -438,11 +438,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[4] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT8_MAX < i) return argInvalid();
-            board.vescRampNumSteps = (uint8_t)i;
+            board.vescSettings.rampNumSteps = (uint8_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "RNS:%d", board.vescRampNumSteps);
+        snprintf(reply, sizeof(reply), "RNS:%d", board.vescSettings.rampNumSteps);
         msg->replyAppend(reply);
         return success();
     }
@@ -454,11 +454,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[8] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT16_MAX < i) return argInvalid();
-            board.vescRampTime = (uint16_t)i;
+            board.vescSettings.rampTime = (uint16_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "RT:%d", board.vescRampTime);
+        snprintf(reply, sizeof(reply), "RT:%d", board.vescSettings.rampTime);
         msg->replyAppend(reply);
         return success();
     }
@@ -470,11 +470,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[8] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT8_MAX < i) return argInvalid();
-            board.vescTMW = (uint16_t)i;
+            board.vescSettings.tMotorWarn = (uint16_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "TMW:%d", board.vescTMW);
+        snprintf(reply, sizeof(reply), "TMW:%d", board.vescSettings.tMotorWarn);
         msg->replyAppend(reply);
         return success();
     }
@@ -486,11 +486,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[8] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT8_MAX < i) return argInvalid();
-            board.vescTML = (uint16_t)i;
+            board.vescSettings.tMotorLimit = (uint16_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "TML:%d", board.vescTML);
+        snprintf(reply, sizeof(reply), "TML:%d", board.vescSettings.tMotorLimit);
         msg->replyAppend(reply);
         return success();
     }
@@ -502,11 +502,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[8] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT8_MAX < i) return argInvalid();
-            board.vescTEW = (uint16_t)i;
+            board.vescSettings.tEscWarn = (uint16_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "TEW:%d", board.vescTEW);
+        snprintf(reply, sizeof(reply), "TEW:%d", board.vescSettings.tEscWarn);
         msg->replyAppend(reply);
         return success();
     }
@@ -518,11 +518,11 @@ Api::Result *Api::vescProcessor(Api::Message *msg) {
             char check[8] = "";
             snprintf(check, sizeof(check), "%d", i);
             if (0 != strcmp(buf, check) || i < 0 || UINT8_MAX < i) return argInvalid();
-            board.vescTEL = (uint16_t)i;
+            board.vescSettings.tEscLimit = (uint16_t)i;
             board.saveVescSettings();
         }
         char reply[32];
-        snprintf(reply, sizeof(reply), "TEL:%d", board.vescTEL);
+        snprintf(reply, sizeof(reply), "TEL:%d", board.vescSettings.tEscLimit);
         msg->replyAppend(reply);
         return success();
     }

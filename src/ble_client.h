@@ -3,28 +3,14 @@
 
 #include "definitions.h"
 #include "atoll_ble_client.h"
-#include "ble_server.h"
+// #include "ble_server.h"
 
 typedef Atoll::Peer Peer;
-// typedef Atoll::PowerMeter PowerMeter;
+//  typedef Atoll::PowerMeter PowerMeter;
 
 class BleClient : public Atoll::BleClient {
    public:
-    virtual Peer *createPeer(Peer::Saved saved);
-    virtual Peer *createPeer(BLEAdvertisedDevice *advertisedDevice);
-
-    virtual void loadSettings();
-    virtual void saveSettings();
-    virtual void printSettings();
-
-    // duration is in milliseconds
-    virtual bool startScan(uint32_t duration) override;
-
     virtual bool tarePowerMeter();
-
-   protected:
-    virtual void onResult(BLEAdvertisedDevice *advertisedDevice) override;
-    virtual void onScanEnd(BLEScanResults results) override;
 };
 
 #endif

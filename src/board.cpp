@@ -76,7 +76,7 @@ void Board::setup() {
 #elif DISPLAY_DEVICE == DISPLAY_LCD
     display.setup(LCD_BACKLIGHT_PIN);
 #endif
-    if (!otaMode) bleClient.setup(hostName, &arduinoPreferences);
+    if (!otaMode) bleClient.setup(hostName, &arduinoPreferences, &api);
     if (!otaMode) touch.setup(&arduinoPreferences, "Touch");
     battery.setup(&arduinoPreferences, BATTERY_PIN, &battery, &api, &bleServer);
     if (!otaMode) recorder.setup(&gps, &sdcard, &api, &recorder);
@@ -212,53 +212,7 @@ bool Board::loadSettings() {
         tmpFloat = 20.0f;
     pasProportionalFactor = tmpFloat;
 
-    tmpUint = preferences->getUInt("vescBNS", vescBattNumSeries);
-    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
-    vescBattNumSeries = tmpUint;
-
-    vescBattCapacityWh = preferences->getFloat("vescBC", vescBattCapacityWh);
-    if (vescBattCapacityWh < 0.0f) vescBattCapacityWh = 0.0f;
-
-    tmpUint = preferences->getUInt("vescMP", vescMaxPower);
-    if (UINT16_MAX < tmpUint) tmpUint = UINT16_MAX;
-    vescMaxPower = tmpUint;
-
-    vescMinCurrent = preferences->getFloat("vescMiC", vescMinCurrent);
-    if (vescMinCurrent < 0.0f) vescMinCurrent = 0.0f;
-
-    vescMaxCurrent = preferences->getFloat("vescMaC", vescMaxCurrent);
-    if (vescMaxCurrent < 0.0f) vescMaxCurrent = 0.0f;
-
-    vescRampUp = preferences->getBool("vescRU", vescRampUp);
-
-    vescRampDown = preferences->getBool("vescRD", vescRampDown);
-
-    vescRampMinCurrentDiff = preferences->getFloat("vescRMCD", vescRampMinCurrentDiff);
-    if (vescRampMinCurrentDiff < 0.0f) vescRampMinCurrentDiff = 0.0f;
-
-    tmpUint = preferences->getUInt("vescRNS", vescRampNumSteps);
-    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
-    vescRampNumSteps = tmpUint;
-
-    tmpUint = preferences->getUInt("vescRT", vescRampTime);
-    if (UINT16_MAX < tmpUint) tmpUint = UINT16_MAX;
-    vescRampTime = tmpUint;
-
-    tmpUint = preferences->getUInt("vescTMW", vescTMW);
-    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
-    vescTMW = tmpUint;
-
-    tmpUint = preferences->getUInt("vescTML", vescTML);
-    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
-    vescTML = tmpUint;
-
-    tmpUint = preferences->getUInt("vescTEW", vescTEW);
-    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
-    vescTEW = tmpUint;
-
-    tmpUint = preferences->getUInt("vescTEL", vescTEL);
-    if (UINT8_MAX < tmpUint) tmpUint = UINT8_MAX;
-    vescTEL = tmpUint;
+    vescSettings.load(preferences);
 
     preferencesEnd();
     return true;
@@ -292,19 +246,6 @@ void Board::savePasSettings(bool skipStartEnd) {
 
 void Board::saveVescSettings(bool skipStartEnd) {
     if (!skipStartEnd && !preferencesStartSave()) return;
-    preferences->putUInt("vescBNS", vescBattNumSeries);
-    preferences->putFloat("vescBC", vescBattCapacityWh);
-    preferences->putUInt("vescMP", vescMaxPower);
-    preferences->putFloat("vescMiC", vescMinCurrent);
-    preferences->putFloat("vescMaC", vescMaxCurrent);
-    preferences->putBool("vescRU", vescRampUp);
-    preferences->putBool("vescRD", vescRampDown);
-    preferences->putFloat("vescRMCD", vescRampMinCurrentDiff);
-    preferences->putUInt("vescRNS", vescRampNumSteps);
-    preferences->putUInt("vescRT", vescRampTime);
-    preferences->putUInt("vescTMW", vescTMW);
-    preferences->putUInt("vescTML", vescTML);
-    preferences->putUInt("vescTEW", vescTEW);
-    preferences->putUInt("vescTEL", vescTEL);
+    vescSettings.save(preferences);
     if (!skipStartEnd) preferencesEnd();
 }

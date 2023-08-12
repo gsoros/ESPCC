@@ -15,6 +15,7 @@
 #include "atoll_preferences.h"
 #include "atoll_task.h"
 #include "atoll_time.h"
+#include "atoll_vesc_settings.h"
 
 #include "touch.h"
 #include "ble_client.h"
@@ -92,26 +93,13 @@ class Board : public Atoll::Task,
 
     bool otaMode = false;
 
-    uint8_t pasMode = PAS_MODE_PROPORTIONAL;  //
-    uint8_t pasLevel = 0;                     //
+    uint8_t pasMode = PAS_MODE_PROPORTIONAL;  // power assist mode
+    uint8_t pasLevel = 0;                     // power assist level
     uint8_t pasMinHumanPower = 50;            // W, threshold to activate pas
     uint16_t pasConstantFactor = 100;         // power factor in constant mode
     float pasProportionalFactor = 1.0f;       // power factor in proportional mode
 
-    uint8_t vescBattNumSeries = 13;       // number of cells in series
-    float vescBattCapacityWh = 740;       // 3.7V * 20Ah
-    uint16_t vescMaxPower = 2500;         // power limit, W
-    float vescMinCurrent = 1.1f;          // minimum current for startup, A
-    float vescMaxCurrent = 50.0f;         // current limit, A
-    bool vescRampUp = true;               // ramp up active
-    bool vescRampDown = true;             // ramp down active
-    float vescRampMinCurrentDiff = 1.0f;  // minimum current difference for ramping, A
-    uint8_t vescRampNumSteps = 3;         // number of ramp steps
-    uint16_t vescRampTime = 500;          // remp time in ms
-    uint8_t vescTMW = 60;                 // tMotor warning, ˚C
-    uint8_t vescTML = 90;                 // tMotor limit, ˚C
-    uint8_t vescTEW = 50;                 // tESC warning, ˚C
-    uint8_t vescTEL = 90;                 // tESC limit, ˚C
+    Atoll::VescSettings vescSettings;
 };
 
 extern Board board;
