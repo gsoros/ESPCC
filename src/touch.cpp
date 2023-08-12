@@ -37,7 +37,7 @@ void Touch::fireEvent(uint8_t index, Event event) {
             }
         } break;
         case Event::doubleTouch: {
-            if (3 == index && board.recorder.end()) {  // bottom right
+            if (false && 3 == index && board.recorder.end()) {  // bottom right DISABLED
                 if (board.wifi.startOnRecordingEnd) {
                     log_i("starting wifi");
 #ifdef FEATURE_WEBSERVER
