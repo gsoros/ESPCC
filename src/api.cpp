@@ -11,14 +11,6 @@ void Api::setup(
 
     addCommand(Api::Command("system", Api::systemProcessor));
     addCommand(Api::Command("touch", Api::touchProcessor));
-
-    // TODO move this to Atoll, peers=scan, peers=add:, etc.
-    addCommand(Api::Command("scan", Api::scanProcessor));
-    addCommand(Api::Command("scanResult", Api::scanResultProcessor));
-    addCommand(Api::Command("peers", Api::peersProcessor));
-    addCommand(Api::Command("addPeer", Api::addPeerProcessor));
-    addCommand(Api::Command("deletePeer", Api::deletePeerProcessor));
-
     addCommand(Api::Command("vesc", Api::vescProcessor));
 }
 
@@ -193,92 +185,6 @@ Api::Result *Api::touchProcessor(Api::Message *msg) {
 
     msg->replyAppend("read|thresholds[:t0,...]|enabled[:0|1]|disableFor:numSeconds");
     return argInvalid();
-}
-
-Api::Result *Api::scanProcessor(Api::Message *msg) {
-    if (!strlen(msg->arg)) return result("argInvalid");
-    int duration = atoi(msg->arg);
-    if (duration < 1 || 120 < duration) return result("argInvalid");
-    if (board.bleClient.scan->isScanning()) {
-        snprintf(msg->reply, sizeof(msg->reply), "%s", "already scanning");
-        return error();
-    }
-    if (!board.bleClient.startScan(duration * 1000)) {  // convert duration from s to ms
-        snprintf(msg->reply, sizeof(msg->reply), "%s", "could not start");
-        return error();
-    }
-    snprintf(msg->reply, sizeof(msg->reply), "%d", duration);
-    return success();
-}
-
-Api::Result *Api::scanResultProcessor(Api::Message *msg) {
-    if (msg->log) log_e("command scanResult cannot be called directly, replies are generated after starting a scan");
-    return error();
-}
-
-Api::Result *Api::peersProcessor(Api::Message *msg) {
-    char value[msgReplyLength] = "";
-    int16_t remaining = 0;
-    for (int i = 0; i < board.bleClient.peersMax; i++) {
-        if (nullptr == board.bleClient.peers[i]) continue;
-        if (board.bleClient.peers[i]->markedForRemoval) continue;
-        char token[Peer::packedMaxLength + 1];
-        board.bleClient.peers[i]->pack(token, sizeof(token) - 1, false);
-        strcat(token, "|");
-        remaining = msgReplyLength - strlen(value) - 1;
-        if (remaining < strlen(token)) {
-            if (msg->log) log_e("no space left for adding %s to %s", token, value);
-            return internalError();
-        }
-        strncat(value, token, remaining);
-    }
-    strncpy(msg->reply, value, msgReplyLength);
-    return success();
-}
-
-Api::Result *Api::addPeerProcessor(Api::Message *msg) {
-    if (strlen(msg->arg) < sizeof(Peer::Saved::address) + 5) {
-        if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
-        return result("argInvalid");
-    }
-    Peer::Saved saved;
-    if (!Peer::unpack(
-            msg->arg,
-            &saved)) {
-        if (msg->log) log_e("could not unpack %s", msg->arg);
-        return result("argInvalid");
-    }
-    if (board.bleClient.peerExists(saved.address)) {
-        if (msg->log) log_e("peer already exists: %s", msg->arg);
-        return result("argInvalid");
-    }
-    Peer *peer = board.bleClient.createPeer(saved);
-    if (nullptr == peer) {
-        if (msg->log) log_e("could not create peer from %s", msg->arg);
-        return error();
-    }
-    if (!board.bleClient.addPeer(peer)) {
-        delete peer;
-        if (msg->log) log_e("could not add peer from %s", msg->arg);
-        return error();
-    }
-    board.bleClient.saveSettings();
-    return success();
-}
-
-Api::Result *Api::deletePeerProcessor(Api::Message *msg) {
-    if (strlen(msg->arg) < sizeof(Peer::Saved::address) - 1) {
-        if (msg->log) log_e("arg too short (%d)", strlen(msg->arg));
-        return result("argInvalid");
-    }
-    log_i("calling bleClient.removePeer(%s)", msg->arg);
-    uint8_t removed = board.bleClient.removePeer(msg->arg);
-    if (0 < removed) {
-        board.bleClient.saveSettings();
-        snprintf(msg->reply, sizeof(msg->reply), "%d", removed);
-        return success();
-    }
-    return error();
 }
 
 Api::Result *Api::vescProcessor(Api::Message *msg) {
