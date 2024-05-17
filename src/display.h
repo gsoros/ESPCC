@@ -287,10 +287,10 @@ class Display : public Atoll::Task, public Print {
     uint8_t statusIconSize = 14;  // = 14
 
     uint8_t currentPage = 0;
-    const uint8_t numPages = DISPLAY_NUM_PAGES;  // helper
+    const uint8_t numPages = DISPLAY_NUM_PAGES;  // number of pages
 
     ulong lastFieldUpdate = 0;
-    int8_t lastMinute = -1;
+    int8_t lastMinute = -1;  // last displayed minute
 
     int16_t power = -1;                                                       // <= -1: disconnected
     ulong lastPowerUpdate = 0;                                                //

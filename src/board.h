@@ -95,6 +95,7 @@ class Board : public Atoll::Task,
 
     uint8_t pasMode = PAS_MODE_PROPORTIONAL;  // power assist mode
     uint8_t pasLevel = 0;                     // power assist level
+    uint8_t pasMaxLevel = 12;                 // power assist maximum level
     uint8_t pasMinHumanPower = 50;            // W, threshold to activate pas
     uint16_t pasConstantFactor = 100;         // power factor in constant mode
     float pasProportionalFactor = 1.0f;       // power factor in proportional mode

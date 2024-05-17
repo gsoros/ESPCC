@@ -7,6 +7,11 @@
 #define ATOLL_TOUCH_NUM_PADS TOUCH_NUM_PADS
 #include "atoll_touch.h"
 
+#define TOUCH_PAD_TOPLEFT 0
+#define TOUCH_PAD_TOPRIGHT 1
+#define TOUCH_PAD_BOTTOMLEFT 2
+#define TOUCH_PAD_BOTTOMRIGHT 3
+
 class Touch : public Atoll::Touch {
    public:
     Touch(

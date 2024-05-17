@@ -1,6 +1,7 @@
 #include "board.h"
 #include "display.h"
 #include "atoll_time.h"
+#include "touch.h"
 
 Display::Field::Field(uint8_t id) : area() {
     for (uint8_t i = 0; i < DISPLAY_NUM_PAGES; i++)
@@ -447,9 +448,9 @@ void Display::switchPage(int8_t direction) {
     if (!(0 == currentPage && -1 == direction))
         currentPage += direction;
     if (currentPage < 0)
-        currentPage = 0;
+        currentPage = numPages - 1;  // wrap around
     else if (numPages - 1 < currentPage)
-        currentPage = numPages - 1;
+        currentPage = 0;  // wrap around
     log_i("currentPage %d", currentPage);
     lastMinute = -1;
     if (!aquireMutex()) return;
@@ -1071,12 +1072,12 @@ bool Display::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
             if (queue([this, a]() { fill(a, bg); }, 300)) {
                 // log_i("queued pad #%d clear in 300ms", pad->index);
             }
-            if (1 == pad->index) {  // top right to switch page up
-                switchPage(1);
-                return false;              // do not propagate
-            } else if (3 == pad->index) {  // bottom right to switch page down
-                switchPage(-1);
-                return false;  // do not propagate
+            if (TOUCH_PAD_TOPRIGHT == pad->index) {
+                switchPage(1);  // switch page up
+                return false;   // do not propagate
+            } else if (TOUCH_PAD_BOTTOMRIGHT == pad->index) {
+                switchPage(-1);  // switch page down
+                return false;    // do not propagate
             }
             return true;
         }

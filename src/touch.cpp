@@ -12,10 +12,10 @@ void Touch::fireEvent(uint8_t index, Event event) {
     }
     switch (event) {
         case Event::singleTouch: {
-            if (0 == index) {  // top left to increase pas
+            if (TOUCH_PAD_TOPLEFT == index) {  // increase pas
                 board.pasLevel++;
-                if (12 < board.pasLevel) board.pasLevel = 12;
-            } else if (2 == index) {  // bottom left to decrease pas
+                if (board.pasMaxLevel < board.pasLevel) board.pasLevel = board.pasMaxLevel;
+            } else if (TOUCH_PAD_BOTTOMLEFT == index) {  // decrease pas
                 if (0 < board.pasLevel)
                     board.pasLevel--;
             }
@@ -24,20 +24,20 @@ void Touch::fireEvent(uint8_t index, Event event) {
             board.display.onPasChange();
         } break;
         case Event::longTouch: {
-            if (0 == index || 2 == index) {  // top left or bottom left
+            if (TOUCH_PAD_TOPLEFT == index || TOUCH_PAD_BOTTOMLEFT == index) {
                 board.pasMode = board.pasMode == PAS_MODE_PROPORTIONAL ? PAS_MODE_CONSTANT : PAS_MODE_PROPORTIONAL;
                 board.savePasSettings();
                 log_d("pasMode: %d", board.pasMode);
                 board.display.onPasChange();
-            } else if (1 == index) {  // top right
+            } else if (TOUCH_PAD_TOPRIGHT == index) {  // tare
                 board.bleClient.tarePowerMeter();
-            } else if (3 == index && board.recorder.start()) {  // bottom right
+            } else if (TOUCH_PAD_BOTTOMRIGHT == index && board.recorder.start()) {  // start recording
                 // disable wifi but don't save
                 board.wifi.setEnabled(false, false);
             }
         } break;
         case Event::doubleTouch: {
-            if (false && 3 == index && board.recorder.end()) {  // bottom right DISABLED
+            if (false && TOUCH_PAD_BOTTOMRIGHT == index && board.recorder.end()) {  // DISABLED
                 if (board.wifi.startOnRecordingEnd) {
                     log_i("starting wifi");
 #ifdef FEATURE_WEBSERVER
