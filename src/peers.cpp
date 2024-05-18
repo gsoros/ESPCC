@@ -152,7 +152,7 @@ void ApiTxChar::processInit(const char* value) {
     } while (semi = strchr(cur, ';'));
 
     // init is complete, this would be the time to request a small MTU
-    // but it is not (yet) possible with nimbe_arduino
+    // but it is not (yet) possible with nimble_arduino
     // if (nullptr != peer && peer->isESPM() && ((ESPM*)peer)->defaultMTU)
     // Atoll::Ble::setMTU(((ESPM*)peer)->defaultMTU);
 }
@@ -220,7 +220,7 @@ uint8_t ApiTxChar::commandCode(const char* name) {
 
 void WeightChar::notify() {
     Atoll::PeerCharacteristicWeightscale::notify();
-    // log_i("WeightChar %2.2f", lastValue);
+    //log_i("WeightChar %2.2f", lastValue);
     board.display.onWeight(lastValue);
 }
 

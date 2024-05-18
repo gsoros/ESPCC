@@ -10,6 +10,8 @@ typedef Atoll::Peer Peer;
 
 class BleClient : public Atoll::BleClient {
    public:
+    virtual Peer* createPeer(Peer::Saved saved) override;
+    virtual Peer* createPeer(BLEAdvertisedDevice* advertisedDevice) override;
     virtual bool tarePowerMeter();
 };
 

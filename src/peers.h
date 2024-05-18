@@ -50,7 +50,9 @@ class ESPM : public Atoll::ESPM {
                       new ApiTxChar,
                       new Atoll::PeerCharacteristicApiRX(),
                       new WeightChar(),
-                      new TemperatureChar()) {}
+                      new TemperatureChar()) {
+        log_d("ESPCC::ESPM constructed");
+    }
     virtual void onDisconnect(BLEClient* client, int reason) override;
 };
 
