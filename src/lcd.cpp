@@ -329,7 +329,9 @@ void Lcd::updateStatus(bool forceRedraw) {
 
 // the return value indicates whether the event should propagate
 bool Lcd::onTouchEvent(Touch::Pad *pad, Touch::Event event) {
-    if (1 == pad->index && Touch::Event::tripleTouch == event) {  // top right
+    if (!board.touch.locked &&
+        TOUCH_PAD_TOPRIGHT == pad->index &&
+        Touch::Event::tripleTouch == event) {
         if (backlightState) {
             backlight(0);
             fg = BLACK;

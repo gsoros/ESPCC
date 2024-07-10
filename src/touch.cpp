@@ -6,7 +6,7 @@ void Touch::fireEvent(uint8_t index, Event event) {
     if (!board.display.onTouchEvent(&pads[index], event)) {
         return;  // not propagated
     }
-    if (locked && event != Event::quintupleTouch) {
+    if (locked && Event::quintupleTouch != event) {
         log_i("locked, no action");
         return;  // must unlock
     }
@@ -52,12 +52,16 @@ void Touch::fireEvent(uint8_t index, Event event) {
             }
         } break;
         case Event::quintupleTouch: {
-            locked = !locked;
-            log_i("%slocked", locked ? "" : "un");
-            board.display.onLockChanged(locked);
-            char str[32] = "";
-            snprintf(str, sizeof(str), "%d;%d=locked:%d", Api::success()->code, Api::command("touch")->code, locked ? 1 : 0);
-            board.bleServer.notifyApiTx(str);
+            if (TOUCH_PAD_TOPRIGHT != index) {
+                log_i("need topright quintuple for lock");
+            } else {
+                locked = !locked;
+                log_i("%slocked", locked ? "" : "un");
+                board.display.onLockChanged(locked);
+                char str[32] = "";
+                snprintf(str, sizeof(str), "%d;%d=locked:%d", Api::success()->code, Api::command("touch")->code, locked ? 1 : 0);
+                board.bleServer.notifyApiTx(str);
+            }
         } break;
         default:
             break;
